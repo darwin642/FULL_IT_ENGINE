@@ -13,4 +13,4 @@ Program will be open source.
 
 image:
 
-![Cartman ekran görüntüsü](01a/image.png)
+![Cartman ekran görüntüsü](0.1a/image.png)
