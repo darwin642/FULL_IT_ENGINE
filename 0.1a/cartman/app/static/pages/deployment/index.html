@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>Cartman | Deployment Operations</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/css/modules/deployment-center.css">
+  <script src="/static/js/modules/standalone-page.js" defer></script>
+  <script src="/static/js/core/module-definitions.js" defer></script>
+  <script src="/static/js/modules/standalone-navigation.js" defer></script>
+  <script src="/static/js/modules/deployment-demo-store.js" defer></script>
+  <script src="/static/js/modules/deployment-center.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-area">
+      <a class="brand" href="/">
+        <span class="brand-logo">C</span>
+        <span>CARTMAN</span>
+      </a>
+    </div>
+    <div class="top-actions">
+      <span class="dc-preview"><span></span> DEMO PREVIEW</span>
+      <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+  </header>
+
+  <main class="dc-main">
+    <nav class="dc-crumb"><a href="/">Workspace</a><span>/</span><span>Software &amp; Deployment</span><span>/</span><strong>Deployment</strong></nav>
+
+    <section class="dc-hero">
+      <div>
+        <div class="dc-eyebrow"><span class="dc-eyebrow-mark">◆</span> OPERATIONS CENTER</div>
+        <h1>Deployment</h1>
+        <p class="dc-subtitle">Plan, review and monitor software rollout activity across your environment.</p>
+      </div>
+      <div class="dc-hero-actions">
+        <button class="dc-btn dc-btn-secondary" id="dc-export">Export view ↗</button>
+        <button class="dc-btn dc-btn-primary" id="dc-add">＋ New deployment</button>
+      </div>
+    </section>
+
+    <div class="dc-notice"><span class="dc-notice-icon">i</span><div><strong>Demo environment</strong><span>Sample records only. No endpoints are contacted and no deployment actions are executed.</span></div><span class="dc-notice-tag">LOCAL PREVIEW</span></div>
+
+    <section class="dc-metrics" aria-label="Deployment metrics">
+      <article class="dc-metric"><div class="dc-metric-top"><span>Total deployments</span><span class="dc-metric-icon purple">▤</span></div><strong id="dc-total">—</strong><div class="dc-metric-foot"><span class="dc-neutral-dot"></span> All demo records</div></article>
+      <article class="dc-metric"><div class="dc-metric-top"><span>Successful</span><span class="dc-metric-icon green">✓</span></div><strong id="dc-success">—</strong><div class="dc-metric-foot"><span class="dc-good-dot"></span><span id="dc-success-rate">—</span> success rate</div></article>
+      <article class="dc-metric"><div class="dc-metric-top"><span>In progress</span><span class="dc-metric-icon blue">↻</span></div><strong id="dc-running">—</strong><div class="dc-metric-foot"><span class="dc-live-dot"></span> Active demo jobs</div></article>
+      <article class="dc-metric"><div class="dc-metric-top"><span>Needs attention</span><span class="dc-metric-icon red">!</span></div><strong id="dc-attention">—</strong><div class="dc-metric-foot"><span class="dc-bad-dot"></span> Failed deployments</div></article>
+    </section>
+
+    <section class="dc-content-grid">
+      <article class="dc-panel dc-activity-panel">
+        <div class="dc-panel-heading"><div><div class="dc-section-kicker">EXECUTION OVERVIEW</div><h2>Deployment activity</h2><p>Track rollout status and review recent operations.</p></div><span class="dc-live-label"><i></i> Sample data</span></div>
+        <div class="dc-toolbar">
+          <label class="dc-search"><span>⌕</span><input type="search" id="dc-search" placeholder="Search name, target, ID..." aria-label="Search deployments"></label>
+          <select id="dc-status" aria-label="Filter by status"><option value="all">All statuses</option><option>Completed</option><option>Running</option><option>Queued</option><option>Failed</option><option>Draft</option></select>
+          <select id="dc-type" aria-label="Filter by deployment type"><option value="all">All types</option><option>Software</option><option>OS Image</option><option>Patch</option><option>Package</option></select>
+          <button class="dc-btn dc-btn-filter" id="dc-reset">Reset</button>
+        </div>
+        <div class="dc-table-wrap">
+          <table class="dc-table">
+            <thead><tr><th><button data-sort="name">DEPLOYMENT <span>↕</span></button></th><th><button data-sort="type">TYPE <span>↕</span></button></th><th>TARGETS</th><th><button data-sort="updated">LAST UPDATED <span>↕</span></button></th><th><button data-sort="status">STATUS <span>↕</span></button></th><th><span class="dc-sr-only">Actions</span></th></tr></thead>
+            <tbody id="dc-rows"></tbody>
+          </table>
+        </div>
+        <div class="dc-table-bottom"><span id="dc-count">Loading records…</span><span>Session-only demo data</span></div>
+        <div class="dc-empty" id="dc-empty" hidden><span>⌕</span><strong>No deployments found</strong><p>Try another search term or clear your filters.</p><button class="dc-btn dc-btn-secondary" id="dc-empty-reset">Clear filters</button></div>
+      </article>
+
+      <aside class="dc-side">
+        <article class="dc-panel dc-quick-panel">
+          <div class="dc-panel-heading"><div><div class="dc-section-kicker">SHORTCUTS</div><h2>Quick actions</h2></div><span class="dc-shortcut-icon">↗</span></div>
+          <a class="dc-quick-link" href="/pages/software-deployment/"><span class="dc-quick-icon qi-purple">⇧</span><span><strong>Software deployment</strong><small>Configure a software rollout</small></span><b>→</b></a>
+          <a class="dc-quick-link" href="/pages/os-deployment/"><span class="dc-quick-icon qi-blue">▣</span><span><strong>OS deployment images</strong><small>Review image library</small></span><b>→</b></a>
+          <a class="dc-quick-link" href="/pages/deployment-jobs/"><span class="dc-quick-icon qi-green">⌘</span><span><strong>Deployment jobs</strong><small>Inspect execution queue</small></span><b>→</b></a>
+          <a class="dc-quick-link" href="/pages/deployment-history/"><span class="dc-quick-icon qi-orange">◷</span><span><strong>Deployment history</strong><small>Browse previous activity</small></span><b>→</b></a>
+        </article>
+
+        <article class="dc-panel dc-health-panel">
+          <div class="dc-panel-heading"><div><div class="dc-section-kicker">ROLL OUT HEALTH</div><h2>Success distribution</h2></div><span class="dc-health-symbol">◉</span></div>
+          <div class="dc-health-summary"><div><strong id="dc-health-percent">—</strong><span>completed successfully</span></div><div class="dc-health-ring" id="dc-ring"><span>✓</span></div></div>
+          <div class="dc-progress-track"><span id="dc-progress-success"></span><span id="dc-progress-running"></span><span id="dc-progress-failed"></span></div>
+          <div class="dc-legend"><span><i class="lg-green"></i>Successful <b id="dc-legend-success">—</b></span><span><i class="lg-blue"></i>Running <b id="dc-legend-running">—</b></span><span><i class="lg-red"></i>Failed <b id="dc-legend-failed">—</b></span></div>
+        </article>
+
+        <article class="dc-tip"><span>✦</span><div><strong>Deployment workflow</strong><p>Configure your rollout first, then review its job status and history. Actions in this preview never reach managed devices.</p></div></article>
+      </aside>
+    </section>
+
+    <footer class="dc-footer"><span>Cartman Infrastructure Management</span><span>Deployment Operations Center <i></i> UI Preview</span></footer>
+  </main>
+
+  <div class="dc-menu" id="dc-menu" hidden>
+    <button data-action="details">◫ <span>View details</span></button>
+    <button data-action="copy">▣ <span>Copy deployment ID</span></button>
+    <button data-action="review">✓ <span>Mark as reviewed</span></button>
+  </div>
+
+  <div class="dc-modal-backdrop" id="dc-detail-backdrop" hidden>
+    <section class="dc-modal" role="dialog" aria-modal="true" aria-labelledby="dc-detail-title">
+      <div class="dc-modal-head"><div><div class="dc-section-kicker">DEPLOYMENT RECORD</div><h2 id="dc-detail-title">Deployment details</h2></div><button class="dc-icon-close" data-close="detail" aria-label="Close">×</button></div>
+      <div id="dc-detail-body"></div>
+      <div class="dc-modal-foot"><span class="dc-modal-note">Demo data · No remote actions</span><button class="dc-btn dc-btn-primary" data-close="detail">Done</button></div>
+    </section>
+  </div>
+
+  <div class="dc-modal-backdrop" id="dc-add-backdrop" hidden>
+    <section class="dc-modal" role="dialog" aria-modal="true" aria-labelledby="dc-add-title">
+      <div class="dc-modal-head"><div><div class="dc-section-kicker">DEMO WORKFLOW</div><h2 id="dc-add-title">New deployment</h2><p>Create a temporary preview record.</p></div><button class="dc-icon-close" data-close="add" aria-label="Close">×</button></div>
+      <form id="dc-add-form">
+        <label class="dc-field">Deployment name<input name="name" required maxlength="70" placeholder="e.g. Chrome rollout - Pilot"></label>
+        <div class="dc-form-grid"><label class="dc-field">Deployment type<select name="type"><option>Software</option><option>OS Image</option><option>Patch</option><option>Package</option></select></label><label class="dc-field">Target group<input name="target" required maxlength="70" placeholder="e.g. IT Workstations"></label></div>
+        <label class="dc-field">Version / release<input name="version" maxlength="40" placeholder="e.g. 1.0.0"></label>
+        <div class="dc-form-note">This creates a draft in this browser session only. Nothing is installed or sent to a device.</div>
+        <div class="dc-modal-foot"><button type="button" class="dc-btn dc-btn-secondary" data-close="add">Cancel</button><button type="submit" class="dc-btn dc-btn-primary">Create demo draft</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="dc-toast" id="dc-toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,0 +1,63 @@
+
+"use strict";
+(() => {
+  const KEY = "cartman-deployment-demo-v1";
+  const seed = [
+    {id:"DPL-2026-0142",name:"Microsoft 365 Apps — Ring 1",type:"Software",version:"2509 · 16.0.19231",target:"IT Workstations",devices:48,updated:"2 min ago",time:Date.now()-120000,status:"Running",owner:"Endpoint Team",progress:72,description:"Pilot rollout for Microsoft 365 Apps."},
+    {id:"DPL-2026-0141",name:"Windows Security Cumulative Update",type:"Patch",version:"KB5066128",target:"Corporate Laptops",devices:126,updated:"18 min ago",time:Date.now()-1080000,status:"Completed",owner:"System Admin",progress:100,description:"Monthly security update rollout."},
+    {id:"DPL-2026-0140",name:"Google Chrome Enterprise",type:"Software",version:"141.0.7390.55",target:"Managed Windows",devices:214,updated:"42 min ago",time:Date.now()-2520000,status:"Completed",owner:"Endpoint Team",progress:100,description:"Enterprise browser update."},
+    {id:"DPL-2026-0139",name:"Windows 11 24H2 — Pilot",type:"OS Image",version:"24H2 · Build 26100",target:"Pilot Devices",devices:12,updated:"1 hr ago",time:Date.now()-3600000,status:"Failed",owner:"IT Operations",progress:33,description:"Simulated pilot deployment failure."},
+    {id:"DPL-2026-0138",name:"7-Zip Enterprise Package",type:"Package",version:"24.09 · x64",target:"Engineering",devices:36,updated:"2 hrs ago",time:Date.now()-7200000,status:"Queued",owner:"Package Admin",progress:0,description:"Package rollout waiting in the demo queue."},
+    {id:"DPL-2026-0137",name:"Microsoft Edge Security Update",type:"Patch",version:"141.0.3537.57",target:"Shared Devices",devices:83,updated:"3 hrs ago",time:Date.now()-10800000,status:"Completed",owner:"Endpoint Team",progress:100,description:"Browser security patch rollout."},
+    {id:"DPL-2026-0136",name:"Standard Workstation Image",type:"OS Image",version:"WIN11-STD-06",target:"New Starters",devices:8,updated:"Yesterday",time:Date.now()-86400000,status:"Draft",owner:"IT Operations",progress:0,description:"Draft workstation image rollout."},
+    {id:"DPL-2026-0135",name:"7-Zip Version Alignment",type:"Package",version:"24.09 · x64",target:"Finance Devices",devices:24,updated:"Yesterday",time:Date.now()-90000000,status:"Failed",owner:"Package Admin",progress:58,description:"Simulated package deployment failure."}
+  ];
+  // Normalize legacy demo records while preserving all existing session data.
+  const now = Date.now();
+  seed.forEach((r, i) => {
+    r.requestedAt = r.time;
+    r.startedAt = r.status === "Queued" || r.status === "Draft" ? null : r.time - 60000;
+    r.finishedAt = r.status === "Completed" || r.status === "Failed" ? r.time : null;
+  });
+  function read() {
+    try {
+      const data = JSON.parse(sessionStorage.getItem(KEY) || "null");
+      if (Array.isArray(data)) return data;
+    } catch (_) {}
+    return seed;
+  }
+  let records = read().map(r => ({
+    ...r,
+    requestedAt: r.requestedAt ?? r.time ?? null,
+    startedAt: r.startedAt ?? (
+      ["Queued", "Draft"].includes(r.status) ? null :
+      (r.status === "Running" ? (r.time ? r.time - 60000 : null) : (r.time || null))
+    ),
+    finishedAt: r.finishedAt ?? (
+      ["Completed", "Failed"].includes(r.status) ? (r.time || null) : null
+    )
+  }));
+  function save() {
+    try { sessionStorage.setItem(KEY, JSON.stringify(records)); } catch (_) {}
+  }
+  function list() { return records.map(x => ({...x})); }
+  function upsert(record) {
+    const i = records.findIndex(x => x.id === record.id);
+    if (i < 0) records.unshift({...record});
+    else records[i] = {...records[i], ...record};
+    save();
+    window.dispatchEvent(new CustomEvent("cartman:deployment-change", {detail:{id:record.id}}));
+    return {...record};
+  }
+  function merge(items) {
+    const map = new Map(records.map(x => [x.id, x]));
+    for (const item of items || []) {
+      if (!map.has(item.id)) map.set(item.id, {...item});
+    }
+    records = [...map.values()];
+    save();
+    return list();
+  }
+  save();
+  window.CartmanDeploymentDemo = {list, upsert, merge};
+})();

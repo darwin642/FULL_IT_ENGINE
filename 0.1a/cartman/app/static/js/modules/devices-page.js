@@ -1,0 +1,308 @@
+"use strict";
+
+function refreshDeviceRows() {
+    const workspace = $("#devices-workspace");
+    if (!workspace) return;
+
+    const tbody = $(".devices-table tbody", workspace);
+    if (tbody) tbody.innerHTML = renderDeviceRows();
+
+    const count = $(".devices-table-panel .section-count", workspace);
+    if (count) count.textContent = `${getDeviceFilteredData().length} SHOWN`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    renderDevicesModule();
+});
+
+document.addEventListener("click", event => {
+
+    const deviceViewButton = event.target.closest("[data-device-view]");
+    if (deviceViewButton) {
+        deviceViewState.view = deviceViewButton.dataset.deviceView;
+        renderDevicesModule();
+        return;
+    }
+
+    const groupButton = event.target.closest("[data-device-group-action]");
+    if (groupButton) {
+        const action = groupButton.dataset.deviceGroupAction;
+        const groupId = groupButton.dataset.deviceGroupId;
+
+        if (action === "new") {
+            deviceViewState.groupFormOpen = true;
+            deviceViewState.editingGroupId = null;
+            renderDevicesModule();
+            $("#device-group-name")?.focus();
+        } else if (action === "select") {
+            deviceViewState.selectedGroupId = groupId;
+            deviceViewState.groupFormOpen = false;
+            deviceViewState.editingGroupId = null;
+            renderDevicesModule();
+        } else if (action === "edit") {
+            deviceViewState.selectedGroupId = groupId;
+            deviceViewState.editingGroupId = groupId;
+            deviceViewState.groupFormOpen = true;
+            renderDevicesModule();
+            $("#device-group-name")?.focus();
+        } else if (action === "cancel") {
+            deviceViewState.groupFormOpen = false;
+            deviceViewState.editingGroupId = null;
+            renderDevicesModule();
+        } else if (action === "delete") {
+            const groups = getDeviceGroups();
+            const group = groups.find(item => item.id === groupId);
+
+            if (group && window.confirm(`Delete device group "${group.name}"?`)) {
+                if (saveDeviceGroups(groups.filter(item => item.id !== groupId))) {
+                    if (deviceViewState.selectedGroupId === groupId) {
+                        deviceViewState.selectedGroupId = null;
+                    }
+                    if (deviceViewState.editingGroupId === groupId) {
+                        deviceViewState.editingGroupId = null;
+                        deviceViewState.groupFormOpen = false;
+                    }
+                    renderDevicesModule();
+                    notify("Device group deleted.");
+                }
+            }
+        }
+
+        return;
+    }
+    const filter = event.target.closest("[data-device-filter]");
+    if (filter) {
+        deviceViewState.filter = filter.dataset.deviceFilter;
+        renderDevicesModule();
+        return;
+    }
+
+    const menuItem = event.target.closest("[data-device-menu-action]");
+    if (menuItem) {
+        const id = menuItem.dataset.deviceId;
+        const action = menuItem.dataset.deviceMenuAction;
+        const device = getDeviceData().find(item => item.id === id);
+
+        menuItem.closest("[data-device-menu]")?.setAttribute("hidden", "");
+        menuItem.closest(".device-actions")
+            ?.querySelector(".device-actions-trigger")
+            ?.setAttribute("aria-expanded", "false");
+
+        if (action === "edit" && device) {
+            openDeviceModal(device);
+        } else if (action === "delete" && id) {
+            deleteDevice(id);
+        } else {
+            const labels = {
+                package: "Package deployment",
+                shutdown: "Shutdown",
+                network: "Network action",
+                connect: "Connect",
+                monitor: "Monitoring",
+                vpn: "VPN action"
+            };
+            if (labels[action]) {
+                notify(`${labels[action]} is demo-only. No endpoint was contacted.`);
+            }
+        }
+        return;
+    }
+
+    const newAction = event.target.closest("[data-device-new-action]");
+    if (newAction) {
+        const action = newAction.dataset.deviceNewAction;
+
+        if (action === "export-selected") {
+            exportSelectedDevicesJSON();
+            return;
+        }
+
+        if ((action === "more" && newAction.dataset.deviceId) ||
+            action === "inventory-more") {
+            const menu = newAction
+                .closest(".device-actions, .devices-inventory-actions")
+                ?.querySelector("[data-device-menu]");
+
+            if (!menu) return;
+
+            document.querySelectorAll("[data-device-menu]").forEach(item => {
+                if (item !== menu) item.hidden = true;
+            });
+
+            menu.hidden = !menu.hidden;
+            newAction.setAttribute("aria-expanded", String(!menu.hidden));
+            return;
+        }
+    }
+
+    const button = event.target.closest("[data-device-action]");
+    if (!button) return;
+
+    const action = button.dataset.deviceAction;
+    const id = button.dataset.deviceId;
+
+    switch (action) {
+        case "import-json":
+            $("#devices-json-file")?.click();
+            break;
+        case "export-json":
+            exportDevicesJSON();
+            break;
+        case "add":
+            openDeviceModal();
+            break;
+        case "edit": {
+            const device = getDeviceData().find(item => item.id === id);
+            if (device) openDeviceModal(device);
+            break;
+        }
+        case "delete":
+            deleteDevice(id);
+            break;
+        case "manage-tags":
+            openManageDeviceTags();
+            break;
+        case "reset":
+            resetDeviceDemoData();
+            break;
+        case "close-modal":
+            $("#devices-modal-backdrop")?.remove();
+            deviceViewState.editingId = null;
+            break;
+        case "add-tag-from-form":
+            addCustomDeviceTag();
+            break;
+        case "create-managed-tag":
+            createManagedDeviceTag();
+            break;
+        case "delete-tag":
+            deleteManagedDeviceTag(button.dataset.deviceTag);
+            break;
+    }
+});
+
+document.addEventListener("click", event => {
+    if (event.target.closest("#devices-clear-filters")) {
+        deviceViewState.search = "";
+        deviceViewState.sort = "newest";
+        deviceViewState.type = "all";
+        deviceViewState.os = "all";
+        deviceViewState.status = "all";
+        deviceViewState.filter = "All devices";
+        renderDevicesModule();
+    }
+});
+
+
+document.addEventListener("input", event => {
+    if (event.target.id !== "device-group-search-input") return;
+
+    deviceViewState.groupSearch = event.target.value;
+    const cursor = event.target.selectionStart;
+
+    renderDevicesModule();
+
+    const nextInput = $("#device-group-search-input");
+    if (nextInput) {
+        nextInput.focus();
+        try {
+            nextInput.setSelectionRange(cursor, cursor);
+        } catch (_) {}
+    }
+});
+
+document.addEventListener("input", event => {
+    if (event.target.id !== "devices-search-input") return;
+    deviceViewState.search = event.target.value;
+    refreshDeviceRows();
+});
+
+document.addEventListener("change", async event => {
+    const target = event.target;
+
+    if (target.id === "devices-json-file") {
+        const file = target.files?.[0];
+        if (!file) return;
+
+        try {
+            await importDevicesJSON(file);
+        } catch (error) {
+            console.error("Device import failed:", error);
+            notify("Could not import the JSON file.");
+        } finally {
+            target.value = "";
+        }
+        return;
+    }
+
+    const stateMap = {
+        "devices-sort": "sort",
+        "devices-type-filter": "type",
+        "devices-os-filter": "os",
+        "devices-status-filter": "status",
+        "devices-tag-filter": "filter"
+    };
+
+    if (stateMap[target.id]) {
+        deviceViewState[stateMap[target.id]] = target.value;
+        renderDevicesModule();
+        return;
+    }
+
+    if (target.id === "devices-select-visible") {
+        const visible = getDeviceFilteredData().map(device => device.id);
+        const selected = new Set(deviceViewState.selected);
+
+        visible.forEach(id => target.checked
+            ? selected.add(id)
+            : selected.delete(id));
+
+        deviceViewState.selected = [...selected];
+        renderDevicesModule();
+        return;
+    }
+
+    if (target.matches("[data-device-select]")) {
+        const selected = new Set(deviceViewState.selected);
+        const id = target.dataset.deviceSelect;
+
+        target.checked ? selected.add(id) : selected.delete(id);
+
+        deviceViewState.selected = [...selected];
+
+        const count = $(".devices-bulk-toolbar span");
+        if (count) count.textContent = `${selected.size} selected`;
+    }
+});
+
+document.addEventListener("submit", event => {
+    if (event.target.id === "device-group-form") {
+        saveDeviceGroupForm(event);
+        return;
+    }
+
+    if (event.target.id === "device-form") {
+        saveDeviceForm(event);
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        $("#devices-modal-backdrop")?.remove();
+        deviceViewState.editingId = null;
+
+        document.querySelectorAll("[data-device-menu]").forEach(menu => {
+            menu.hidden = true;
+        });
+    }
+
+    if (event.key === "Enter" && event.target.id === "device-new-tag") {
+        event.preventDefault();
+        addCustomDeviceTag();
+    }
+
+    if (event.key === "Enter" && event.target.id === "manage-new-device-tag") {
+        event.preventDefault();
+        createManagedDeviceTag();
+    }
+});
