@@ -9,3 +9,8 @@ Check files for updates.
 Project will be for making IT jobs easy without having to handle many paid programs. That sucks.
 
 Program will be open source.
+
+
+image:
+
+![Cartman ekran görüntüsü](image.png)
