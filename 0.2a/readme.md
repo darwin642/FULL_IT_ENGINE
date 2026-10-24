@@ -21,7 +21,11 @@ Shutdown with a time limiter is possible from 1 seconds to 80k seconds.
 In Devices, Device's components are visible. (CPU, Manufacturer, RAM, DISK)
 
 Example:
+Device inventory
+Cartman API inventory · 2 devices registered
 
+2 SHOWN Actions
+⌄
 	DEVICE	MANUFACTURER	MODEL	PRIVATE IP	PUBLIC IP	ASSIGNED TO	TYPE	OPERATING SYSTEM	CPU	GPU	RAM	DISK	ADDED	LAST SEEN	STATUS	TAGS	ACTIONS
 	
 DV
