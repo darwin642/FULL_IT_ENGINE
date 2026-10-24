@@ -1,4 +1,4 @@
-Server GUI is open for visits by GCP : https://console.cloud.google.com/compute/instances?project=project-aed44365-ff0a-48b4-b75
+Server GUI is open for visits by GCP : 34.179.213.154:8000
 
 
 ## Changes:
