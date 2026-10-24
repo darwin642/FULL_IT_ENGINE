@@ -48,7 +48,7 @@ Workstation	macOS 27.0	Apple M1 (8 logical cores)	Apple M1	8 GB	228 GB	24. Okt. 
 Untagged
 ⋯
 
-Common issues
+## Common issues
 
 If the device is kicked, the client's ID has to be deleted otherwise server does not accept no matter what.
 
@@ -60,14 +60,14 @@ Public IP is not tested.
 
 ![Cartman Dashboard](image.png)
 
-Tutorial to start client (If python is not installed, client might not work.)
+## Tutorial to start client (If python is not installed, client might not work.)
 
 
 cd DISK_PATH:\cartman\dist_verified\CartmanClient
 .\CartmanClient.exe --server server_ip --port 50101 --enable-task-execution
 
 
-Mac client exists aswell.
+## Mac client exists aswell.
 
 cd ~/YOUR_PATH/cartman
 
