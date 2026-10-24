@@ -1,3 +1,6 @@
+Server GUI is open for visits by GCP : https://console.cloud.google.com/compute/instances?project=project-aed44365-ff0a-48b4-b75
+
+
 ## Changes:
 
 No issue was touched from 0.1a. (norwegian issue still exists.)
