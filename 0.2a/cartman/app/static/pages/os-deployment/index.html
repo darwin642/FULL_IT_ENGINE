@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1020">
+<title>Cartman | OS Deployment Images</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/modules/os-deployment.css">
+<script src="/static/js/core/events.js" defer></script>
+<script src="/static/js/core/i18n.js" defer></script>
+<script src="/static/js/core/theme.js" defer></script>
+<script src="/static/js/modules/standalone-page.js" defer></script>
+<script src="/static/js/core/module-definitions.js" defer></script>
+<script src="/static/js/modules/standalone-navigation.js" defer></script>
+<script src="/static/js/modules/os-deployment.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-area">
+    <button id="menu-toggle" class="icon-button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a>
+  </div>
+  <div class="top-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input id="global-search" type="search" placeholder="Search modules..." autocomplete="off">
+      <kbd>Ctrl K</kbd>
+    </label>
+    <div class="language-wrap">
+      <button id="language-toggle" class="toolbar-button flag-toggle" aria-label="Select language" aria-expanded="false"><span id="language-label">EN</span><span>⌄</span></button>
+      <div id="language-menu" class="dropdown language-menu hidden">
+        <button data-language="en" title="English" aria-label="English"></button>
+        <button data-language="tr" title="Türkçe" aria-label="Turkish"></button>
+        <button data-language="de" title="Deutsch" aria-label="German"></button>
+        <button data-language="fr" title="Français" aria-label="French"></button>
+        <button data-language="es" title="Español" aria-label="Spanish"></button>
+        <button data-language="nl" title="Nederlands" aria-label="Dutch"></button>
+        <button data-language="pl" title="Polski" aria-label="Polish"></button>
+        <button data-language="it" title="Italiano" aria-label="Italian"></button>
+        <button data-language="pt-BR" title="Português" aria-label="Portuguese"></button>
+        <button data-language="ja" title="日本語" aria-label="Japanese"></button>
+        <button data-language="ar" title="العربية" aria-label="Arabic"></button>
+        <button data-language="zh-CN" title="简体中文" aria-label="Simplified Chinese"></button>
+        <button data-language="ru" title="Русский" aria-label="Russian"></button>
+      </div>
+    </div>
+    <button id="terminal-toggle" class="toolbar-button terminal-button" type="button"><span>›_</span><span>Terminal</span></button>
+    <button id="theme-toggle" class="toolbar-button" aria-label="Switch theme">☀ <span id="theme-label">Light mode</span></button>
+    <div class="profile-wrap">
+      <button id="profile-toggle" class="profile-button" aria-expanded="false">
+        <span class="avatar">K</span>
+        <span class="profile-info"><strong>Kaan Yaşar</strong><small>Administrator · Demo</small></span>
+        <span>⌄</span>
+      </button>
+      <div id="profile-menu" class="dropdown profile-menu hidden">
+        <div class="dropdown-heading">Current session</div>
+        <strong>Kaan Yaşar</strong><small>Administrator · Demo UI</small>
+        <a href="/">Dashboard</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="oi-main">
+  <div class="oi-heading">
+    <div>
+      <div class="oi-kicker">CARTMAN WORKSPACE / SOFTWARE &amp; DEPLOYMENT</div>
+      <h1>OS Deployment (Images)</h1>
+      <p>Manage operating system images and deployment sources.</p>
+    </div>
+    <button class="oi-btn oi-primary" id="oi-add"><span>＋</span> Add Image</button>
+  </div>
+
+  <section class="oi-card">
+    <div class="oi-tabs">
+      <button class="oi-tab active" data-tab="images">Images <span id="oi-tab-count">0</span></button>
+      <button class="oi-tab" data-tab="history">◷ History</button>
+      <div class="oi-spacer"></div>
+      <button class="oi-btn" id="oi-import">⇧ Import JSON</button>
+      <button class="oi-btn" id="oi-export">⇩ Export JSON</button>
+    </div>
+
+    <div class="oi-tools" id="oi-image-tools">
+      <label class="oi-search"><span>⌕</span><input id="oi-search" type="search" placeholder="Search images..." aria-label="Search images"></label>
+      <select id="oi-os-filter" aria-label="Filter operating system">
+        <option value="">All operating systems</option>
+        <option>Windows</option><option>Linux</option><option>macOS</option><option>Other</option>
+      </select>
+      <select id="oi-status-filter" aria-label="Filter authenticity">
+        <option value="">All authenticity</option>
+        <option value="official">Official</option>
+        <option value="unverified">Unverified</option>
+      </select>
+      <select id="oi-sort" aria-label="Sort images">
+        <option value="name">Sort: Name</option>
+        <option value="os">Sort: Operating system</option>
+        <option value="version">Sort: Version</option>
+        <option value="size">Sort: Size</option>
+        <option value="date">Sort: Date added</option>
+        <option value="official">Sort: Authenticity</option>
+      </select>
+    </div>
+
+    <div class="oi-bulk" id="oi-bulk" hidden>
+      <div class="oi-bulk-info"><strong id="oi-selected-count">0 images selected</strong><small>Bulk actions</small></div>
+      <button class="oi-btn oi-primary" id="oi-deploy-selected">➤ Deploy Selected</button>
+      <button class="oi-btn oi-danger-outline" id="oi-delete-selected">♲ Delete Selected</button>
+      <button class="oi-btn oi-quiet" id="oi-clear-selection">Clear selection</button>
+    </div>
+
+    <div class="oi-table-wrap" id="oi-image-view">
+      <table class="oi-table">
+        <thead><tr>
+          <th class="oi-check"><input type="checkbox" id="oi-select-all" aria-label="Select all visible images"></th>
+          <th>Image name</th><th>Operating system</th><th>Version</th><th>Size</th>
+          <th>Originality</th><th>Added by</th><th>Date added</th><th></th>
+        </tr></thead>
+        <tbody id="oi-rows"></tbody>
+      </table>
+      <div class="oi-empty" id="oi-empty">
+        <div class="oi-empty-icon">▤</div>
+        <h3>No images in your library</h3>
+        <p>Upload an ISO, DMG or APP file to start building your image library.</p>
+        <button class="oi-btn oi-primary" id="oi-empty-add">＋ Add Image</button>
+      </div>
+    </div>
+
+    <div class="oi-history-view" id="oi-history-view" hidden>
+      <div class="oi-history-head"><div><h2>Image History</h2><p>Audit trail for image library actions in this session.</p></div><button class="oi-btn" id="oi-clear-history">Clear history</button></div>
+      <div id="oi-history-list" class="oi-history-list"></div>
+      <div id="oi-history-empty" class="oi-empty"><div class="oi-empty-icon">◷</div><h3>No history yet</h3><p>Image operations will appear here.</p></div>
+    </div>
+    <div class="oi-footer"><span id="oi-row-count">0 images</span><span>Only verified sources should be marked Official.</span></div>
+  </section>
+  <p class="oi-disclaimer">Local UI preview. Files and image records are not yet synced to a backend service.</p>
+</main>
+
+<input id="oi-file-input" type="file" accept=".iso,.dmg,.app" multiple hidden>
+<input id="oi-json-input" type="file" accept=".json,application/json" hidden>
+
+<div class="oi-modal-backdrop" id="oi-modal" hidden>
+  <section class="oi-modal" role="dialog" aria-modal="true" aria-labelledby="oi-modal-title">
+    <div class="oi-modal-head"><h2 id="oi-modal-title">Image details</h2><button class="oi-icon-btn" id="oi-modal-close" aria-label="Close">×</button></div>
+    <div id="oi-modal-body"></div>
+    <div class="oi-modal-actions" id="oi-modal-actions"></div>
+  </section>
+</div>
+<div class="oi-toast" id="oi-toast" role="status" aria-live="polite"></div>
+</body>
+</html>

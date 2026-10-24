@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Cartman | Audit Logs</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">&#9672;</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE / AUDIT</div>
+                <h1>Audit Logs</h1>
+                <p>Inspect recorded activity, actors and event timestamps.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Audit Logs workspace">
+            <div class="workspace-eyebrow">AUDIT LOGS</div>
+
+            <div class="workspace-toolbar">
+                <input class="workspace-search"
+                    type="search"
+                    data-page-search
+                    placeholder="Search audit logs..."
+                    aria-label="Search Audit Logs">
+                <span class="workspace-demo-label">UI PREVIEW · NO LIVE DATA</span>
+            </div>
+
+            <div class="workspace-stats">
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Configured</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Active</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Pending review</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Data source</span>
+                    <strong class="workspace-stat-value">—</strong>
+                </article>
+            </div>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <h2>Audit Logs resources</h2>
+                    <span class="workspace-row-count" data-row-count>1 preview row(s)</span>
+                </div>
+                <div class="workspace-table-wrap">
+                    <table class="workspace-table">
+                        <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Resource</th><th>Result</th></tr></thead>
+                        <tbody>
+                            <tr data-search-text="audit Cartman | Audit Logs Inspect recorded activity, actors and event timestamps. DEMO-AUDIT No recorded actor No live events Demo workspace Preview only">
+                                <td>DEMO-AUDIT</td><td>No recorded actor</td><td>No live events</td><td>Demo workspace</td><td>Preview only</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="workspace-empty hidden" data-empty-state>No matching rows.</p>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Local UI preview · No live data or remote actions</span>
+        </footer>
+    </main>
+</body>
+</html>

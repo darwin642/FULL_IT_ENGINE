@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Device Lifecycle</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/device-lifecycle.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/device-lifecycle.js" defer></script>
+</head>
+<body class="dl-page">
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span>
+            <span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <span class="dl-connection"><span></span> Lifecycle data unavailable</span>
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="dl-main">
+    <nav class="dl-breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Workspace</a><span>/</span><span>Asset Management</span><span>/</span>
+        <strong>Device Lifecycle</strong>
+    </nav>
+
+    <section class="dl-hero">
+        <div class="dl-hero-copy">
+            <div class="dl-kicker"><span class="dl-kicker-icon">↻</span> ASSET MANAGEMENT</div>
+            <h1>Device Lifecycle</h1>
+            <p>Track devices from planning and deployment through refresh and retirement.</p>
+            <div class="dl-hero-tags">
+                <span><i class="dl-dot"></i> Lifecycle tracking not connected</span>
+                <span>Inventory integration required</span>
+            </div>
+        </div>
+        <div class="dl-hero-art" aria-hidden="true">
+            <div class="dl-orbit dl-orbit-one"></div>
+            <div class="dl-orbit dl-orbit-two"></div>
+            <div class="dl-device-glyph">
+                <span class="dl-device-screen"></span>
+                <span class="dl-device-base"></span>
+            </div>
+            <span class="dl-art-node dl-node-a">01</span>
+            <span class="dl-art-node dl-node-b">05</span>
+            <span class="dl-art-node dl-node-c">↻</span>
+        </div>
+    </section>
+
+    <section class="dl-stats" aria-label="Lifecycle summary">
+        <article class="dl-stat">
+            <div class="dl-stat-top"><span>Total assets</span><span class="dl-stat-icon">▦</span></div>
+            <strong>—</strong><p>Inventory records</p>
+            <div class="dl-stat-foot"><span class="dl-neutral-dot"></span> Awaiting data source</div>
+        </article>
+        <article class="dl-stat">
+            <div class="dl-stat-top"><span>In service</span><span class="dl-stat-icon dl-icon-green">✓</span></div>
+            <strong>—</strong><p>Active deployments</p>
+            <div class="dl-stat-foot">Lifecycle status unavailable</div>
+        </article>
+        <article class="dl-stat">
+            <div class="dl-stat-top"><span>Refresh due</span><span class="dl-stat-icon dl-icon-amber">↻</span></div>
+            <strong>—</strong><p>Upcoming refreshes</p>
+            <div class="dl-stat-foot">Refresh dates not configured</div>
+        </article>
+        <article class="dl-stat">
+            <div class="dl-stat-top"><span>Warranty watch</span><span class="dl-stat-icon dl-icon-purple">◇</span></div>
+            <strong>—</strong><p>Expiring or expired</p>
+            <div class="dl-stat-foot">Warranty records unavailable</div>
+        </article>
+    </section>
+
+    <section class="dl-panel dl-lifecycle-panel">
+        <div class="dl-section-heading">
+            <div>
+                <div class="dl-section-kicker">ASSET JOURNEY</div>
+                <h2>Lifecycle stages</h2>
+                <p>A shared view of the device lifecycle process.</p>
+            </div>
+            <span class="dl-muted-pill">5 stages · Tracking not connected</span>
+        </div>
+        <div class="dl-stage-track">
+            <article class="dl-stage">
+                <div class="dl-stage-icon">⌕</div>
+                <div class="dl-stage-number">STAGE 01</div>
+                <h3>Planning</h3>
+                <p>Requirements and asset allocation</p>
+                <span class="dl-stage-state">Not configured</span>
+            </article>
+            <div class="dl-stage-arrow">›</div>
+            <article class="dl-stage">
+                <div class="dl-stage-icon">⇧</div>
+                <div class="dl-stage-number">STAGE 02</div>
+                <h3>Deployment</h3>
+                <p>Provisioning and handover</p>
+                <span class="dl-stage-state">Not configured</span>
+            </article>
+            <div class="dl-stage-arrow">›</div>
+            <article class="dl-stage">
+                <div class="dl-stage-icon">▣</div>
+                <div class="dl-stage-number">STAGE 03</div>
+                <h3>Active</h3>
+                <p>In-service asset management</p>
+                <span class="dl-stage-state">Not configured</span>
+            </article>
+            <div class="dl-stage-arrow">›</div>
+            <article class="dl-stage">
+                <div class="dl-stage-icon">↻</div>
+                <div class="dl-stage-number">STAGE 04</div>
+                <h3>Refresh</h3>
+                <p>Replacement and renewal planning</p>
+                <span class="dl-stage-state">Not configured</span>
+            </article>
+            <div class="dl-stage-arrow">›</div>
+            <article class="dl-stage dl-stage-retired">
+                <div class="dl-stage-icon">□</div>
+                <div class="dl-stage-number">STAGE 05</div>
+                <h3>Retired</h3>
+                <p>Decommission and disposal</p>
+                <span class="dl-stage-state">Not configured</span>
+            </article>
+        </div>
+        <div class="dl-stage-note">
+            <span class="dl-info-icon">i</span>
+            <span>Stage counts and transitions will appear when a lifecycle data source is configured.</span>
+        </div>
+    </section>
+
+    <section class="dl-workspace">
+        <div class="dl-panel dl-inventory-panel">
+            <div class="dl-section-heading dl-inventory-heading">
+                <div>
+                    <div class="dl-section-kicker">ASSET REGISTER</div>
+                    <h2>Lifecycle inventory</h2>
+                    <p>Search assets and review lifecycle, warranty and refresh information.</p>
+                </div>
+                <span class="dl-count-pill" data-dl-count>0 assets</span>
+            </div>
+
+            <div class="dl-toolbar">
+                <label class="dl-search-wrap">
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" data-dl-search placeholder="Search by asset, model or owner..." aria-label="Search lifecycle inventory">
+                </label>
+                <select data-dl-stage aria-label="Filter by lifecycle stage">
+                    <option value="">All lifecycle stages</option>
+                    <option value="planning">Planning</option>
+                    <option value="deployment">Deployment</option>
+                    <option value="active">Active</option>
+                    <option value="refresh">Refresh</option>
+                    <option value="retired">Retired</option>
+                </select>
+                <button type="button" class="dl-reset-button" data-dl-reset>Reset</button>
+            </div>
+
+            <div class="dl-table-wrap">
+                <table class="dl-table">
+                    <thead>
+                        <tr>
+                            <th>ASSET</th>
+                            <th>MODEL / OWNER</th>
+                            <th>LIFECYCLE STAGE</th>
+                            <th>WARRANTY</th>
+                            <th>NEXT ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody data-dl-rows></tbody>
+                </table>
+                <div class="dl-empty" data-dl-empty>
+                    <div class="dl-empty-visual"><span>▦</span><i></i></div>
+                    <h3>No lifecycle records available</h3>
+                    <p>Connect an asset inventory source to populate devices, lifecycle stages, warranty dates and refresh actions.</p>
+                    <span class="dl-empty-hint">No demo assets are being displayed.</span>
+                </div>
+            </div>
+            <div class="dl-table-footer">
+                <span data-dl-footer-count>0 assets</span>
+                <span>Live inventory integration required</span>
+            </div>
+        </div>
+
+        <aside class="dl-side-column">
+            <section class="dl-panel dl-side-panel">
+                <div class="dl-section-kicker">LIFECYCLE READINESS</div>
+                <h2>Data requirements</h2>
+                <p class="dl-side-intro">Connect the relevant sources to enable lifecycle tracking.</p>
+                <div class="dl-requirement">
+                    <span class="dl-requirement-icon">▦</span>
+                    <div><strong>Asset inventory</strong><small>Device identity and ownership</small></div>
+                    <span class="dl-requirement-status">Required</span>
+                </div>
+                <div class="dl-requirement">
+                    <span class="dl-requirement-icon">◷</span>
+                    <div><strong>Purchase & warranty</strong><small>Dates and coverage details</small></div>
+                    <span class="dl-requirement-status">Optional</span>
+                </div>
+                <div class="dl-requirement">
+                    <span class="dl-requirement-icon">↻</span>
+                    <div><strong>Lifecycle policies</strong><small>Refresh rules and thresholds</small></div>
+                    <span class="dl-requirement-status">Optional</span>
+                </div>
+            </section>
+
+            <section class="dl-panel dl-side-panel dl-next-panel">
+                <div class="dl-next-icon">↗</div>
+                <div class="dl-section-kicker">NEXT STEP</div>
+                <h2>Connect your asset data</h2>
+                <p>Once an inventory source is available, this workspace can show lifecycle stage, warranty coverage and planned refresh actions.</p>
+                <span class="dl-unavailable-label"><i></i> No data connector configured</span>
+            </section>
+        </aside>
+    </section>
+
+    <footer class="dl-footer">
+        <span><b class="dl-footer-mark">C</b> Cartman Infrastructure Management</span>
+        <span>Lifecycle workspace <i></i> UI preview · No live data or remote actions</span>
+    </footer>
+</main>
+</body>
+</html>

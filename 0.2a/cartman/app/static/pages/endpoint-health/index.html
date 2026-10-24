@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Endpoint Health</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/endpoint-health.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/endpoint-health.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span><span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="eh-page">
+    <div class="module-header eh-module-header">
+        <span class="category-icon purple">&#9672;</span>
+        <div>
+            <div class="eyebrow">CARTMAN WORKSPACE / ENDPOINT MANAGEMENT</div>
+            <h1>Endpoint Health</h1>
+            <p>Monitor endpoint condition, resource utilization and health-check readiness.</p>
+        </div>
+    </div>
+
+    <section class="eh-banner">
+        <div class="eh-banner-icon">&#9829;</div>
+        <div class="eh-banner-copy">
+            <strong>Health monitoring is awaiting a data source</strong>
+            <p>Connect an endpoint telemetry provider to start collecting health signals.</p>
+        </div>
+        <span class="eh-source-status"><i></i> Not connected</span>
+    </section>
+
+    <section class="eh-overview">
+        <div class="eh-section-title">
+            <div>
+                <span class="eh-kicker">FLEET CONDITION</span>
+                <h2>Health overview</h2>
+                <p>Endpoint health at a glance</p>
+            </div>
+            <span class="eh-preview-label">UI PREVIEW · NO LIVE DATA</span>
+        </div>
+
+        <div class="eh-summary-grid">
+            <article class="eh-summary-card eh-summary-primary">
+                <div class="eh-card-label"><span>Overall health score</span><span class="eh-icon">&#9829;</span></div>
+                <div class="eh-score-row">
+                    <div class="eh-score-ring"><div><strong>—</strong><small>NO DATA</small></div></div>
+                    <div class="eh-score-copy"><strong>Not evaluated</strong><p>No health telemetry received yet.</p></div>
+                </div>
+                <div class="eh-card-foot"><span>Health assessment</span><span>Awaiting data</span></div>
+            </article>
+
+            <article class="eh-summary-card">
+                <div class="eh-card-label"><span>Monitored endpoints</span><span class="eh-icon eh-icon-blue">&#9673;</span></div>
+                <strong class="eh-big-value">—</strong>
+                <p class="eh-card-description">Devices reporting health telemetry</p>
+                <div class="eh-card-foot"><span>Inventory source</span><span>Not connected</span></div>
+            </article>
+
+            <article class="eh-summary-card">
+                <div class="eh-card-label"><span>Health alerts</span><span class="eh-icon eh-icon-amber">&#9888;</span></div>
+                <strong class="eh-big-value">—</strong>
+                <p class="eh-card-description">Warnings and critical health findings</p>
+                <div class="eh-card-foot"><span>Alert source</span><span>Not connected</span></div>
+            </article>
+
+            <article class="eh-summary-card">
+                <div class="eh-card-label"><span>Last health check</span><span class="eh-icon eh-icon-purple">&#8635;</span></div>
+                <strong class="eh-big-value eh-no-check">—</strong>
+                <p class="eh-card-description">Most recent telemetry timestamp</p>
+                <div class="eh-card-foot"><span>Collection status</span><span>Not started</span></div>
+            </article>
+        </div>
+    </section>
+
+    <section class="eh-metrics-section">
+        <div class="eh-section-title">
+            <div>
+                <span class="eh-kicker">RESOURCE TELEMETRY</span>
+                <h2>System resources</h2>
+                <p>Latest resource utilization across monitored endpoints</p>
+            </div>
+        </div>
+        <div class="eh-metrics-grid">
+            <article class="eh-metric-card">
+                <div class="eh-metric-heading"><span class="eh-metric-icon eh-cpu">&#9881;</span><div><strong>CPU utilization</strong><small>Processor load</small></div><span class="eh-metric-na">N/A</span></div>
+                <div class="eh-metric-value">— <small>%</small></div>
+                <div class="eh-meter"><span></span></div>
+                <div class="eh-metric-footer"><span>Average utilization</span><span>No telemetry</span></div>
+            </article>
+            <article class="eh-metric-card">
+                <div class="eh-metric-heading"><span class="eh-metric-icon eh-ram">&#9638;</span><div><strong>Memory usage</strong><small>Physical memory</small></div><span class="eh-metric-na">N/A</span></div>
+                <div class="eh-metric-value">— <small>%</small></div>
+                <div class="eh-meter"><span></span></div>
+                <div class="eh-metric-footer"><span>Average utilization</span><span>No telemetry</span></div>
+            </article>
+            <article class="eh-metric-card">
+                <div class="eh-metric-heading"><span class="eh-metric-icon eh-disk">&#9635;</span><div><strong>Disk utilization</strong><small>Storage capacity</small></div><span class="eh-metric-na">N/A</span></div>
+                <div class="eh-metric-value">— <small>%</small></div>
+                <div class="eh-meter"><span></span></div>
+                <div class="eh-metric-footer"><span>Average utilization</span><span>No telemetry</span></div>
+            </article>
+        </div>
+    </section>
+
+    <section class="eh-bottom-grid">
+        <article class="eh-panel">
+            <div class="eh-panel-heading">
+                <div><span class="eh-kicker">ENDPOINT FLEET</span><h2>Endpoint health inventory</h2><p>Health state and latest check-in per device</p></div>
+                <span class="eh-record-count" data-eh-count>0 endpoints</span>
+            </div>
+            <div class="eh-toolbar">
+                <label class="eh-search"><span>&#9906;</span><input type="search" data-eh-search placeholder="Search endpoints..." aria-label="Search endpoints"></label>
+                <select data-eh-status aria-label="Filter by health status">
+                    <option value="">All health states</option>
+                    <option value="healthy">Healthy</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+                <select data-eh-platform aria-label="Filter by operating system">
+                    <option value="">All platforms</option>
+                    <option value="windows">Windows</option>
+                    <option value="linux">Linux</option>
+                    <option value="macos">macOS</option>
+                </select>
+            </div>
+            <div class="eh-table-wrap">
+                <table class="eh-table">
+                    <thead><tr><th>ENDPOINT</th><th>PLATFORM</th><th>CPU</th><th>MEMORY</th><th>LAST CHECK</th><th>HEALTH</th></tr></thead>
+                    <tbody data-eh-rows></tbody>
+                </table>
+                <div class="eh-empty" data-eh-empty>
+                    <span class="eh-empty-icon">&#9829;</span>
+                    <h3>No endpoint health data</h3>
+                    <p>Endpoints will appear here when health telemetry is connected.</p>
+                </div>
+            </div>
+            <div class="eh-panel-footer"><span>Endpoint health inventory</span><span data-eh-footer-count>0 endpoints</span></div>
+        </article>
+
+        <article class="eh-panel eh-checks-panel">
+            <div class="eh-panel-heading">
+                <div><span class="eh-kicker">DIAGNOSTICS</span><h2>Health checks</h2><p>Monitoring capability readiness</p></div>
+                <span class="eh-checks-count">4 checks</span>
+            </div>
+            <div class="eh-check-list">
+                <div class="eh-check-item"><span class="eh-check-icon">&#9678;</span><div><strong>CPU utilization</strong><small>Processor load thresholds</small></div><span class="eh-check-state">Not configured</span></div>
+                <div class="eh-check-item"><span class="eh-check-icon">&#9638;</span><div><strong>Memory pressure</strong><small>Memory availability thresholds</small></div><span class="eh-check-state">Not configured</span></div>
+                <div class="eh-check-item"><span class="eh-check-icon">&#9635;</span><div><strong>Disk capacity</strong><small>Free storage thresholds</small></div><span class="eh-check-state">Not configured</span></div>
+                <div class="eh-check-item"><span class="eh-check-icon">&#8635;</span><div><strong>Agent heartbeat</strong><small>Last-seen and reporting interval</small></div><span class="eh-check-state">Not connected</span></div>
+            </div>
+            <div class="eh-checks-note"><span>&#9432;</span><p>Thresholds and health rules can be configured when telemetry integration is available.</p></div>
+        </article>
+    </section>
+
+    <footer class="app-footer eh-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Local UI preview · No live health telemetry</span>
+    </footer>
+</main>
+</body>
+</html>

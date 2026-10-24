@@ -1,0 +1,981 @@
+from pathlib import Path
+import json
+import sqlite3
+import uuid
+
+from fastapi import FastAPI, HTTPException, Header
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, validator
+from typing import Optional
+
+
+app = FastAPI(title="Cartman")
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+FRONTEND = STATIC_DIR / "index.html"
+DATABASE = BASE_DIR / "cartman.db"
+
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIR),
+    name="static",
+)
+
+VALID_STATUSES = {"Online", "Warning", "Offline"}
+
+
+def get_connection():
+    connection = sqlite3.connect(str(DATABASE))
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    return connection
+
+
+def initialize_database():
+    with get_connection() as connection:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS devices (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                os TEXT NOT NULL,
+                ip TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'Online',
+                tags TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        device_columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(devices)")
+        }
+        for column, definition in {
+            "public_ip": "TEXT NOT NULL DEFAULT ''",
+            "local_ip": "TEXT NOT NULL DEFAULT ''",
+            "username": "TEXT NOT NULL DEFAULT ''",
+        }.items():
+            if column not in device_columns:
+                connection.execute(
+                    f"ALTER TABLE devices ADD COLUMN {column} {definition}"
+                )
+
+        connection.executescript("""
+            CREATE TABLE IF NOT EXISTS device_connection_requests (
+                id TEXT PRIMARY KEY,
+                device_name TEXT NOT NULL,
+                os TEXT NOT NULL,
+                client_ip TEXT NOT NULL DEFAULT '',
+                username TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'Pending'
+                    CHECK (status IN ('Pending', 'Approved', 'Rejected')),
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TEXT,
+                device_id TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_device_requests_status_time
+            ON device_connection_requests(status, created_at DESC);
+        """)
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS software_catalog (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL COLLATE NOCASE,
+                publisher TEXT NOT NULL DEFAULT '',
+                version TEXT NOT NULL DEFAULT 'Unknown',
+                target_os TEXT NOT NULL DEFAULT 'Any',
+                category TEXT NOT NULL DEFAULT 'General',
+                package_type TEXT NOT NULL DEFAULT 'Other',
+                install_command TEXT NOT NULL DEFAULT '',
+                uninstall_command TEXT NOT NULL DEFAULT '',
+                source_url TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'Active',
+                notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(name, version, target_os)
+            )
+        """)
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS software_audit_history (
+                id TEXT PRIMARY KEY,
+                software_id TEXT NOT NULL,
+                software_name TEXT NOT NULL,
+                action TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                details_json TEXT NOT NULL DEFAULT '{}'
+            )
+        """)
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS idx_software_audit_time
+            ON software_audit_history(occurred_at DESC)
+        """)
+
+
+        connection.executescript("""
+            CREATE TABLE IF NOT EXISTS monitoring_metrics (
+                id TEXT PRIMARY KEY,
+                device_id TEXT NOT NULL,
+                metric_name TEXT NOT NULL,
+                value REAL NOT NULL,
+                unit TEXT NOT NULL DEFAULT '',
+                source TEXT NOT NULL DEFAULT 'unknown',
+                collected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_monitoring_metrics_device_time
+            ON monitoring_metrics(device_id, collected_at DESC);
+
+            CREATE TABLE IF NOT EXISTS monitoring_events (
+                id TEXT PRIMARY KEY,
+                device_id TEXT NOT NULL DEFAULT '',
+                event_type TEXT NOT NULL,
+                severity TEXT NOT NULL DEFAULT 'Info',
+                message TEXT NOT NULL,
+                details_json TEXT NOT NULL DEFAULT '{}',
+                occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_monitoring_events_time
+            ON monitoring_events(occurred_at DESC);
+
+            CREATE TABLE IF NOT EXISTS monitoring_alerts (
+                id TEXT PRIMARY KEY,
+                device_id TEXT NOT NULL DEFAULT '',
+                title TEXT NOT NULL,
+                severity TEXT NOT NULL DEFAULT 'Warning',
+                status TEXT NOT NULL DEFAULT 'Open',
+                details TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                acknowledged_at TEXT,
+                resolved_at TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_monitoring_alerts_status
+            ON monitoring_alerts(status, created_at DESC);
+
+            CREATE TABLE IF NOT EXISTS availability_checks (
+                id TEXT PRIMARY KEY,
+                device_id TEXT NOT NULL,
+                target TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL,
+                response_ms REAL,
+                checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_availability_checks_device_time
+            ON availability_checks(device_id, checked_at DESC);
+
+            CREATE TABLE IF NOT EXISTS service_checks (
+                id TEXT PRIMARY KEY,
+                device_id TEXT NOT NULL,
+                service_name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                response_ms REAL,
+                checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_service_checks_device_time
+            ON service_checks(device_id, checked_at DESC);
+        """)
+
+        existing_columns = {
+            row["name"]
+            for row in connection.execute(
+                "PRAGMA table_info(software_catalog)"
+            ).fetchall()
+        }
+        if "created_by" not in existing_columns:
+            connection.execute(
+                "ALTER TABLE software_catalog ADD COLUMN "
+                "created_by TEXT NOT NULL DEFAULT 'Unknown operator'"
+            )
+        if "updated_by" not in existing_columns:
+            connection.execute(
+                "ALTER TABLE software_catalog ADD COLUMN "
+                "updated_by TEXT NOT NULL DEFAULT 'Unknown operator'"
+            )
+
+
+
+initialize_database()
+
+
+class DeviceInput(BaseModel):
+    name: str = Field(..., min_length=1, max_length=150)
+    os: str = Field(..., min_length=1, max_length=150)
+    ip: str = Field(default="", max_length=100)
+    public_ip: str = Field(default="", max_length=100)
+    local_ip: str = Field(default="", max_length=100)
+    username: str = Field(default="", max_length=150)
+    status: str = "Online"
+    tags: list[str] = Field(default_factory=list)
+
+    @validator("name", "os", "ip", "public_ip", "local_ip", "username")
+    def strip_text(cls, value):
+        return value.strip()
+
+    @validator("name", "os")
+    def required_text(cls, value):
+        if not value:
+            raise ValueError("This field cannot be empty")
+        return value
+
+    @validator("status")
+    def validate_status(cls, value):
+        if value not in VALID_STATUSES:
+            raise ValueError("Status must be Online, Warning or Offline")
+        return value
+
+    @validator("tags")
+    def validate_tags(cls, value):
+        if len(value) > 100:
+            raise ValueError("Too many tags")
+        cleaned = []
+        for tag in value:
+            if not isinstance(tag, str) or not tag.strip():
+                continue
+            tag = tag.strip()
+            if len(tag) > 100:
+                raise ValueError("Tag is too long")
+            if tag not in cleaned:
+                cleaned.append(tag)
+        return cleaned
+
+
+class SoftwareInput(BaseModel):
+    name: str = Field(..., min_length=1, max_length=180)
+    publisher: str = Field(default="", max_length=180)
+    version: str = Field(default="Unknown", max_length=80)
+    target_os: str = Field(default="Any", max_length=40)
+    category: str = Field(default="General", max_length=80)
+    package_type: str = Field(default="Other", max_length=40)
+    install_command: str = Field(default="", max_length=2000)
+    uninstall_command: str = Field(default="", max_length=2000)
+    source_url: str = Field(default="", max_length=1000)
+    status: str = "Active"
+    notes: str = Field(default="", max_length=5000)
+
+    @validator(
+        "name", "publisher", "version", "target_os", "category",
+        "package_type", "install_command", "uninstall_command",
+        "source_url", "notes"
+    )
+    def strip_software_text(cls, value):
+        return value.strip()
+
+    @validator("name")
+    def require_software_name(cls, value):
+        if not value:
+            raise ValueError("Software name cannot be empty")
+        return value
+
+    @validator("status")
+    def validate_software_status(cls, value):
+        if value not in {"Active", "Draft", "Deprecated"}:
+            raise ValueError("Status must be Active, Draft or Deprecated")
+        return value
+
+
+def serialize_software(row):
+    return dict(row)
+
+
+def serialize_device(row):
+    device = dict(row)
+    device["tags"] = json.loads(device["tags"])
+    return device
+
+
+
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return FRONTEND.read_text(encoding="utf-8")
+
+
+@app.get("/pages/inventory/", response_class=HTMLResponse)
+def inventory_page():
+    return (STATIC_DIR / "pages" / "inventory.html").read_text(
+        encoding="utf-8"
+    )
+
+
+@app.get("/pages/{slug}/", response_class=HTMLResponse)
+def standalone_module_page(slug: str):
+    if not slug or any(
+        not (character.islower() or character.isdigit() or character == "-")
+        for character in slug
+    ):
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    page_file = STATIC_DIR / "pages" / slug / "index.html"
+
+    if not page_file.is_file():
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    return page_file.read_text(encoding="utf-8")
+
+
+@app.get("/api/health")
+def health():
+    try:
+        with get_connection() as connection:
+            connection.execute("SELECT 1")
+        return {
+            "app": "Cartman",
+            "status": "online",
+            "database": "connected",
+        }
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        )
+
+
+
+def normalize_operator(value):
+    value = (value or "").strip()
+    if not value:
+        return "Unidentified operator"
+    return value[:120]
+
+
+def write_software_audit(connection, software_id, software_name,
+                         action, actor, details):
+    connection.execute(
+        "INSERT INTO software_audit_history "
+        "(id, software_id, software_name, action, actor, details_json) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            "audit-" + uuid.uuid4().hex,
+            software_id,
+            software_name,
+            action,
+            actor,
+            json.dumps(details, ensure_ascii=False),
+        ),
+    )
+
+
+def serialize_audit(row):
+    result = dict(row)
+    raw = result.pop("details_json", "{}")
+    try:
+        result["details"] = json.loads(raw)
+    except (TypeError, ValueError):
+        result["details"] = {}
+    return result
+
+
+@app.get("/api/software")
+def list_software():
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT * FROM software_catalog "
+            "ORDER BY name COLLATE NOCASE, version COLLATE NOCASE"
+        ).fetchall()
+    return [serialize_software(row) for row in rows]
+
+
+@app.get("/api/software/{software_id}")
+def get_software(software_id: str):
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM software_catalog WHERE id = ?",
+            (software_id,),
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Software not found")
+    return serialize_software(row)
+
+
+@app.post("/api/software", status_code=201)
+def create_software(
+    software: SoftwareInput,
+    x_operator: str = Header(default="Unidentified operator", alias="X-Operator"),
+):
+    software_id = "software-" + uuid.uuid4().hex
+    actor = normalize_operator(x_operator)
+    values = software.dict()
+
+    try:
+        with get_connection() as connection:
+            connection.execute(
+                "INSERT INTO software_catalog "
+                "(id, name, publisher, version, target_os, category, "
+                "package_type, install_command, uninstall_command, source_url, "
+                "status, notes, created_by, updated_by) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    software_id, values["name"], values["publisher"],
+                    values["version"], values["target_os"], values["category"],
+                    values["package_type"], values["install_command"],
+                    values["uninstall_command"], values["source_url"],
+                    values["status"], values["notes"], actor, actor,
+                ),
+            )
+            write_software_audit(
+                connection, software_id, values["name"],
+                "Created", actor, {"values": values},
+            )
+            row = connection.execute(
+                "SELECT * FROM software_catalog WHERE id = ?",
+                (software_id,),
+            ).fetchone()
+        return serialize_software(row)
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Software with this name, version and OS already exists",
+        )
+
+
+@app.put("/api/software/{software_id}")
+def update_software(
+    software_id: str,
+    software: SoftwareInput,
+    x_operator: str = Header(default="Unidentified operator", alias="X-Operator"),
+):
+    actor = normalize_operator(x_operator)
+    values = software.dict()
+
+    try:
+        with get_connection() as connection:
+            old = connection.execute(
+                "SELECT * FROM software_catalog WHERE id = ?",
+                (software_id,),
+            ).fetchone()
+
+            if old is None:
+                raise HTTPException(status_code=404, detail="Software not found")
+
+            old_values = dict(old)
+            changed = {
+                key: {"old": old_values.get(key), "new": value}
+                for key, value in values.items()
+                if old_values.get(key) != value
+            }
+
+            connection.execute(
+                "UPDATE software_catalog SET "
+                "name = ?, publisher = ?, version = ?, target_os = ?, "
+                "category = ?, package_type = ?, install_command = ?, "
+                "uninstall_command = ?, source_url = ?, status = ?, notes = ?, "
+                "updated_by = ?, updated_at = CURRENT_TIMESTAMP "
+                "WHERE id = ?",
+                (
+                    values["name"], values["publisher"], values["version"],
+                    values["target_os"], values["category"],
+                    values["package_type"], values["install_command"],
+                    values["uninstall_command"], values["source_url"],
+                    values["status"], values["notes"], actor, software_id,
+                ),
+            )
+
+            if changed:
+                write_software_audit(
+                    connection, software_id, values["name"],
+                    "Updated", actor, {"changes": changed},
+                )
+
+            row = connection.execute(
+                "SELECT * FROM software_catalog WHERE id = ?",
+                (software_id,),
+            ).fetchone()
+        return serialize_software(row)
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Software with this name, version and OS already exists",
+        )
+
+
+@app.delete("/api/software/{software_id}")
+def delete_software(
+    software_id: str,
+    x_operator: str = Header(default="Unidentified operator", alias="X-Operator"),
+):
+    actor = normalize_operator(x_operator)
+
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM software_catalog WHERE id = ?",
+            (software_id,),
+        ).fetchone()
+
+        if row is None:
+            raise HTTPException(status_code=404, detail="Software not found")
+
+        snapshot = dict(row)
+        write_software_audit(
+            connection,
+            software_id,
+            snapshot["name"],
+            "Deleted",
+            actor,
+            {"values": snapshot},
+        )
+        connection.execute(
+            "DELETE FROM software_catalog WHERE id = ?",
+            (software_id,),
+        )
+
+    return {"deleted": True, "id": software_id}
+
+
+@app.get("/api/software-audit")
+def list_software_audit(
+    limit: int = 100,
+    software_id: str = "",
+    action: str = "",
+    q: str = "",
+):
+    limit = max(1, min(limit, 500))
+    clauses = []
+    params = []
+
+    if software_id:
+        clauses.append("software_id = ?")
+        params.append(software_id)
+    if action:
+        clauses.append("action = ?")
+        params.append(action)
+    if q.strip():
+        clauses.append("(software_name LIKE ? OR actor LIKE ?)")
+        needle = "%" + q.strip()[:120] + "%"
+        params.extend([needle, needle])
+
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    sql = (
+        "SELECT id, software_id, software_name, action, actor, "
+        "occurred_at, details_json FROM software_audit_history"
+        + where
+        + " ORDER BY occurred_at DESC, rowid DESC LIMIT ?"
+    )
+    params.append(limit)
+
+    with get_connection() as connection:
+        rows = connection.execute(sql, params).fetchall()
+
+    return [serialize_audit(row) for row in rows]
+
+
+@app.get("/api/devices")
+def list_devices():
+    with get_connection() as connection:
+        rows = connection.execute("""
+            SELECT id, name, os, ip, status, tags,
+                   created_at, updated_at
+            FROM devices
+            ORDER BY name COLLATE NOCASE
+        """).fetchall()
+
+    return [serialize_device(row) for row in rows]
+
+
+@app.get("/api/devices/{device_id}")
+def get_device(device_id: str):
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM devices WHERE id = ?",
+            (device_id,),
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    return serialize_device(row)
+
+
+@app.post("/api/devices", status_code=201)
+def create_device(device: DeviceInput):
+    device_id = "device-" + uuid.uuid4().hex
+
+    try:
+        with get_connection() as connection:
+            connection.execute("""
+                INSERT INTO devices (
+                    id, name, os, ip, status, tags,
+                    public_ip, local_ip, username
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                device_id,
+                device.name,
+                device.os,
+                device.local_ip or device.ip or device.public_ip,
+                device.status,
+                json.dumps(device.tags),
+                device.public_ip,
+                device.local_ip,
+                device.username,
+            ))
+
+            row = connection.execute(
+                "SELECT * FROM devices WHERE id = ?",
+                (device_id,),
+            ).fetchone()
+
+        return serialize_device(row)
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="A device with that name already exists",
+        )
+
+
+@app.put("/api/devices/{device_id}")
+def update_device(device_id: str, device: DeviceInput):
+    try:
+        with get_connection() as connection:
+            cursor = connection.execute("""
+                UPDATE devices
+                SET name = ?, os = ?,
+                    ip = CASE
+                        WHEN ? != '' THEN ?
+                        WHEN ? != '' THEN ?
+                        ELSE ip
+                    END,
+                    status = ?, tags = ?,
+                    public_ip = CASE WHEN ? != '' THEN ? ELSE public_ip END,
+                    local_ip = CASE WHEN ? != '' THEN ? ELSE local_ip END,
+                    username = CASE WHEN ? != '' THEN ? ELSE username END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (
+                device.name,
+                device.os,
+                device.local_ip, device.local_ip,
+                device.ip, device.ip,
+                device.status,
+                json.dumps(device.tags),
+                device.public_ip, device.public_ip,
+                device.local_ip, device.local_ip,
+                device.username, device.username,
+                device_id,
+            ))
+
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Device not found",
+                )
+
+            row = connection.execute(
+                "SELECT * FROM devices WHERE id = ?",
+                (device_id,),
+            ).fetchone()
+
+        return serialize_device(row)
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="A device with that name already exists",
+        )
+
+
+@app.delete("/api/devices/{device_id}")
+def delete_device(device_id: str):
+    with get_connection() as connection:
+        cursor = connection.execute(
+            "DELETE FROM devices WHERE id = ?",
+            (device_id,),
+        )
+
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    return {"deleted": True, "id": device_id}
+
+
+@app.post("/api/devices/import")
+def import_devices(devices: list[DeviceInput]):
+    if len(devices) > 5000:
+        raise HTTPException(
+            status_code=413,
+            detail="Maximum 5000 devices per import",
+        )
+
+    imported = 0
+    skipped = 0
+
+    with get_connection() as connection:
+        for device in devices:
+            device_id = "device-" + uuid.uuid4().hex
+
+            try:
+                connection.execute("""
+                    INSERT INTO devices (
+                        id, name, os, ip, status, tags,
+                        public_ip, local_ip, username
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    device_id,
+                    device.name,
+                    device.os,
+                    device.local_ip or device.ip or device.public_ip,
+                    device.status,
+                    json.dumps(device.tags),
+                    device.public_ip,
+                    device.local_ip,
+                    device.username,
+                ))
+                imported += 1
+            except sqlite3.IntegrityError:
+                skipped += 1
+
+    return {"imported": imported, "skipped": skipped}
+
+
+
+
+@app.get("/api/overview")
+def overview():
+    """Aggregate persisted device and monitoring data for the dashboard."""
+    with get_connection() as connection:
+        device_rows = connection.execute("""
+            SELECT id, name, os, ip, status, tags, created_at, updated_at
+            FROM devices
+            ORDER BY updated_at DESC, name COLLATE NOCASE
+        """).fetchall()
+
+        status_rows = connection.execute("""
+            SELECT status, COUNT(*) AS total
+            FROM devices
+            GROUP BY status
+        """).fetchall()
+
+        alert_rows = connection.execute("""
+            SELECT id, device_id, title, severity, status, details, created_at
+            FROM monitoring_alerts
+            WHERE LOWER(status) NOT IN ('resolved', 'closed')
+            ORDER BY created_at DESC
+            LIMIT 5
+        """).fetchall()
+
+        event_rows = connection.execute("""
+            SELECT id, device_id, event_type, severity, message, occurred_at
+            FROM monitoring_events
+            ORDER BY occurred_at DESC
+            LIMIT 10
+        """).fetchall()
+
+        check_rows = connection.execute("""
+            SELECT a.id, a.device_id, a.target, a.status,
+                   a.response_ms, a.checked_at
+            FROM availability_checks AS a
+            INNER JOIN (
+                SELECT device_id, MAX(checked_at) AS latest
+                FROM availability_checks
+                GROUP BY device_id
+            ) AS latest
+              ON latest.device_id = a.device_id
+             AND latest.latest = a.checked_at
+            ORDER BY a.checked_at DESC
+            LIMIT 1000
+        """).fetchall()
+
+        metric_count = connection.execute(
+            "SELECT COUNT(*) FROM monitoring_metrics"
+        ).fetchone()[0]
+
+        service_check_count = connection.execute(
+            "SELECT COUNT(*) FROM service_checks"
+        ).fetchone()[0]
+
+        event_count = connection.execute(
+            "SELECT COUNT(*) FROM monitoring_events"
+        ).fetchone()[0]
+
+        alert_count = connection.execute("""
+            SELECT COUNT(*) FROM monitoring_alerts
+            WHERE LOWER(status) NOT IN ('resolved', 'closed')
+        """).fetchone()[0]
+
+    devices = [serialize_device(row) for row in device_rows]
+    status_counts = {
+        str(row["status"] or "Unknown"): row["total"]
+        for row in status_rows
+    }
+
+    # Availability results are real checks, separate from stored device status.
+    latest_checks = [dict(row) for row in check_rows]
+    check_status_counts = {}
+    for check in latest_checks:
+        key = str(check.get("status") or "Unknown")
+        check_status_counts[key] = check_status_counts.get(key, 0) + 1
+
+    activities = []
+    for event in event_rows:
+        activities.append({
+            "id": f'event-{event["id"]}',
+            "kind": "event",
+            "title": event["message"] or event["event_type"] or "Monitoring event",
+            "detail": (
+                f'{event["event_type"] or "Event"}'
+                + (f' · {event["severity"]}' if event["severity"] else "")
+                + (f' · {event["device_id"]}' if event["device_id"] else "")
+            ),
+            "timestamp": event["occurred_at"],
+        })
+
+    for alert in alert_rows:
+        activities.append({
+            "id": f'alert-{alert["id"]}',
+            "kind": "alert",
+            "title": alert["title"] or "Monitoring alert",
+            "detail": (
+                f'{alert["severity"] or "Unspecified severity"}'
+                + (f' · {alert["device_id"]}' if alert["device_id"] else "")
+                + f' · {alert["status"]}'
+            ),
+            "timestamp": alert["created_at"],
+        })
+
+    activities.sort(
+        key=lambda item: item["timestamp"] or "",
+        reverse=True,
+    )
+
+    return {
+        "generated_at": __import__("datetime").datetime.now(
+            __import__("datetime").timezone.utc
+        ).isoformat(),
+        "devices": {
+            "total": len(devices),
+            "status_counts": status_counts,
+            "items": devices[:5],
+        },
+        "monitoring": {
+            "metric_samples": metric_count,
+            "service_checks": service_check_count,
+            "availability_checks": sum(check_status_counts.values()),
+            "latest_check_status_counts": check_status_counts,
+            "open_alerts": alert_count,
+            "events_total": event_count,
+            "alerts": [dict(row) for row in alert_rows],
+        },
+        "activity": activities[:6],
+        "tickets": {"configured": False, "reason": "Ticketing API is not implemented."},
+        "tasks": {"configured": False, "reason": "Task API is not implemented."},
+    }
+
+
+# Monitoring read APIs. Empty tables mean no telemetry/checks have been collected yet.
+@app.get("/api/monitoring/summary")
+def monitoring_summary():
+    with get_connection() as connection:
+        devices = connection.execute(
+            "SELECT status, COUNT(*) AS total FROM devices GROUP BY status"
+        ).fetchall()
+        metric_count = connection.execute(
+            "SELECT COUNT(*) FROM monitoring_metrics"
+        ).fetchone()[0]
+        open_alerts = connection.execute(
+            "SELECT COUNT(*) FROM monitoring_alerts WHERE status = 'Open'"
+        ).fetchone()[0]
+        checks = connection.execute(
+            "SELECT COUNT(*) FROM availability_checks"
+        ).fetchone()[0]
+        services = connection.execute(
+            "SELECT COUNT(*) FROM service_checks"
+        ).fetchone()[0]
+    return {
+        "device_status_counts": {row["status"]: row["total"] for row in devices},
+        "metric_samples": metric_count,
+        "open_alerts": open_alerts,
+        "availability_checks": checks,
+        "service_checks": services,
+        "telemetry_configured": metric_count > 0,
+    }
+
+
+@app.get("/api/monitoring/metrics")
+def monitoring_metrics(device_id: Optional[str] = None, limit: int = 200):
+    limit = max(1, min(limit, 1000))
+    sql = """SELECT id, device_id, metric_name, value, unit, source, collected_at
+             FROM monitoring_metrics"""
+    params = []
+    if device_id:
+        sql += " WHERE device_id = ?"
+        params.append(device_id)
+    sql += " ORDER BY collected_at DESC LIMIT ?"
+    params.append(limit)
+    with get_connection() as connection:
+        return [dict(row) for row in connection.execute(sql, params).fetchall()]
+
+
+@app.get("/api/monitoring/alerts")
+def monitoring_alerts(status: Optional[str] = None, limit: int = 200):
+    limit = max(1, min(limit, 1000))
+    sql = """SELECT id, device_id, title, severity, status, details,
+                    created_at, acknowledged_at, resolved_at
+             FROM monitoring_alerts"""
+    params = []
+    if status:
+        sql += " WHERE status = ?"
+        params.append(status)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    with get_connection() as connection:
+        return [dict(row) for row in connection.execute(sql, params).fetchall()]
+
+
+@app.get("/api/monitoring/events")
+def monitoring_events(device_id: Optional[str] = None, limit: int = 200):
+    limit = max(1, min(limit, 1000))
+    sql = """SELECT id, device_id, event_type, severity, message,
+                    details_json, occurred_at
+             FROM monitoring_events"""
+    params = []
+    if device_id:
+        sql += " WHERE device_id = ?"
+        params.append(device_id)
+    sql += " ORDER BY occurred_at DESC LIMIT ?"
+    params.append(limit)
+    with get_connection() as connection:
+        return [dict(row) for row in connection.execute(sql, params).fetchall()]
+
+
+@app.get("/api/monitoring/availability")
+def monitoring_availability(device_id: Optional[str] = None, limit: int = 200):
+    limit = max(1, min(limit, 1000))
+    sql = """SELECT id, device_id, target, status, response_ms, checked_at
+             FROM availability_checks"""
+    params = []
+    if device_id:
+        sql += " WHERE device_id = ?"
+        params.append(device_id)
+    sql += " ORDER BY checked_at DESC LIMIT ?"
+    params.append(limit)
+    with get_connection() as connection:
+        return [dict(row) for row in connection.execute(sql, params).fetchall()]
+
+
+@app.get("/api/monitoring/services")
+def monitoring_services(device_id: Optional[str] = None, limit: int = 200):
+    limit = max(1, min(limit, 1000))
+    sql = """SELECT id, device_id, service_name, status, response_ms, checked_at
+             FROM service_checks"""
+    params = []
+    if device_id:
+        sql += " WHERE device_id = ?"
+        params.append(device_id)
+    sql += " ORDER BY checked_at DESC LIMIT ?"
+    params.append(limit)
+    with get_connection() as connection:
+        return [dict(row) for row in connection.execute(sql, params).fetchall()]
+
+

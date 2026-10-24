@@ -1,0 +1,1102 @@
+
+"use strict";
+
+/* =========================================================
+   CARTMAN — UI CONTROLLER
+   Demo dashboard and local device inventory.
+   No real endpoint execution or remote device management.
+   ========================================================= */
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+const state = {
+    language: "en",
+    theme: "dark",
+    module: "Home"
+};
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+
+/* =========================================================
+   LANGUAGES AND FLAGS
+   ========================================================= */
+
+const languageNames = {
+    en: "English",
+    tr: "Türkçe",
+    de: "Deutsch",
+    fr: "Français",
+    es: "Español",
+    nl: "Nederlands",
+    pl: "Polski",
+    it: "Italiano",
+    ja: "日本語",
+    "pt-BR": "Português",
+    ar: "العربية",
+    "zh-CN": "简体中文",
+    ru: "Русский",
+    el: "Ελληνικά",
+    bcs: "Bosanski / Hrvatski / Srpski",
+    he: "עברית",
+    sq: "Shqip",
+    cs: "Čeština",
+    lt: "Lietuvių",
+    sv: "Svenska",
+    no: "Norsk bokmål",
+    da: "Dansk",
+    fi: "Suomi",
+    az: "Azərbaycanca",
+    id: "Bahasa Indonesia",
+    ms: "Bahasa Melayu",
+    et: "Eesti",
+    hu: "Magyar",
+    ko: "한국어"
+};
+
+const flagFiles = {
+    en: "gb",
+    tr: "tr",
+    de: "de",
+    fr: "fr",
+    es: "es",
+    nl: "nl",
+    pl: "pl",
+    it: "it",
+    ja: "jp",
+    "pt-BR": "pt",
+    ar: "sa",
+    "zh-CN": "cn",
+    ru: "ru",
+    el: "gr",
+    bcs: "ba",
+    he: "il",
+    sq: "al",
+    cs: "cz",
+    lt: "lt",
+    sv: "se",
+    no: "no",
+    da: "dk",
+    fi: "fi",
+    az: "az",
+    id: "id",
+    ms: "my",
+    et: "ee",
+    hu: "hu",
+    ko: "kr"
+};
+
+function currentTranslations() {
+    return translations[state.language] || null;
+}
+
+function translate(key, fallback = "") {
+    const value = currentTranslations()?.[key];
+    return typeof value === "string" ? value : fallback;
+}
+
+function createFlagImage(language) {
+    const file = flagFiles[language];
+
+    if (!file) {
+        return document.createTextNode(languageNames[language] || language);
+    }
+
+    const image = document.createElement("img");
+    image.className = "language-flag";
+    image.src = `/static/flags/${file}.svg`;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.draggable = false;
+
+    image.addEventListener("error", () => {
+        image.hidden = true;
+    }, { once: true });
+
+    return image;
+}
+
+function renderLanguageFlags() {
+    $$("#language-menu [data-language]").forEach(button => {
+        const language = button.dataset.language;
+
+        button.replaceChildren(createFlagImage(language));
+        button.title = languageNames[language] || language;
+        button.setAttribute(
+            "aria-label",
+            languageNames[language] || language
+        );
+    });
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+
+/* =========================================================
+   SIDEBAR AND DROPDOWNS
+   ========================================================= */
+
+function setMenu(open) {
+    document.body.classList.toggle("menu-open", open);
+    $("#menu-toggle")?.setAttribute("aria-expanded", String(open));
+}
+
+function closeDropdowns(except = null) {
+    [
+        ["#profile-menu", "#profile-toggle"],
+        ["#language-menu", "#language-toggle"]
+    ].forEach(([menuSelector, buttonSelector]) => {
+        const menu = $(menuSelector);
+        const button = $(buttonSelector);
+
+        if (menu && menu !== except) {
+            menu.classList.add("hidden");
+            button?.setAttribute("aria-expanded", "false");
+        }
+    });
+}
+
+function toggleDropdown(menuSelector, buttonSelector) {
+    const menu = $(menuSelector);
+    const button = $(buttonSelector);
+
+    if (!menu || !button) return;
+
+    const shouldOpen = menu.classList.contains("hidden");
+    closeDropdowns(menu);
+
+    menu.classList.toggle("hidden", !shouldOpen);
+    button.setAttribute("aria-expanded", String(shouldOpen));
+}
+
+function getModuleLabel(name) {
+    const key = moduleTranslationKeys[name];
+    const value = currentTranslations()?.[key];
+
+    return typeof value === "string" ? value : name;
+}
+
+function setText(selector, value) {
+    const element = $(selector);
+
+    if (element && typeof value === "string") {
+        element.textContent = value;
+    }
+}
+
+/* =========================================================
+   LANGUAGE APPLICATION
+   ========================================================= */
+
+let languageApplySequence = 0;
+
+async function applyLanguage(language, showNotice = true) {
+    if (!languageNames[language]) return;
+
+    const sequence = ++languageApplySequence;
+    let t;
+
+    try {
+        t = await loadTranslation(language);
+    } catch (error) {
+        console.error("Translation loading failed:", error);
+
+        if (showNotice) {
+            notify(
+                currentTranslations()?.translationLoadError ||
+                "Could not load this language. Check its JSON file."
+            );
+        }
+
+        return;
+    }
+
+    if (sequence !== languageApplySequence) return;
+
+    state.language = language;
+
+    try {
+        localStorage.setItem("cartman-language", language);
+    } catch {
+        // Language remains active for this session.
+    }
+
+    const languageLabel = $("#language-label");
+
+    if (languageLabel) {
+        languageLabel.replaceChildren(createFlagImage(language));
+        languageLabel.title = languageNames[language];
+        languageLabel.setAttribute(
+            "aria-label",
+            languageNames[language]
+        );
+    }
+
+    const navTranslations = {
+        Home: t.overview,
+        Devices: t.devices,
+        Inventory: t.inventory,
+        Software: t.software,
+        "Remote Access": t.remote,
+        Monitoring: t.monitoring,
+        Ticketing: t.ticketing,
+        "Knowledge Base": t.knowledge,
+        "Tasks & Automation": t.tasks,
+        Services: t.services,
+        "Identity & Access": t.identity,
+        Policies: t.policies,
+        "Audit Logs": t.audit,
+        Settings: t.settings
+    };
+
+    $$("[data-page]").forEach(element => {
+        const labelText = navTranslations[element.dataset.page];
+        if (typeof labelText !== "string") return;
+
+        const textNode = [...element.childNodes].find(node =>
+            node.nodeType === Node.TEXT_NODE &&
+            node.textContent.trim()
+        );
+
+        if (textNode) {
+            textNode.textContent = ` ${labelText} `;
+        } else if (element.classList.contains("category-card")) {
+            const title = $("strong", element);
+            if (title) title.textContent = labelText;
+        }
+    });
+
+    setText("#breadcrumb-page", getModuleLabel(state.module));
+    setText(".welcome h1", t.welcome);
+    setText(".welcome > p", t.intro);
+    setText(".section-heading h2", t.environment);
+    setText(".section-heading p", t.environmentSub);
+    setText("#refresh-dashboard", t.refresh);
+    setText(".modules-heading h2", t.modules);
+    setText(".modules-heading p", t.modulesSub);
+    setText("#no-results", t.noResults);
+    setText("#back-home", t.backHome);
+    setText("#module-open-terminal", t.openTerminal);
+
+    const search = $("#global-search");
+    if (search) search.placeholder = t.searchPlaceholder || "";
+
+    const terminalButton = $("#terminal-toggle");
+    const terminalText = terminalButton?.querySelector("span:last-child");
+
+    if (terminalText && typeof t.terminal === "string") {
+        terminalText.textContent = t.terminal;
+    }
+
+    if (state.module !== "Home") {
+        setText("#module-title", getModuleLabel(state.module));
+        setText(
+            "#module-description",
+            t.moduleDescriptions?.[state.module] ||
+            moduleDescriptions[state.module] ||
+            ""
+        );
+        setText("#module-state-title", t.modulePreview || "Module preview");
+        setText(
+            "#module-state-description",
+            t.previewDescription || ""
+        );
+    }
+
+    document.documentElement.lang = language;
+    document.documentElement.dir =
+        ["ar", "he"].includes(language) ? "rtl" : "ltr";
+
+    applyTheme(state.theme);
+    closeDropdowns();
+
+    $$("#language-menu [data-language]").forEach(button => {
+        button.classList.toggle(
+            "selected",
+            button.dataset.language === language
+        );
+    });
+
+    if (state.module === "Devices") {
+        renderDevicesModule();
+    }
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+function setModulePlaceholderVisible(visible) {
+    const placeholder = $(".module-placeholder", $("#module-view"));
+    if (placeholder) placeholder.classList.toggle("hidden", !visible);
+}
+
+function openHome() {
+    state.module = "Home";
+
+    $("#home-view")?.classList.remove("hidden");
+    $("#module-view")?.classList.add("hidden");
+
+    setText("#breadcrumb-page", getModuleLabel("Home"));
+
+    $$(".nav-link").forEach(link => {
+        link.classList.toggle("active", link.dataset.page === "Home");
+    });
+
+    setMenu(false);
+    setTerminal(false);
+    closeDropdowns();
+
+    history.replaceState(null, "", "/");
+}
+
+const modulePageConfigs = {
+    Inventory: {
+        eyebrow: "ASSET MANAGEMENT",
+        stats: [["Tracked assets", "248"], ["Assigned", "196"], ["Unassigned", "32"], ["Needs review", "20"]],
+        columns: ["Asset", "Type", "Assigned to", "Location", "Status"],
+        rows: [
+            ["SRV-PROD-01", "Server", "Infrastructure", "Datacenter", "Active"],
+            ["WS-024", "Workstation", "IT Support", "Office", "Active"],
+            ["LAP-118", "Laptop", "Unassigned", "Warehouse", "Available"],
+            ["SW-CORE-01", "Network asset", "Networking", "Datacenter", "Review"]
+        ]
+    },
+    Software: {
+        eyebrow: "SOFTWARE MANAGEMENT",
+        stats: [["Software titles", "86"], ["Installations", "412"], ["Pending deployments", "7"], ["Needs attention", "3"]],
+        columns: ["Software", "Version", "Installations", "Deployment", "Status"],
+        rows: [
+            ["Microsoft 365 Apps", "Current", "124", "Managed", "Installed"],
+            ["7-Zip", "24.x", "86", "Managed", "Installed"],
+            ["VPN Client", "1.x", "42", "Queued", "Pending"],
+            ["Endpoint Agent", "—", "—", "Not configured", "Review"]
+        ]
+    },
+    Network: {
+        eyebrow: "NETWORK OPERATIONS",
+        stats: [["Known devices", "—"], ["Interfaces", "—"], ["Active alerts", "—"], ["Connected gateways", "0"]],
+        columns: ["Resource", "Address", "Role", "Connection", "Status"],
+        rows: [
+            ["No network data connected", "—", "—", "Not configured", "Not connected"]
+        ]
+    },
+    Virtualization: {
+        eyebrow: "VIRTUALIZATION",
+        stats: [["Hypervisor hosts", "—"], ["Virtual machines", "—"], ["Allocated vCPU", "—"], ["Datastores", "—"]],
+        columns: ["Resource", "Platform", "CPU / Memory", "Host", "Status"],
+        rows: [
+            ["No virtualization provider connected", "—", "—", "—", "Not connected"]
+        ]
+    },
+    Infrastructure: {
+        eyebrow: "INFRASTRUCTURE OPERATIONS",
+        stats: [["Servers", "—"], ["Sites", "—"], ["Capacity alerts", "—"], ["Providers", "0"]],
+        columns: ["Resource", "Environment", "Role", "Location", "Status"],
+        rows: [
+            ["No infrastructure provider connected", "—", "—", "—", "Not connected"]
+        ]
+    },
+    Deployment: {
+        eyebrow: "DEPLOYMENT OPERATIONS",
+        stats: [["Deployment jobs", "0"], ["Queued", "0"], ["Completed", "0"], ["Failed", "0"]],
+        columns: ["Deployment", "Target", "Package", "Schedule", "Status"],
+        rows: [
+            ["No deployment jobs created", "—", "—", "—", "Not configured"]
+        ]
+    },
+    "Remote Access": {
+        eyebrow: "REMOTE ACCESS",
+        stats: [["Gateways", "0"], ["Connected peers", "0"], ["Access policies", "0"], ["Active sessions", "0"]],
+        columns: ["Gateway / Peer", "Type", "Endpoint", "Last seen", "Status"],
+        rows: [
+            ["No VPN gateway configured", "WireGuard planned", "—", "—", "Not connected"]
+        ]
+    },
+    Monitoring: {
+        eyebrow: "OBSERVABILITY",
+        stats: [["Monitored targets", "0"], ["Active alerts", "0"], ["Warning", "0"], ["Data sources", "0"]],
+        columns: ["Target", "Metric", "Last observation", "Threshold", "Status"],
+        rows: [
+            ["No monitoring source connected", "—", "—", "—", "Not connected"]
+        ]
+    },
+    Ticketing: {
+        eyebrow: "SERVICE DESK",
+        stats: [["Open tickets", "0"], ["In progress", "0"], ["Waiting", "0"], ["Resolved today", "0"]],
+        columns: ["Ticket", "Subject", "Priority", "Assignee", "Status"],
+        rows: [
+            ["No tickets created", "—", "—", "—", "Empty"]
+        ]
+    },
+    "Knowledge Base": {
+        eyebrow: "KNOWLEDGE MANAGEMENT",
+        stats: [["Articles", "0"], ["Published", "0"], ["Drafts", "0"], ["Categories", "0"]],
+        columns: ["Article", "Category", "Owner", "Updated", "Status"],
+        rows: [
+            ["No knowledge articles created", "—", "—", "—", "Empty"]
+        ]
+    },
+    "Tasks & Automation": {
+        eyebrow: "AUTOMATION",
+        stats: [["Tasks", "0"], ["Running", "0"], ["Scheduled", "0"], ["Failed", "0"]],
+        columns: ["Task", "Trigger", "Last run", "Next run", "Status"],
+        rows: [
+            ["No automation configured", "—", "—", "—", "Not configured"]
+        ]
+    },
+    Services: {
+        eyebrow: "SERVICE MANAGEMENT",
+        stats: [["Known services", "0"], ["Running", "—"], ["Stopped", "—"], ["Monitored hosts", "0"]],
+        columns: ["Service", "Host", "Startup type", "Last checked", "Status"],
+        rows: [
+            ["No service source connected", "—", "—", "—", "Not connected"]
+        ]
+    },
+    "Identity & Access": {
+        eyebrow: "IDENTITY & ACCESS",
+        stats: [["Users", "0"], ["Roles", "0"], ["Access requests", "0"], ["Identity providers", "0"]],
+        columns: ["Identity", "Type", "Role", "Provider", "Status"],
+        rows: [
+            ["No identity provider connected", "—", "—", "—", "Not connected"]
+        ]
+    },
+    Policies: {
+        eyebrow: "POLICY MANAGEMENT",
+        stats: [["Policies", "0"], ["Assigned", "0"], ["Compliant", "—"], ["Needs review", "0"]],
+        columns: ["Policy", "Scope", "Assignments", "Updated", "Status"],
+        rows: [
+            ["No policies configured", "—", "—", "—", "Not configured"]
+        ]
+    },
+    "Audit Logs": {
+        eyebrow: "AUDIT & COMPLIANCE",
+        stats: [["Events", "0"], ["Administrative", "0"], ["Warnings", "0"], ["Sources", "0"]],
+        columns: ["Event", "Actor", "Action", "Timestamp", "Result"],
+        rows: [
+            ["No audit source connected", "—", "—", "—", "Not connected"]
+        ]
+    },
+    Settings: {
+        eyebrow: "PLATFORM CONFIGURATION",
+        stats: [["Platform", "Cartman"], ["API", "Local"], ["Database", "SQLite"], ["Integrations", "0"]],
+        columns: ["Setting", "Description", "Current state", "Scope", "Status"],
+        rows: [
+            ["Appearance", "Theme and display preferences", "Available in toolbar", "User", "Available"],
+            ["Language", "Interface language", "Available in toolbar", "User", "Available"],
+            ["Backend integrations", "Connect external systems", "Not configured", "Platform", "Pending"]
+        ]
+    },
+    API: {
+        eyebrow: "DEVELOPER PLATFORM",
+        stats: [["API status", "Local"], ["Endpoints", "—"], ["API keys", "0"], ["Integrations", "0"]],
+        columns: ["Resource", "Method", "Purpose", "Authentication", "Status"],
+        rows: [
+            ["GET /api/health", "GET", "Application health", "Local endpoint", "Available"],
+            ["/api/devices", "GET / POST", "Device inventory", "Local endpoint", "Available"]
+        ]
+    },
+    Connectors: {
+        eyebrow: "INTEGRATION MANAGEMENT",
+        stats: [["Connectors", "0"], ["Connected", "0"], ["Pending setup", "0"], ["Errors", "0"]],
+        columns: ["Connector", "Category", "Authentication", "Last sync", "Status"],
+        rows: [
+            ["No connectors configured", "—", "—", "—", "Not connected"]
+        ]
+    }
+};
+
+
+// Generic preview configurations for modules awaiting real integrations.
+Object.assign(modulePageConfigs, Object.fromEntries(
+    Object.keys(moduleTranslationKeys)
+        .filter(name => name !== "Home" && name !== "Devices")
+        .filter(name => !modulePageConfigs[name])
+        .map(name => [name, {
+            eyebrow: name.toUpperCase(),
+            stats: [
+                ["Configured", "0"],
+                ["Active", "0"],
+                ["Pending", "0"],
+                ["Data source", "Not connected"]
+            ],
+            columns: ["Resource", "Type", "Details", "Source", "Status"],
+            rows: [[
+                "No data configured",
+                name,
+                "Integration required",
+                "Not connected",
+                "Not configured"
+            ]]
+        }])
+));
+
+function renderWorkspaceModule(name) {
+    const content = $("#module-page-content");
+    const config = modulePageConfigs[name];
+
+    if (!content || !config) return;
+
+    const section = document.createElement("section");
+    section.className = "workspace-module";
+    section.dataset.workspaceModule = name;
+
+    const eyebrow = document.createElement("div");
+    eyebrow.className = "workspace-eyebrow";
+    eyebrow.textContent = config.eyebrow;
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "workspace-toolbar";
+
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "workspace-search";
+    search.placeholder = `Search ${name.toLowerCase()}...`;
+    search.setAttribute("aria-label", `Search ${name}`);
+
+    const stateLabel = document.createElement("span");
+    stateLabel.className = "workspace-demo-label";
+    stateLabel.textContent = "UI PREVIEW · NO LIVE DATA";
+
+    toolbar.append(search, stateLabel);
+
+    const stats = document.createElement("div");
+    stats.className = "workspace-stats";
+
+    config.stats.forEach(([label, value]) => {
+        const card = document.createElement("article");
+        card.className = "workspace-stat";
+
+        const statLabel = document.createElement("span");
+        statLabel.className = "workspace-stat-label";
+        statLabel.textContent = label;
+
+        const statValue = document.createElement("strong");
+        statValue.className = "workspace-stat-value";
+        statValue.textContent = value;
+
+        card.append(statLabel, statValue);
+        stats.appendChild(card);
+    });
+
+    const panel = document.createElement("div");
+    panel.className = "workspace-table-panel";
+
+    const panelHeader = document.createElement("div");
+    panelHeader.className = "workspace-panel-header";
+
+    const panelTitle = document.createElement("h2");
+    panelTitle.textContent = `${name} overview`;
+
+    const count = document.createElement("span");
+    count.className = "workspace-row-count";
+    count.textContent = `${config.rows.length} preview row(s)`;
+
+    panelHeader.append(panelTitle, count);
+
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "workspace-table-wrap";
+
+    const table = document.createElement("table");
+    table.className = "workspace-table";
+
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+
+    config.columns.forEach(column => {
+        const th = document.createElement("th");
+        th.textContent = column;
+        headRow.appendChild(th);
+    });
+
+    thead.appendChild(headRow);
+
+    const tbody = document.createElement("tbody");
+
+    config.rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.dataset.searchText = row.join(" ").toLocaleLowerCase();
+
+        row.forEach((value, index) => {
+            const td = document.createElement("td");
+            td.textContent = value;
+
+            if (index === row.length - 1) {
+                const status = document.createElement("span");
+                status.className = "workspace-status";
+                status.textContent = value;
+                td.replaceChildren(status);
+            }
+
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+    });
+
+    table.append(thead, tbody);
+    tableWrap.appendChild(table);
+
+    const empty = document.createElement("p");
+    empty.className = "workspace-empty hidden";
+    empty.textContent = "No matching rows.";
+
+    panel.append(panelHeader, tableWrap, empty);
+    section.append(eyebrow, toolbar, stats, panel);
+    content.replaceChildren(section);
+
+    search.addEventListener("input", () => {
+        const query = search.value.trim().toLocaleLowerCase();
+        let visible = 0;
+
+        tbody.querySelectorAll("tr").forEach(row => {
+            const matches = row.dataset.searchText.includes(query);
+            row.classList.toggle("hidden", !matches);
+            if (matches) visible++;
+        });
+
+        empty.classList.toggle("hidden", visible > 0);
+        count.textContent = `${visible} row(s)`;
+    });
+}
+
+function setModulePlaceholderVisible(visible) {
+    const placeholder = $(".module-placeholder", $("#module-view"));
+    if (placeholder) placeholder.classList.toggle("hidden", !visible);
+}
+
+function openHome() {
+    state.module = "Home";
+
+    $("#home-view")?.classList.remove("hidden");
+    $("#module-view")?.classList.add("hidden");
+
+    setText("#breadcrumb-page", getModuleLabel("Home"));
+
+    $$(".nav-link").forEach(link => {
+        link.classList.toggle("active", link.dataset.page === "Home");
+    });
+
+    setMenu(false);
+    setTerminal(false);
+    closeDropdowns();
+
+    history.replaceState(null, "", "/");
+}
+
+function openModule(name) {
+    if (name === "Home") {
+        openHome();
+        return;
+    }
+
+    if (!moduleTranslationKeys[name]) return;
+
+    state.module = name;
+
+    $("#home-view")?.classList.add("hidden");
+    $("#module-view")?.classList.remove("hidden");
+
+    setText("#module-title", getModuleLabel(name));
+    setText(
+        "#module-description",
+        currentTranslations()?.moduleDescriptions?.[name] ||
+        moduleDescriptions[name] ||
+        ""
+    );
+    setText("#breadcrumb-page", getModuleLabel(name));
+
+    const icon = $("#module-icon");
+    if (icon) icon.textContent = moduleIcons[name] || "◈";
+
+    $$(".nav-link").forEach(link => {
+        link.classList.toggle("active", link.dataset.page === name);
+    });
+
+    $("#devices-workspace")?.remove();
+
+    const content = $("#module-page-content");
+    if (content) content.replaceChildren();
+
+    if (name === "Devices") {
+        setModulePlaceholderVisible(false);
+        renderDevicesModule();
+    } else if (modulePageConfigs[name]) {
+        setModulePlaceholderVisible(false);
+        renderWorkspaceModule(name);
+    } else {
+        setModulePlaceholderVisible(true);
+    }
+
+    setMenu(false);
+    setTerminal(false);
+    closeDropdowns();
+
+    const slug = name
+        .toLowerCase()
+        .replaceAll("&", "and")
+        .replaceAll(" ", "-");
+
+    history.replaceState(null, "", `/#${slug}`);
+}
+
+/* =========================================================
+   GLOBAL SEARCH
+   ========================================================= */
+
+function filterModules() {
+    const query = ($("#global-search")?.value || "")
+        .trim()
+        .toLocaleLowerCase(state.language);
+
+    const cards = $$(".category-card");
+    let visible = 0;
+
+    cards.forEach(card => {
+        const matches = card.textContent
+            .toLocaleLowerCase(state.language)
+            .includes(query);
+
+        card.classList.toggle("hidden", !matches);
+        if (matches) visible++;
+    });
+
+    $("#no-results")?.classList.toggle("hidden", visible > 0);
+
+    if (query && state.module !== "Home") openHome();
+}
+
+/* =========================================================
+   TERMINAL PREVIEW
+   ========================================================= */
+
+function setTerminal(open) {
+    document.body.classList.toggle("terminal-open", open);
+    $("#terminal-panel")?.setAttribute("aria-hidden", String(!open));
+    $("#terminal-toggle")?.setAttribute("aria-expanded", String(open));
+
+    if (open) {
+        setMenu(false);
+        closeDropdowns();
+        window.setTimeout(() => $("#terminal-command")?.focus(), 50);
+    }
+}
+
+function addTerminalLine(message, className = "") {
+    const output = $("#terminal-output");
+    if (!output) return;
+
+    const line = document.createElement("p");
+    line.textContent = message;
+
+    if (className) line.className = className;
+
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+}
+
+function clearTerminal() {
+    $("#terminal-output")?.replaceChildren();
+}
+
+function terminalMessage(key, fallback = "") {
+    const messages = currentTranslations()?.terminalMessages;
+
+    return typeof messages?.[key] === "string"
+        ? messages[key]
+        : fallback;
+}
+
+function printHelp() {
+    addTerminalLine(
+        terminalMessage("title", "Cartman CLI — preview mode"),
+        "terminal-success"
+    );
+    addTerminalLine("");
+    addTerminalLine(
+        terminalMessage("availableCommands", "Available commands:")
+    );
+    addTerminalLine(
+        "  help          " +
+        terminalMessage("help", "Show this help")
+    );
+    addTerminalLine(
+        "  clear         " +
+        terminalMessage("clear", "Clear terminal output")
+    );
+    addTerminalLine(
+        "  get status    " +
+        terminalMessage("status", "Check the Cartman API")
+    );
+    addTerminalLine(
+        "  get devices   " +
+        terminalMessage("devices", "Show demo inventory status")
+    );
+    addTerminalLine(
+        "  get tickets   " +
+        terminalMessage("tickets", "Show demo ticket counts")
+    );
+    addTerminalLine(
+        "  modules       " +
+        terminalMessage("modules", "List available modules")
+    );
+    addTerminalLine(
+        "  whoami        " +
+        terminalMessage("whoami", "Show demo session")
+    );
+    addTerminalLine(
+        "  date          " +
+        terminalMessage("date", "Show local date and time")
+    );
+    addTerminalLine(
+        "  open <module> " +
+        terminalMessage("open", "Open a module")
+    );
+    addTerminalLine("");
+    addTerminalLine(
+        terminalMessage(
+            "noRemoteCommands",
+            "Remote device commands are not implemented."
+        ),
+        "terminal-muted"
+    );
+}
+
+async function executeCommand(raw) {
+    const command = raw.trim();
+    if (!command) return;
+
+    addTerminalLine(`cartman > ${command}`);
+
+    const parts = command.split(/\s+/);
+    const first = parts[0].toLowerCase();
+    const second = parts[1]?.toLowerCase();
+
+    if (first === "help") {
+        printHelp();
+        return;
+    }
+
+    if (first === "clear") {
+        clearTerminal();
+        return;
+    }
+
+    if (first === "date") {
+        addTerminalLine(
+            new Date().toLocaleString(state.language),
+            "terminal-success"
+        );
+        return;
+    }
+
+    if (first === "whoami") {
+        addTerminalLine(
+            terminalMessage(
+                "user",
+                "Kaan Yaşar · Administrator (demo UI)"
+            ),
+            "terminal-success"
+        );
+        return;
+    }
+
+    if (first === "modules") {
+        addTerminalLine(
+            ["Home", ...Object.keys(moduleDescriptions)]
+                .map(getModuleLabel)
+                .join(" · "),
+            "terminal-success"
+        );
+        return;
+    }
+
+    if (first === "open") {
+        const requested = parts.slice(1).join(" ").toLowerCase();
+
+        const match = Object.keys(moduleDescriptions).find(name =>
+            name.toLowerCase() === requested ||
+            getModuleLabel(name).toLowerCase() === requested
+        );
+
+        if (requested === "home" || requested === "overview") {
+            openHome();
+            addTerminalLine(
+                terminalMessage("openedOverview", "Opened Overview."),
+                "terminal-success"
+            );
+        } else if (match) {
+            if (match !== "Devices" && moduleTranslationKeys[match]) {
+                window.location.assign(`/pages/${moduleTranslationKeys[match]}/`);
+            } else {
+                openModule(match);
+            }
+            addTerminalLine(
+                `${terminalMessage("opened", "Opened")} ${getModuleLabel(match)}.`,
+                "terminal-success"
+            );
+        } else {
+            addTerminalLine(
+                terminalMessage(
+                    "moduleNotFound",
+                    "Module not found. Type 'modules'."
+                ),
+                "terminal-error"
+            );
+        }
+
+        return;
+    }
+
+    if (first === "get" && second === "status") {
+        addTerminalLine(
+            terminalMessage("checkingApi", "Checking Cartman API..."),
+            "terminal-muted"
+        );
+
+        try {
+            const response = await fetch("/api/health", {
+                headers: { Accept: "application/json" }
+            });
+
+            if (!response.ok) throw new Error("API request failed");
+
+            const data = await response.json();
+
+            addTerminalLine(`Application: ${data.app}`, "terminal-success");
+            addTerminalLine(`Status: ${data.status}`, "terminal-success");
+        } catch {
+            addTerminalLine(
+                terminalMessage(
+                    "apiUnavailable",
+                    "API unavailable. Check the backend server."
+                ),
+                "terminal-error"
+            );
+        }
+
+        return;
+    }
+
+    if (first === "get" && second === "devices") {
+        const devices = getDeviceData();
+        const online = devices.filter(device => device.status === "Online").length;
+        const warning = devices.filter(device => device.status === "Warning").length;
+        const offline = devices.filter(device => device.status === "Offline").length;
+
+        addTerminalLine(
+            `Demo inventory: ${devices.length} devices, ${online} online, ${warning} warning, ${offline} offline.`,
+            "terminal-muted"
+        );
+        addTerminalLine(
+            terminalMessage(
+                "sampleData",
+                "These are sample values, not live endpoint data."
+            )
+        );
+
+        return;
+    }
+
+    if (first === "get" && second === "tickets") {
+        addTerminalLine(
+            terminalMessage(
+                "demoTickets",
+                "Demo ticket queue: 5 open, 3 in progress, 12 resolved."
+            ),
+            "terminal-muted"
+        );
+        addTerminalLine(
+            terminalMessage(
+                "ticketingOffline",
+                "Ticketing backend is not connected."
+            )
+        );
+        return;
+    }
+
+    addTerminalLine(
+        terminalMessage(
+            "unknownCommand",
+            "Unknown command. Type 'help' for available commands."
+        ),
+        "terminal-error"
+    );
+}
+
+/* =========================================================
+   API STATUS
+   ========================================================= */
+
+async function checkApiStatus() {
+    const status = $("#api-status");
+    if (!status) return;
+
+    status.textContent = translate("apiChecking", "Checking...");
+    status.style.color = "";
+
+    try {
+        const response = await fetch("/api/health", {
+            headers: { Accept: "application/json" }
+        });
+
+        if (!response.ok) throw new Error("API request failed");
+
+        const data = await response.json();
+
+        status.textContent = data.status === "online"
+            ? translate("apiOnline", "Online")
+            : data.status;
+
+        status.style.color = data.status === "online"
+            ? "var(--green)"
+            : "var(--red)";
+    } catch {
+        status.textContent = translate("apiOffline", "Offline");
+        status.style.color = "var(--red)";
+    }
+}
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+async function initializeCartman() {
+    try {
+        applyTheme(localStorage.getItem("cartman-theme") || "dark");
+    } catch {
+        applyTheme("dark");
+    }
+
+    renderLanguageFlags();
+
+    let savedLanguage = "en";
+
+    try {
+        savedLanguage = localStorage.getItem("cartman-language") || "en";
+    } catch {
+        // Use English if local storage is unavailable.
+    }
+
+    try {
+        await applyLanguage(
+            languageNames[savedLanguage] ? savedLanguage : "en",
+            false
+        );
+    } catch (error) {
+        console.error("Language initialization failed:", error);
+    }
+
+    await checkApiStatus();
+
+    console.info("Cartman UI initialized.");
+}
+
+setupCartmanEvents();
+void initializeCartman();
+
+
