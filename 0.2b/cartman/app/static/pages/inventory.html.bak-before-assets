@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Inventory</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/inventory.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">← Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">▤</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE</div>
+                <h1>Inventory</h1>
+                <p>Hardware specifications and asset details.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Inventory overview">
+            <div class="workspace-eyebrow">ASSET MANAGEMENT</div>
+
+            <div class="workspace-toolbar">
+                <input
+                    id="inventory-search"
+                    class="workspace-search"
+                    type="search"
+                    placeholder="Search inventory..."
+                    aria-label="Search inventory"
+                >
+                <span class="workspace-demo-label">UI PREVIEW · NO LIVE DATA</span>
+            </div>
+
+            <div class="workspace-stats">
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Tracked assets</span>
+                    <strong class="workspace-stat-value">248</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Assigned</span>
+                    <strong class="workspace-stat-value">196</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Unassigned</span>
+                    <strong class="workspace-stat-value">32</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Needs review</span>
+                    <strong class="workspace-stat-value">20</strong>
+                </article>
+            </div>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <h2>Inventory overview</h2>
+                    <span id="inventory-row-count" class="workspace-row-count">4 preview row(s)</span>
+                </div>
+
+                <div class="workspace-table-wrap">
+                    <table class="workspace-table">
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Type</th>
+                                <th>Assigned to</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body">
+                            <tr data-search-text="srv-prod-01 server infrastructure datacenter active">
+                                <td>SRV-PROD-01</td><td>Server</td><td>Infrastructure</td><td>Datacenter</td><td><span class="workspace-status">Active</span></td>
+                            </tr>
+                            <tr data-search-text="ws-024 workstation it support office active">
+                                <td>WS-024</td><td>Workstation</td><td>IT Support</td><td>Office</td><td><span class="workspace-status">Active</span></td>
+                            </tr>
+                            <tr data-search-text="lap-118 laptop unassigned warehouse available">
+                                <td>LAP-118</td><td>Laptop</td><td>Unassigned</td><td>Warehouse</td><td><span class="workspace-status">Available</span></td>
+                            </tr>
+                            <tr data-search-text="sw-core-01 network asset networking datacenter review">
+                                <td>SW-CORE-01</td><td>Network asset</td><td>Networking</td><td>Datacenter</td><td><span class="workspace-status">Review</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="inventory-empty" class="workspace-empty hidden">No matching rows.</p>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Development Preview · Demo data</span>
+        </footer>
+    </main>
+</body>
+</html>

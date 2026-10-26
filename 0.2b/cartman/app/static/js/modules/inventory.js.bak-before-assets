@@ -1,0 +1,34 @@
+"use strict";
+
+/* CARTMAN — INDEPENDENT INVENTORY PAGE */
+
+try {
+    if (localStorage.getItem("cartman-theme") === "light") {
+        document.body.classList.add("light-theme");
+    }
+} catch {
+    // Theme preference is optional.
+}
+
+const search = document.getElementById("inventory-search");
+const tableBody = document.getElementById("inventory-table-body");
+const rowCount = document.getElementById("inventory-row-count");
+const emptyState = document.getElementById("inventory-empty");
+
+if (search && tableBody && rowCount && emptyState) {
+    const rows = [...tableBody.querySelectorAll("tr")];
+
+    search.addEventListener("input", () => {
+        const query = search.value.trim().toLocaleLowerCase();
+        let visible = 0;
+
+        rows.forEach(row => {
+            const matches = (row.dataset.searchText || "").includes(query);
+            row.classList.toggle("hidden", !matches);
+            if (matches) visible++;
+        });
+
+        rowCount.textContent = `${visible} row(s)`;
+        emptyState.classList.toggle("hidden", visible > 0);
+    });
+}

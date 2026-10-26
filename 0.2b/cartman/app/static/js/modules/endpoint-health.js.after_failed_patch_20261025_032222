@@ -1,0 +1,407 @@
+(() => {
+    "use strict";
+
+    const root = document.querySelector("[data-eh-rows]");
+    if (!root || window.__cartmanEndpointHealthV1) return;
+    window.__cartmanEndpointHealthV1 = true;
+
+    const $ = selector => document.querySelector(selector);
+    const state = {
+        devices: [],
+        clients: [],
+        agents: [],
+        endpoints: [],
+        filtered: [],
+        loading: false,
+        errors: []
+    };
+
+    const listOf = value => {
+        if (Array.isArray(value)) return value;
+        if (!value || typeof value !== "object") return [];
+        for (const key of ["items", "devices", "clients", "agents", "results"]) {
+            if (Array.isArray(value[key])) return value[key];
+        }
+        return [];
+    };
+
+    async function getJSON(url) {
+        const response = await fetch(url, {
+            cache: "no-store",
+            headers: { "Accept": "application/json" }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.detail || `${url} returned HTTP ${response.status}`);
+        }
+        return data;
+    }
+
+    async function safeList(url, label) {
+        try {
+            return {items: listOf(await getJSON(url)), error: null};
+        } catch (error) {
+            return {items: [], error: `${label}: ${error.message || error}`};
+        }
+    }
+
+    const norm = value => String(value ?? "").trim().toLowerCase();
+
+    function deviceId(device) {
+        return String(device.id ?? device.device_id ?? device.deviceId ?? "");
+    }
+
+    function deviceName(device) {
+        return String(device.name ?? device.hostname ?? device.device_name ??
+            device.deviceName ?? "Unnamed endpoint");
+    }
+
+    function deviceOS(device) {
+        return String(device.os ?? device.operating_system ?? device.platform ?? "Unknown");
+    }
+
+    function deviceIP(device) {
+        return String(device.ip ?? device.private_ip ?? device.privateIp ??
+            device.ip_address ?? device.ipAddress ?? "");
+    }
+
+    function namesFor(record) {
+        return [
+            record.device_name, record.deviceName, record.hostname,
+            record.device_hostname, record.client_name, record.name
+        ].map(norm).filter(Boolean);
+    }
+
+    function matchesDevice(record, device) {
+        const dIds = [device.id, device.device_id, device.deviceId]
+            .filter(v => v !== undefined && v !== null && String(v) !== "")
+            .map(String);
+        const rIds = [
+            record.device_id, record.deviceId, record.endpoint_id, record.endpointId
+        ].filter(v => v !== undefined && v !== null && String(v) !== "")
+            .map(String);
+
+        if (dIds.length && rIds.length) {
+            if (dIds.some(id => rIds.includes(id))) return true;
+            // Explicit but conflicting IDs must not match by name.
+            return false;
+        }
+
+        const targetNames = [deviceName(device)].map(norm);
+        return namesFor(record).some(name => targetNames.includes(name));
+    }
+
+    function isConnected(record) {
+        if (record.connected === true || record.is_connected === true ||
+            record.isConnected === true || record.online === true) return true;
+
+        const status = norm(record.connection_status ?? record.connectionStatus ??
+            record.status ?? record.state);
+        return ["connected", "online", "ready"].includes(status);
+    }
+
+    function approvalOf(records) {
+        for (const record of records) {
+            const value = record.approval_status ?? record.approvalStatus ??
+                record.approval_state ?? record.approval;
+            if (value !== undefined && value !== null && String(value).trim()) {
+                return String(value);
+            }
+        }
+        return "";
+    }
+
+    function lastSeenOf(device, related) {
+        const values = [];
+        for (const item of related) {
+            const value = item.last_seen ?? item.lastSeen ??
+                item.credential_last_seen ?? item.heartbeat_at ?? item.heartbeatAt;
+            if (value) values.push(value);
+        }
+        const deviceValue = device.last_seen ?? device.lastSeen;
+        if (deviceValue) values.push(deviceValue);
+
+        if (!values.length) return "";
+        values.sort((a, b) => {
+            const ta = Date.parse(a) || 0;
+            const tb = Date.parse(b) || 0;
+            return tb - ta;
+        });
+        return values[0];
+    }
+
+    function classify(device) {
+        const matchedClients = state.clients.filter(item => matchesDevice(item, device));
+        const matchedAgents = state.agents.filter(item => matchesDevice(item, device));
+        const related = [...matchedClients, ...matchedAgents];
+        const connected = related.some(isConnected);
+        const approval = approvalOf(related);
+        const approvalNorm = norm(approval);
+
+        let status;
+        if (/reject|denied|revoked|blocked/.test(approvalNorm)) {
+            status = "Rejected";
+        } else if (/pending|awaiting|requested/.test(approvalNorm)) {
+            status = "Pending approval";
+        } else if (connected) {
+            status = "Connected";
+        } else if (related.length) {
+            status = "Offline";
+        } else {
+            status = "No agent";
+        }
+
+        return {
+            id: deviceId(device),
+            name: deviceName(device),
+            os: deviceOS(device),
+            ip: deviceIP(device),
+            status,
+            approval: approval || (related.length ? "Not reported" : "No agent record"),
+            lastSeen: lastSeenOf(device, related),
+            relatedCount: related.length
+        };
+    }
+
+    function formatTime(value) {
+        if (!value) return "Never reported";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+            ? String(value)
+            : date.toLocaleString([], {
+                year: "numeric", month: "short", day: "numeric",
+                hour: "2-digit", minute: "2-digit", second: "2-digit"
+            });
+    }
+
+    function statusClass(status) {
+        if (status === "Connected") return "connected";
+        if (status === "Offline" || status === "Pending approval") return "warning";
+        if (status === "Rejected" || status === "No agent") return "critical";
+        return "unknown";
+    }
+
+    function makeCell(text, className = "") {
+        const cell = document.createElement("td");
+        if (className) cell.className = className;
+        cell.textContent = text || "—";
+        return cell;
+    }
+
+    function makeBadge(text, className) {
+        const badge = document.createElement("span");
+        badge.className = `eh-status ${className}`;
+        const dot = document.createElement("i");
+        dot.setAttribute("aria-hidden", "true");
+        badge.appendChild(dot);
+        badge.appendChild(document.createTextNode(text));
+        return badge;
+    }
+
+    function updateSummary() {
+        const total = state.endpoints.length;
+        const connected = state.endpoints.filter(e => e.status === "Connected").length;
+        const offline = state.endpoints.filter(e => e.status === "Offline").length;
+        const attention = state.endpoints.filter(e => e.status !== "Connected").length;
+
+        $("[data-eh-total]").textContent = total;
+        $("[data-eh-connected]").textContent = connected;
+        $("[data-eh-offline]").textContent = offline;
+        $("[data-eh-attention]").textContent = attention;
+
+        const banner = $("[data-eh-banner]");
+        const mark = $("[data-eh-banner-mark]");
+        const title = $("[data-eh-banner-title]");
+        const description = $("[data-eh-banner-description]");
+
+        if (state.errors.length) {
+            banner.dataset.state = "warning";
+            mark.textContent = "!";
+            title.textContent = "Some endpoint data could not be loaded";
+            description.textContent = state.errors.join(" · ");
+        } else if (!total) {
+            banner.dataset.state = "neutral";
+            mark.textContent = "i";
+            title.textContent = "No devices in inventory";
+            description.textContent = "Add devices and enroll CartmanClient agents to begin tracking endpoint connectivity.";
+        } else if (!attention) {
+            banner.dataset.state = "healthy";
+            mark.textContent = "✓";
+            title.textContent = "All listed endpoints are connected";
+            description.textContent = `${connected} connected agent(s) are currently reporting.`;
+        } else {
+            banner.dataset.state = "warning";
+            mark.textContent = "!";
+            title.textContent = `${attention} endpoint(s) need attention`;
+            description.textContent = `${connected} connected · ${offline} offline. Check missing agents and pending approvals in the table below.`;
+        }
+    }
+
+    function monitoringURL(endpoint) {
+        const params = new URLSearchParams();
+        if (endpoint.id) params.set("endpoint_id", endpoint.id);
+        params.set("endpoint_name", endpoint.name);
+        return `/pages/monitoring/?${params.toString()}`;
+    }
+
+    function renderTable() {
+        const query = norm($("[data-eh-search]").value);
+        const filter = $("[data-eh-filter]").value;
+
+        state.filtered = state.endpoints.filter(endpoint => {
+            const text = norm([
+                endpoint.name, endpoint.os, endpoint.ip, endpoint.id,
+                endpoint.status, endpoint.approval
+            ].join(" "));
+            const searchMatch = text.includes(query);
+            let filterMatch = true;
+
+            if (filter === "connected") filterMatch = endpoint.status === "Connected";
+            if (filter === "offline") filterMatch = endpoint.status === "Offline";
+            if (filter === "missing") filterMatch = endpoint.status === "No agent";
+            if (filter === "attention") filterMatch = endpoint.status !== "Connected";
+
+            return searchMatch && filterMatch;
+        });
+
+        root.replaceChildren();
+
+        if (!state.filtered.length) {
+            const row = document.createElement("tr");
+            const cell = makeCell(
+                state.endpoints.length
+                    ? "No endpoints match these filters."
+                    : "No device records are available. Check the Devices inventory and API connection.",
+                "eh-empty"
+            );
+            cell.colSpan = 6;
+            row.appendChild(cell);
+            root.appendChild(row);
+        }
+
+        for (const endpoint of state.filtered) {
+            const row = document.createElement("tr");
+
+            const nameCell = document.createElement("td");
+            const name = document.createElement("strong");
+            name.className = "eh-device-name";
+            name.textContent = endpoint.name;
+            const sub = document.createElement("small");
+            sub.className = "eh-device-sub";
+            sub.textContent = endpoint.ip || endpoint.id || "IP not recorded";
+            nameCell.append(name, sub);
+            row.appendChild(nameCell);
+
+            row.appendChild(makeCell(endpoint.os));
+            const connectionCell = document.createElement("td");
+            connectionCell.appendChild(makeBadge(endpoint.status, statusClass(endpoint.status)));
+            row.appendChild(connectionCell);
+
+            const approvalCell = document.createElement("td");
+            const approval = endpoint.approval;
+            const approvalClass = /approved/i.test(approval) && !/not approved/i.test(approval)
+                ? "connected"
+                : /pending|awaiting|requested/i.test(approval)
+                    ? "warning"
+                    : /reject|denied|revoked|no agent/i.test(approval)
+                        ? "critical" : "unknown";
+            approvalCell.appendChild(makeBadge(approval, approvalClass));
+            row.appendChild(approvalCell);
+
+            row.appendChild(makeCell(formatTime(endpoint.lastSeen), "eh-last-seen"));
+
+            const actionCell = document.createElement("td");
+            const link = document.createElement("a");
+            link.className = "eh-row-action";
+            link.href = monitoringURL(endpoint);
+            link.textContent = "View in Monitoring ↗";
+            actionCell.appendChild(link);
+            row.appendChild(actionCell);
+
+            root.appendChild(row);
+        }
+
+        $("[data-eh-count]").textContent =
+            `${state.filtered.length} of ${state.endpoints.length} endpoint(s)`;
+    }
+
+    async function load() {
+        if (state.loading) return;
+        state.loading = true;
+
+        const refresh = $("[data-eh-refresh]");
+        refresh.disabled = true;
+        refresh.textContent = "Refreshing…";
+
+        try {
+            const [devicesResult, clientsResult, agentsResult] = await Promise.all([
+                safeList("/api/devices", "Device inventory"),
+                safeList("/api/device-connection-clients", "Connection status"),
+                safeList("/api/endpoint-agents", "Endpoint agents")
+            ]);
+
+            state.devices = devicesResult.items;
+            state.clients = clientsResult.items;
+            state.agents = agentsResult.items;
+            state.errors = [
+                devicesResult.error, clientsResult.error, agentsResult.error
+            ].filter(Boolean);
+
+            state.endpoints = state.devices.map(classify);
+            updateSummary();
+            renderTable();
+
+            $("[data-eh-updated]").textContent =
+                "Updated " + new Date().toLocaleTimeString([], {
+                    hour: "2-digit", minute: "2-digit", second: "2-digit"
+                });
+
+            const note = $("[data-eh-table-note]");
+            note.textContent = state.errors.length
+                ? "Partial data · one or more API requests failed. See the status message above."
+                : "Connection and approval state from Cartman APIs. Performance metrics are not collected on this page.";
+        } finally {
+            state.loading = false;
+            refresh.disabled = false;
+            refresh.innerHTML = '<span aria-hidden="true">&#8635;</span> Refresh';
+        }
+    }
+
+    $("[data-eh-refresh]").addEventListener("click", load);
+    $("[data-eh-search]").addEventListener("input", renderTable);
+    $("[data-eh-filter]").addEventListener("change", renderTable);
+    $("[data-eh-clear]").addEventListener("click", () => {
+        $("[data-eh-search]").value = "";
+        $("[data-eh-filter]").value = "all";
+        renderTable();
+    });
+
+    $("[data-eh-export]").addEventListener("click", () => {
+        const columns = [
+            "Endpoint", "OS", "IP", "Connection status",
+            "Approval", "Last seen", "Device ID"
+        ];
+        const values = state.filtered.map(e => [
+            e.name, e.os, e.ip, e.status, e.approval,
+            e.lastSeen || "", e.id
+        ]);
+        const csv = [columns, ...values].map(row =>
+            row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
+        ).join("\r\n");
+
+        const url = URL.createObjectURL(new Blob(["\uFEFF", csv], {
+            type: "text/csv;charset=utf-8"
+        }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "cartman-endpoint-health.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    load();
+    const timer = window.setInterval(() => {
+        if (!document.hidden) load();
+    }, 30000);
+    window.addEventListener("pagehide", () => window.clearInterval(timer), {once: true});
+})();

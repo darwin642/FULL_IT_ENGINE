@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Remote Commands</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/remote-commands.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/remote-commands.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span><span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="rc-page">
+    <div class="module-header rc-module-header">
+        <span class="category-icon purple">&#9000;</span>
+        <div>
+            <div class="eyebrow">CARTMAN WORKSPACE / ENDPOINT MANAGEMENT</div>
+            <h1>Remote Commands</h1>
+            <p>Review command activity, prepare commands and inspect execution results.</p>
+        </div>
+    </div>
+
+    <section class="rc-notice" aria-label="Execution status">
+        <span class="rc-notice-icon">&#9888;</span>
+        <div>
+            <strong data-rc-service-title>Checking agent connection...</strong>
+            <p data-rc-service-description>Checking the local task service.</p>
+        </div>
+        <span class="rc-status-pill" data-rc-service-pill><i></i> Checking</span>
+    </section>
+
+    <div class="rc-section-heading">
+        <div>
+            <span class="rc-kicker">COMMAND OPERATIONS</span>
+            <h2>Execution overview</h2>
+        </div>
+        <span class="rc-preview-tag" data-rc-preview-status>Loading task history...</span>
+    </div>
+
+    <section class="rc-stats" aria-label="Command statistics">
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Total executions</span><span class="rc-stat-icon">&#9776;</span></div>
+            <strong id="rc-stat-total">—</strong><small>Stored task records</small>
+        </article>
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Completed</span><span class="rc-stat-icon rc-green">&#10003;</span></div>
+            <strong id="rc-stat-completed">—</strong><small>Successfully completed</small>
+        </article>
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Pending</span><span class="rc-stat-icon rc-amber">&#9711;</span></div>
+            <strong id="rc-stat-pending">—</strong><small>Queued or running</small>
+        </article>
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Failed</span><span class="rc-stat-icon rc-red">!</span></div>
+            <strong id="rc-stat-failed">—</strong><small>Failed executions</small>
+        </article>
+    </section>
+
+    <section class="rc-layout">
+        <div class="rc-main-column">
+            <section class="rc-panel rc-history-panel">
+                <div class="rc-panel-heading">
+                    <div>
+                        <span class="rc-kicker">ACTIVITY</span>
+                        <h2>Command history</h2>
+                        <p>Review past executions and their results.</p>
+                    </div>
+                    <div class="rc-heading-actions"><span class="rc-count" data-rc-count>0 records</span><button type="button" class="rc-button rc-button-secondary" data-rc-refresh>Refresh</button></div>
+                </div>
+
+                <div class="rc-filterbar">
+                    <label class="rc-search-wrap">
+                        <span>&#9906;</span>
+                        <input type="search" data-rc-search placeholder="Search commands, targets..." aria-label="Search command history">
+                    </label>
+                    <select data-rc-status aria-label="Filter by execution status">
+                        <option value="">All statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                        <option value="running">Running</option>
+                    </select>
+                    <select data-rc-os aria-label="Filter by operating system">
+                        <option value="">All platforms</option>
+                        <option value="windows">Windows</option>
+                        <option value="linux">Linux</option>
+                        <option value="macos">macOS</option>
+                    </select>
+                </div>
+
+                <div class="rc-table-wrap">
+                    <table class="rc-table">
+                        <thead>
+                            <tr>
+                                <th>COMMAND</th>
+                                <th>TARGET</th>
+                                <th>PLATFORM</th>
+                                <th>STARTED</th>
+                                <th>DURATION</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody data-rc-rows></tbody>
+                    </table>
+                    <div class="rc-empty-state" data-rc-empty>
+                        <span class="rc-empty-icon">&#9000;</span>
+                        <h3>No command executions yet</h3>
+                        <p>Execution history will appear here when a command service is connected.</p>
+                    </div>
+                </div>
+                <div class="rc-table-footer">
+                    <span>Execution history</span>
+                    <span data-rc-footer-count>0 records</span>
+                </div>
+            </section>
+
+            <section class="rc-panel rc-detail-panel">
+                <div class="rc-panel-heading">
+                    <div>
+                        <span class="rc-kicker">INSPECTION</span>
+                        <h2>Execution details</h2>
+                        <p>Command output and execution metadata.</p>
+                    </div>
+                    <span class="rc-neutral-pill">No selection</span>
+                </div>
+                <div class="rc-detail-empty">
+                    <span class="rc-detail-icon">&#9776;</span>
+                    <div>
+                        <strong>No execution selected</strong>
+                        <p>Select a command history record to review its details and output.</p>
+                    </div>
+                </div>
+                <div class="rc-output-placeholder">
+                    <div><span class="rc-terminal-dot"></span><span class="rc-terminal-dot"></span><span class="rc-terminal-dot"></span><span>COMMAND OUTPUT</span></div>
+                    <pre>Waiting for an execution record...</pre>
+                </div>
+            </section>
+        </div>
+
+        <aside class="rc-panel rc-composer">
+            <div class="rc-panel-heading">
+                <div>
+                    <span class="rc-kicker">COMMAND WORKSPACE</span>
+                    <h2>Command composer</h2>
+                    <p>Prepare a command for review.</p>
+                </div>
+                <button type="button" class="rc-button rc-button-primary rc-create-template" data-rc-create-template>+ Create custom template</button>
+            </div>
+
+            <div class="rc-form-field">
+                <label for="rc-template">Choose a template (optional)</label>
+                <select id="rc-template" data-rc-template>
+                    <option value="">Choose a template...</option>
+
+                </select>
+                <small>Optional: choose a saved template to prefill the command editor.</small>
+                <p class="rc-template-description-display" data-rc-template-description-display hidden></p>
+                <div class="rc-template-details" data-rc-template-details hidden>
+                    <strong data-rc-template-detail-name></strong>
+                    <span data-rc-template-detail-os></span>
+                    <p data-rc-template-detail-description></p>
+                </div>
+            </div>
+
+            <div class="rc-form-field">
+                <label for="rc-target">Target Details · Device</label>
+                <select id="rc-target">
+                    <option>No endpoint inventory connected</option>
+                </select>
+                <p class="rc-target-status" data-rc-target-status role="status"></p>
+            </div>
+
+            <div class="rc-form-field">
+                <label for="rc-command" data-rc-command-label>Action details</label>
+                <textarea id="rc-command" data-rc-command rows="16" maxlength="6000" spellcheck="false" placeholder="Type or paste a command here..."></textarea>
+                <div class="rc-editor-footer"><span>Plain text preview</span><span data-rc-char-count>0 characters</span></div>
+            </div>
+
+            <div class="rc-security-note">
+                <span>&#128274;</span>
+                <div><strong>Controlled execution</strong><p>Commands run on the selected, approved CartmanClient when task execution is enabled. Review commands carefully before queueing.</p></div>
+            </div>
+
+                        <div class="rc-composer-actions">
+                <button type="button" class="rc-button rc-button-secondary" data-rc-clear>Clear</button>
+            </div>
+            <button type="button" class="rc-button rc-button-execute" data-rc-run disabled>Queue task <span>&#8594;</span></button>
+            <p class="rc-copy-feedback" data-rc-feedback role="status" aria-live="polite"></p>
+
+            <section class="rc-live-output" aria-label="Command output">
+                <div class="rc-live-output-header">
+                    <div><span class="rc-terminal-dot"></span><span class="rc-terminal-dot"></span><span class="rc-terminal-dot"></span><strong>OUTPUT</strong></div>
+                    <span data-rc-live-output-status>READY</span>
+                </div>
+                <pre data-rc-live-output aria-live="polite"></pre>
+            </section>
+        </aside>
+    </section>
+
+    <footer class="app-footer rc-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Approved CartmanClient task queue</span>
+    </footer>
+</main>
+
+<div class="rc-template-backdrop" data-rc-template-modal hidden>
+    <section class="rc-template-modal" role="dialog" aria-modal="true" aria-labelledby="rc-template-modal-title">
+        <header class="rc-template-modal-header">
+            <div>
+                <span class="rc-kicker">COMMAND LIBRARY</span>
+                <h2 id="rc-template-modal-title">Create custom template</h2>
+                <p>Save a reusable command for a specific operating system.</p>
+            </div>
+            <button type="button" class="rc-template-close" data-rc-template-cancel aria-label="Close">&times;</button>
+        </header>
+        <form data-rc-template-form>
+            <div class="rc-template-form-body">
+                <div class="rc-template-form-grid">
+                    <label class="rc-template-field">
+                        Template name *
+                        <input type="text" data-rc-template-name maxlength="120" required placeholder="e.g. Collect system information">
+                    </label>
+                    <label class="rc-template-field">
+                        Target operating system *
+                        <select data-rc-template-os required>
+                            <option value="Any">Any operating system</option>
+                            <option value="Windows">Windows</option>
+                            <option value="macOS">macOS</option>
+                            <option value="Linux">Linux</option>
+                        </select>
+                    </label>
+                    <label class="rc-template-field rc-template-field-wide">
+                        Description
+                        <textarea data-rc-template-description rows="3" maxlength="500" placeholder="What does this command do?"></textarea>
+                    </label>
+                    <label class="rc-template-field rc-template-field-wide">
+                        Command *
+                        <textarea data-rc-template-command rows="16" maxlength="6000" required spellcheck="false" placeholder="Write or paste the command here..."></textarea>
+                        <span class="rc-template-hint">Large command editor · Up to 6,000 characters</span>
+                    </label>
+                </div>
+                <p class="rc-template-error" data-rc-template-error role="alert"></p>
+                <p class="rc-template-safety">Custom commands run only on an enrolled device with an approved CartmanClient and task execution enabled. Review the command and target before queueing.</p>
+            </div>
+            <footer class="rc-template-modal-footer">
+                <button type="button" class="rc-button rc-button-secondary" data-rc-template-cancel>Cancel</button>
+                <button type="submit" class="rc-button rc-button-primary" data-rc-template-save>Save template</button>
+            </footer>
+        </form>
+    </section>
+</div>
+
+
+<div class="rc-schedule-backdrop" data-rc-schedule-modal hidden>
+    <section class="rc-schedule-modal" role="dialog" aria-modal="true" aria-labelledby="rc-schedule-title">
+        <header>
+            <div>
+                <span class="rc-kicker">TASK SCHEDULING</span>
+                <h2 id="rc-schedule-title">Queue command</h2>
+                <p>Choose when Cartman should release this task to the target device.</p>
+            </div>
+            <button type="button" class="rc-template-close" data-rc-schedule-cancel aria-label="Close">&times;</button>
+        </header>
+        <form data-rc-schedule-form>
+            <label class="rc-schedule-choice">
+                <input type="radio" name="rc-schedule-mode" data-rc-schedule-mode value="now" checked>
+                <span><strong>Run now</strong><small>Queue immediately. If the device is offline, it waits for reconnection.</small></span>
+            </label>
+            <label class="rc-schedule-choice">
+                <input type="radio" name="rc-schedule-mode" data-rc-schedule-mode value="scheduled">
+                <span><strong>Schedule for later</strong><small>Release the task at the selected date and time.</small></span>
+            </label>
+            <label class="rc-schedule-time-label">
+                Scheduled date and time
+                <input type="datetime-local" data-rc-schedule-time disabled>
+            </label>
+            <p class="rc-template-error" data-rc-schedule-error role="alert"></p>
+            <footer>
+                <button type="button" class="rc-button rc-button-secondary" data-rc-schedule-cancel>Cancel</button>
+                <button type="submit" class="rc-button rc-button-primary" data-rc-schedule-submit>Confirm &amp; Queue</button>
+            </footer>
+        </form>
+    </section>
+</div>
+
+</body>
+</html>

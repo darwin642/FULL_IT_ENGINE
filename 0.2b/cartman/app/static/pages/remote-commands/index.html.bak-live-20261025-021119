@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Remote Commands</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/remote-commands.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/remote-commands.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span><span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="rc-page">
+    <div class="module-header rc-module-header">
+        <span class="category-icon purple">&#9000;</span>
+        <div>
+            <div class="eyebrow">CARTMAN WORKSPACE / ENDPOINT MANAGEMENT</div>
+            <h1>Remote Commands</h1>
+            <p>Review command activity, prepare commands and inspect execution results.</p>
+        </div>
+    </div>
+
+    <section class="rc-notice" aria-label="Execution status">
+        <span class="rc-notice-icon">&#9888;</span>
+        <div>
+            <strong>Remote execution is not connected</strong>
+            <p>This is a UI preview. No commands will be sent to any device.</p>
+        </div>
+        <span class="rc-status-pill"><i></i> Execution disabled</span>
+    </section>
+
+    <div class="rc-section-heading">
+        <div>
+            <span class="rc-kicker">COMMAND OPERATIONS</span>
+            <h2>Execution overview</h2>
+        </div>
+        <span class="rc-preview-tag">UI PREVIEW · NO LIVE DATA</span>
+    </div>
+
+    <section class="rc-stats" aria-label="Command statistics">
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Total executions</span><span class="rc-stat-icon">&#9776;</span></div>
+            <strong>—</strong><small>No execution data</small>
+        </article>
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Completed</span><span class="rc-stat-icon rc-green">&#10003;</span></div>
+            <strong>—</strong><small>Awaiting integration</small>
+        </article>
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Pending</span><span class="rc-stat-icon rc-amber">&#9711;</span></div>
+            <strong>—</strong><small>Awaiting integration</small>
+        </article>
+        <article class="rc-stat-card">
+            <div class="rc-stat-top"><span>Failed</span><span class="rc-stat-icon rc-red">!</span></div>
+            <strong>—</strong><small>Awaiting integration</small>
+        </article>
+    </section>
+
+    <section class="rc-layout">
+        <div class="rc-main-column">
+            <section class="rc-panel rc-history-panel">
+                <div class="rc-panel-heading">
+                    <div>
+                        <span class="rc-kicker">ACTIVITY</span>
+                        <h2>Command history</h2>
+                        <p>Review past executions and their results.</p>
+                    </div>
+                    <span class="rc-count" data-rc-count>0 records</span>
+                </div>
+
+                <div class="rc-filterbar">
+                    <label class="rc-search-wrap">
+                        <span>&#9906;</span>
+                        <input type="search" data-rc-search placeholder="Search commands, targets..." aria-label="Search command history">
+                    </label>
+                    <select data-rc-status aria-label="Filter by execution status">
+                        <option value="">All statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                        <option value="running">Running</option>
+                    </select>
+                    <select data-rc-os aria-label="Filter by operating system">
+                        <option value="">All platforms</option>
+                        <option value="windows">Windows</option>
+                        <option value="linux">Linux</option>
+                        <option value="macos">macOS</option>
+                    </select>
+                </div>
+
+                <div class="rc-table-wrap">
+                    <table class="rc-table">
+                        <thead>
+                            <tr>
+                                <th>COMMAND</th>
+                                <th>TARGET</th>
+                                <th>PLATFORM</th>
+                                <th>STARTED</th>
+                                <th>DURATION</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody data-rc-rows></tbody>
+                    </table>
+                    <div class="rc-empty-state" data-rc-empty>
+                        <span class="rc-empty-icon">&#9000;</span>
+                        <h3>No command executions yet</h3>
+                        <p>Execution history will appear here when a command service is connected.</p>
+                    </div>
+                </div>
+                <div class="rc-table-footer">
+                    <span>Execution history</span>
+                    <span data-rc-footer-count>0 records</span>
+                </div>
+            </section>
+
+            <section class="rc-panel rc-detail-panel">
+                <div class="rc-panel-heading">
+                    <div>
+                        <span class="rc-kicker">INSPECTION</span>
+                        <h2>Execution details</h2>
+                        <p>Command output and execution metadata.</p>
+                    </div>
+                    <span class="rc-neutral-pill">No selection</span>
+                </div>
+                <div class="rc-detail-empty">
+                    <span class="rc-detail-icon">&#9776;</span>
+                    <div>
+                        <strong>No execution selected</strong>
+                        <p>Select a command history record to review its details and output.</p>
+                    </div>
+                </div>
+                <div class="rc-output-placeholder">
+                    <div><span class="rc-terminal-dot"></span><span class="rc-terminal-dot"></span><span class="rc-terminal-dot"></span><span>COMMAND OUTPUT</span></div>
+                    <pre>Waiting for an execution record...</pre>
+                </div>
+            </section>
+        </div>
+
+        <aside class="rc-panel rc-composer">
+            <div class="rc-panel-heading">
+                <div>
+                    <span class="rc-kicker">COMMAND WORKSPACE</span>
+                    <h2>Command composer</h2>
+                    <p>Prepare a command for review.</p>
+                </div>
+                <span class="rc-composer-icon">&#9000;</span>
+            </div>
+
+            <div class="rc-form-field">
+                <label for="rc-template">Command template</label>
+                <select id="rc-template" data-rc-template>
+                    <option value="">Choose a template...</option>
+                    <option value="win-info">Windows · System information</option>
+                    <option value="win-disk">Windows · Disk space</option>
+                    <option value="linux-info">Linux · System information</option>
+                    <option value="linux-disk">Linux · Disk space</option>
+                    <option value="mac-info">macOS · System information</option>
+                </select>
+                <small>Templates populate the editor only. Nothing is executed.</small>
+            </div>
+
+            <div class="rc-form-field">
+                <label for="rc-target">Target device</label>
+                <select id="rc-target" disabled>
+                    <option>No endpoint inventory connected</option>
+                </select>
+            </div>
+
+            <div class="rc-form-field">
+                <label for="rc-command">Command</label>
+                <textarea id="rc-command" data-rc-command rows="7" spellcheck="false" placeholder="Choose a template or enter a command for review..."></textarea>
+                <div class="rc-editor-footer"><span>Plain text preview</span><span data-rc-char-count>0 characters</span></div>
+            </div>
+
+            <div class="rc-security-note">
+                <span>&#128274;</span>
+                <div><strong>Execution guard enabled</strong><p>Commands cannot be dispatched from this preview. Target selection, authorization and audit integration are not configured.</p></div>
+            </div>
+
+            <div class="rc-composer-actions">
+                <button type="button" class="rc-button rc-button-secondary" data-rc-clear>Clear</button>
+                <button type="button" class="rc-button rc-button-primary" data-rc-copy disabled>Copy command</button>
+            </div>
+            <button type="button" class="rc-button rc-button-execute" disabled title="Remote execution is not connected">Run command <span>&#8594;</span></button>
+            <p class="rc-copy-feedback" data-rc-feedback role="status" aria-live="polite"></p>
+        </aside>
+    </section>
+
+    <footer class="app-footer rc-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Local UI preview · Remote execution disabled</span>
+    </footer>
+</main>
+</body>
+</html>

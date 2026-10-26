@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Endpoint Agents</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/endpoint-agents.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/endpoint-agents.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span><span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="ea-page">
+    <div class="module-header">
+        <span class="category-icon purple">&#8984;</span>
+        <div>
+            <div class="eyebrow">ENDPOINT MANAGEMENT / AGENT CONTROL</div>
+            <h1>Endpoint Agents</h1>
+            <p>Monitor enrolled agents, live connections and enrollment requests.</p>
+        </div>
+    </div>
+
+    <section class="ea-service-banner" aria-label="Agent service status">
+        <span class="ea-service-indicator" data-ea-service-indicator aria-hidden="true"></span>
+        <div class="ea-service-copy">
+            <strong data-ea-service-title>Loading listener status...</strong>
+            <span data-ea-service-description>Checking the local agent listener.</span>
+        </div>
+        <span class="ea-service-tag" data-ea-service-tag>CHECKING</span>
+        <button class="secondary-button" type="button" data-ea-start-listener hidden>
+            Start local listener
+        </button>
+    </section>
+
+    <section class="ea-stats" aria-label="Agent summary">
+        <article class="ea-stat-card">
+            <div class="ea-stat-top"><span>Total agents</span><span class="ea-stat-icon">&#8984;</span></div>
+            <strong data-ea-total>—</strong>
+            <span>Enrolled client identities</span>
+        </article>
+        <article class="ea-stat-card">
+            <div class="ea-stat-top"><span>Online</span><span class="ea-stat-icon">&#9679;</span></div>
+            <strong data-ea-online>—</strong>
+            <span>Approved live sessions</span>
+        </article>
+        <article class="ea-stat-card">
+            <div class="ea-stat-top"><span>Offline</span><span class="ea-stat-icon">&#9711;</span></div>
+            <strong data-ea-offline>—</strong>
+            <span>Enrolled, not currently connected</span>
+        </article>
+        <article class="ea-stat-card">
+            <div class="ea-stat-top"><span>Pending enrollment</span><span class="ea-stat-icon">&#8635;</span></div>
+            <strong data-ea-pending>—</strong>
+            <span>Awaiting administrator decision</span>
+        </article>
+    </section>
+
+    <section class="ea-panel ea-pending-panel" aria-label="Pending agent enrollment">
+        <div class="ea-panel-heading">
+            <div>
+                <span class="ea-kicker">ENROLLMENT APPROVAL</span>
+                <h2>Pending enrollment requests</h2>
+                <p>Approve only devices you recognize and expect to manage.</p>
+            </div>
+            <span class="ea-count" data-ea-pending-count>Loading...</span>
+        </div>
+        <div class="ea-table-wrap">
+            <table class="ea-table">
+                <thead><tr>
+                    <th>Endpoint</th><th>Platform</th><th>Client IP</th>
+                    <th>Username</th><th>Requested</th><th>Decision</th>
+                </tr></thead>
+                <tbody data-ea-pending-rows></tbody>
+            </table>
+        </div>
+        <p class="ea-pending-empty" data-ea-pending-empty hidden>
+            No enrollment requests are waiting for approval.
+        </p>
+    </section>
+
+    <section class="ea-panel" aria-label="Agent inventory">
+        <div class="ea-panel-heading">
+            <div>
+                <span class="ea-kicker">FLEET MANAGEMENT</span>
+                <h2>Agent inventory</h2>
+                <p>Registered CartmanClient identities and their live connectivity.</p>
+            </div>
+            <div class="ea-heading-actions">
+                <span class="ea-count" data-ea-count>Loading...</span>
+                <button type="button" class="secondary-button" data-ea-refresh>Refresh</button>
+            </div>
+        </div>
+
+        <div class="ea-toolbar">
+            <label class="ea-search-wrap">
+                <span aria-hidden="true">&#8981;</span>
+                <input type="search" data-ea-search
+                    placeholder="Search hostname, platform, IP or agent ID..."
+                    aria-label="Search agents">
+            </label>
+            <select data-ea-status aria-label="Filter by agent status">
+                <option value="all">All statuses</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+                <option value="pending">Pending</option>
+            </select>
+        </div>
+
+        <div class="ea-table-wrap">
+            <table class="ea-table">
+                <thead><tr>
+                    <th>Endpoint / Agent ID</th><th>Platform</th>
+                    <th>Agent version</th><th>Last check-in</th>
+                    <th>Collectors</th><th>Status</th>
+                </tr></thead>
+                <tbody data-ea-rows>
+                    <tr><td colspan="6" class="ea-load-error">Loading agents...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="ea-empty-state" data-ea-empty hidden>
+            <span class="ea-empty-icon" aria-hidden="true">&#8984;</span>
+            <h3>No matching agent records</h3>
+            <p>Start the local listener and connect a CartmanClient to register an endpoint.</p>
+        </div>
+    </section>
+
+    <section class="ea-collector-panel" aria-label="Collector overview">
+        <div class="ea-collector-symbol" aria-hidden="true">&#9672;</div>
+        <div class="ea-collector-copy">
+            <span class="ea-kicker">DATA COLLECTION</span>
+            <h2>Collectors</h2>
+            <p>Collector health and installed agent version are not yet reported by CartmanClient.</p>
+        </div>
+        <div class="ea-collector-state">
+            <span class="ea-state-dot"></span>
+            <span>Reporting not implemented</span>
+        </div>
+    </section>
+
+    <footer class="app-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Endpoint Agents · API connected</span>
+    </footer>
+</main>
+</body>
+</html>

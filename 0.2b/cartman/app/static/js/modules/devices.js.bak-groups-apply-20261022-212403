@@ -1,0 +1,1057 @@
+/* =========================================================
+   DEVICES — LOCAL DEMO INVENTORY
+   ========================================================= */
+
+const DEVICE_STORAGE_KEY = "cartman-devices-v1";
+const DEVICE_TAG_STORAGE_KEY = "cartman-device-tags-v1";
+
+const DEFAULT_DEVICE_TAGS = [
+    "Server",
+    "Workstation",
+    "Laptop",
+    "Network",
+    "Virtual Machine",
+    "Production",
+    "Development",
+    "Critical"
+];
+
+const DEVICE_STARTER_DATA = [
+    {
+        id: "device-001",
+        name: "SRV-DC01",
+        os: "Windows Server 2022",
+        ip: "192.168.1.10",
+        status: "Online",
+        tags: ["Server", "Production", "Critical"]
+    },
+    {
+        id: "device-002",
+        name: "SRV-WEB01",
+        os: "Ubuntu Server 24.04",
+        ip: "192.168.1.20",
+        status: "Online",
+        tags: ["Server", "Virtual Machine", "Production"]
+    },
+    {
+        id: "device-003",
+        name: "WS-ADMIN01",
+        os: "Windows 11",
+        ip: "192.168.1.30",
+        status: "Warning",
+        tags: ["Workstation", "Critical"]
+    },
+    {
+        id: "device-004",
+        name: "MAC-MINI01",
+        os: "macOS",
+        ip: "192.168.1.40",
+        status: "Online",
+        tags: ["Workstation", "Development"]
+    },
+    {
+        id: "device-005",
+        name: "LNX-TOOLS01",
+        os: "Ubuntu 24.04",
+        ip: "192.168.1.50",
+        status: "Offline",
+        tags: ["Virtual Machine", "Development"]
+    }
+];
+
+const deviceViewState = {
+    filter: "All devices",
+    search: "",
+    editingId: null,
+    sort: "newest",
+    type: "all",
+    os: "all",
+    status: "all",
+    selected: []
+};
+
+function escapeDeviceHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function loadDeviceData() {
+    try {
+        const stored = localStorage.getItem(DEVICE_STORAGE_KEY);
+
+        if (stored !== null) {
+            const parsed = JSON.parse(stored);
+
+            if (Array.isArray(parsed)) {
+                return parsed.filter(device =>
+                    device &&
+                    typeof device.id === "string" &&
+                    typeof device.name === "string" &&
+                    typeof device.os === "string" &&
+                    typeof device.ip === "string" &&
+                    typeof device.status === "string" &&
+                    Array.isArray(device.tags) &&
+                    device.tags.every(tag => typeof tag === "string")
+                );
+            }
+        }
+    } catch (error) {
+        console.warn("Could not load Cartman demo devices:", error);
+    }
+
+    return DEVICE_STARTER_DATA.map(device => ({
+        ...device,
+        tags: [...device.tags]
+    }));
+}
+
+function saveDeviceData(devices) {
+    try {
+        localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(devices));
+        return true;
+    } catch (error) {
+        console.error("Could not save Cartman demo devices:", error);
+        notify("Could not save demo inventory in this browser.");
+        return false;
+    }
+}
+
+function loadDeviceTags() {
+    try {
+        const stored = localStorage.getItem(DEVICE_TAG_STORAGE_KEY);
+
+        if (stored !== null) {
+            const parsed = JSON.parse(stored);
+
+            if (
+                Array.isArray(parsed) &&
+                parsed.every(tag => typeof tag === "string")
+            ) {
+                return [...new Set([...DEFAULT_DEVICE_TAGS, ...parsed])];
+            }
+        }
+    } catch (error) {
+        console.warn("Could not load Cartman demo tags:", error);
+    }
+
+    return [...DEFAULT_DEVICE_TAGS];
+}
+
+function saveDeviceTags(tags) {
+    try {
+        localStorage.setItem(
+            DEVICE_TAG_STORAGE_KEY,
+            JSON.stringify([...new Set(tags)])
+        );
+        return true;
+    } catch (error) {
+        console.error("Could not save Cartman demo tags:", error);
+        notify("Could not save tags in this browser.");
+        return false;
+    }
+}
+
+function getDeviceData() {
+    return loadDeviceData();
+}
+
+/* CARTMAN DEVICES REDESIGN V1
+   Demo metadata stays local and can later be replaced by API-backed records. */
+function getDeviceEnhancedData() {
+    const demoUsers = [
+        { name: "Alex Morgan", username: "amorgan" },
+        { name: "Sarah Chen", username: "schen" },
+        { name: "Jordan Lee", username: "jlee" },
+        { name: "Unassigned", username: "" }
+    ];
+
+    return getDeviceData().map((device, index) => {
+        const tags = Array.isArray(device.tags) ? device.tags : [];
+        const type = device.type ||
+            (tags.includes("Server") ? "Server" :
+             tags.includes("Laptop") ? "Laptop" :
+             tags.includes("Network") ? "Network" :
+             tags.includes("Virtual Machine") ? "Virtual Machine" :
+             "Workstation");
+        const os = device.os || "Unknown";
+        const isServer = /server/i.test(os) || type === "Server";
+        const isMac = /macos/i.test(os);
+        const isLinux = /ubuntu|linux|debian|red hat/i.test(os);
+        const user = device.assignedUser ||
+            demoUsers[index % demoUsers.length];
+
+        return {
+            ...device,
+            type,
+            assignedUser: user,
+            cpu: device.cpu || (isServer ? "Intel Xeon Gold 6338 · 8 vCPU (demo)" : isMac ? "Apple M1 (demo)" : isLinux ? "AMD EPYC · 4 vCPU (demo)" : type === "Laptop" ? "Intel Core i7-1260P (demo)" : "Intel Core i5-12400 (demo)"),
+            ram: device.ram || (isServer ? "32 GB" : type === "Virtual Machine" ? "8 GB" : "16 GB"),
+            disk: device.disk || (isServer ? "1 TB" : "512 GB"),
+            addedAt: device.addedAt || new Date(Date.now() - (index + 2) * 86400000).toISOString(),
+            lastSeen: device.lastSeen || (device.status === "Offline" ? null : new Date(Date.now() - index * 3600000).toISOString())
+        };
+    });
+}
+
+function formatDeviceDate(value) {
+    if (!value) return "Never";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" :
+        date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function exportSelectedDevicesJSON() {
+    const selected = new Set(deviceViewState.selected);
+    const devices = getDeviceEnhancedData().filter(device => selected.has(device.id));
+    if (!devices.length) {
+        notify("Select at least one device first.");
+        return;
+    }
+    const blob = new Blob([JSON.stringify({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        devices
+    }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "cartman-selected-devices.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    notify(`${devices.length} selected device(s) exported.`);
+}
+
+
+
+function exportDevicesJSON() {
+    const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        devices: getDeviceData()
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(payload, null, 2)],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `cartman-devices-${new Date()
+        .toISOString()
+        .slice(0, 10)}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    notify("Device inventory exported.");
+}
+
+async function importDevicesJSON(file) {
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        notify("JSON file must be smaller than 5 MB.");
+        return;
+    }
+
+    let parsed;
+
+    try {
+        parsed = JSON.parse(await file.text());
+    } catch {
+        notify("Invalid JSON file.");
+        return;
+    }
+
+    const imported = Array.isArray(parsed)
+        ? parsed
+        : parsed?.devices;
+
+    if (!Array.isArray(imported) || imported.length > 5000) {
+        notify("Invalid device list or too many devices (max 5000).");
+        return;
+    }
+
+    const allowedStatuses = ["Online", "Warning", "Offline"];
+
+    const valid = imported.every(device =>
+        device &&
+        typeof device === "object" &&
+        !Array.isArray(device) &&
+        typeof device.name === "string" &&
+        device.name.trim().length > 0 &&
+        device.name.trim().length <= 100 &&
+        typeof device.os === "string" &&
+        device.os.trim().length > 0 &&
+        device.os.trim().length <= 100 &&
+        (device.ip == null ||
+            (typeof device.ip === "string" && device.ip.length <= 100)) &&
+        (device.status == null ||
+            allowedStatuses.includes(device.status)) &&
+        (device.tags == null ||
+            (Array.isArray(device.tags) &&
+                device.tags.length <= 100 &&
+                device.tags.every(tag =>
+                    typeof tag === "string" &&
+                    tag.trim().length > 0 &&
+                    tag.length <= 40
+                )))
+    );
+
+    if (!valid) {
+        notify("JSON contains invalid device data.");
+        return;
+    }
+
+    const existing = getDeviceData();
+    const existingNames = new Set(
+        existing.map(device => device.name.trim().toLowerCase())
+    );
+
+    const newDevices = [];
+    const importedNames = new Set();
+
+    for (const device of imported) {
+        const name = device.name.trim();
+        const normalizedName = name.toLowerCase();
+
+        if (
+            existingNames.has(normalizedName) ||
+            importedNames.has(normalizedName)
+        ) {
+            continue;
+        }
+
+        importedNames.add(normalizedName);
+
+        newDevices.push({
+            id: `device-${Date.now()}-${Math.random()
+                .toString(36).slice(2, 10)}`,
+            name,
+            os: device.os.trim(),
+            ip: typeof device.ip === "string" ? device.ip.trim() : "",
+            status: device.status || "Online",
+            tags: [...new Set(
+                (device.tags || []).map(tag => tag.trim())
+            )]
+        });
+    }
+
+    if (!newDevices.length) {
+        notify("No new devices to import.");
+        return;
+    }
+
+    if (!window.confirm(
+        `Import ${newDevices.length} new device(s)? Existing devices will be kept.`
+    )) {
+        return;
+    }
+
+    const combined = [...existing, ...newDevices];
+
+    if (!saveDeviceData(combined)) return;
+
+    const allTags = [
+        ...getDeviceTags(),
+        ...newDevices.flatMap(device => device.tags)
+    ];
+
+    if (!saveDeviceTags(allTags)) {
+        notify("Devices imported, but saving tags failed.");
+    }
+
+    deviceViewState.filter = "All devices";
+    deviceViewState.search = "";
+
+    renderDevicesModule();
+    notify(`${newDevices.length} device(s) imported.`);
+}
+
+
+function getDeviceTags() {
+    const tags = new Set(loadDeviceTags());
+
+    getDeviceData().forEach(device => {
+        device.tags.forEach(tag => tags.add(tag));
+    });
+
+    return [...tags].sort((a, b) => a.localeCompare(b));
+}
+
+function getDeviceStatusClass(status) {
+    if (status === "Online") return "healthy";
+    if (status === "Warning") return "warning-pill";
+    return "gray";
+}
+
+function getDeviceSymbolClass(tags) {
+    if (tags.includes("Server")) return "purple";
+    if (tags.includes("Laptop")) return "cyan";
+    if (tags.includes("Network")) return "orange";
+    if (tags.includes("Virtual Machine")) return "blue";
+    return "green";
+}
+
+function getDeviceSymbol(tags) {
+    if (tags.includes("Server")) return "SV";
+    if (tags.includes("Laptop")) return "LP";
+    if (tags.includes("Network")) return "NW";
+    if (tags.includes("Virtual Machine")) return "VM";
+    return "DV";
+}
+
+function getDeviceFilteredData() {
+    const query = deviceViewState.search.trim().toLowerCase();
+    const devices = getDeviceEnhancedData().filter(device => {
+        const matchesTag = deviceViewState.filter === "All devices" ||
+            device.tags.includes(deviceViewState.filter);
+        const matchesType = deviceViewState.type === "all" ||
+            device.type === deviceViewState.type;
+        const matchesOS = deviceViewState.os === "all" ||
+            device.os === deviceViewState.os;
+        const matchesStatus = deviceViewState.status === "all" ||
+            device.status === deviceViewState.status;
+        const user = device.assignedUser;
+        const searchable = [
+            device.name, device.os, device.ip, device.publicIp, device.status, device.type,
+            device.cpu, device.ram, device.disk, user?.name, user?.username,
+            ...device.tags
+        ].join(" ").toLowerCase();
+        return matchesTag && matchesType && matchesOS && matchesStatus &&
+            (!query || searchable.includes(query));
+    });
+
+    const sorters = {
+        newest: (a, b) => new Date(b.addedAt) - new Date(a.addedAt),
+        oldest: (a, b) => new Date(a.addedAt) - new Date(b.addedAt),
+        type: (a, b) => a.type.localeCompare(b.type),
+        os: (a, b) => a.os.localeCompare(b.os),
+        status: (a, b) => a.status.localeCompare(b.status)
+    };
+    return devices.sort(sorters[deviceViewState.sort] || sorters.newest);
+}
+
+function renderDeviceStats() {
+    const devices = getDeviceData();
+
+    const total = devices.length;
+    const online = devices.filter(device => device.status === "Online").length;
+    const warning = devices.filter(device => device.status === "Warning").length;
+    const offline = devices.filter(device => device.status === "Offline").length;
+
+    return `
+        <div class="devices-stats">
+            <div class="devices-stat">
+                <div class="devices-stat-label">Total devices</div>
+                <div class="devices-stat-value">${total}</div>
+            </div>
+            <div class="devices-stat">
+                <div class="devices-stat-label">Online</div>
+                <div class="devices-stat-value online">${online}</div>
+            </div>
+            <div class="devices-stat">
+                <div class="devices-stat-label">Warning</div>
+                <div class="devices-stat-value warning">${warning}</div>
+            </div>
+            <div class="devices-stat">
+                <div class="devices-stat-label">Offline</div>
+                <div class="devices-stat-value offline">${offline}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderDeviceTags() { return ""; }
+
+function renderDeviceRows() {
+    const devices = getDeviceFilteredData();
+    const selected = new Set(deviceViewState.selected);
+
+    if (!devices.length) {
+        return `<tr><td colspan="15"><div class="devices-empty">
+            <strong>No devices found</strong>Try changing your search or filters.
+        </div></td></tr>`;
+    }
+
+    return devices.map(device => {
+        const symbolClass = getDeviceSymbolClass(device.tags);
+        const symbol = getDeviceSymbol(device.tags);
+        const user = device.assignedUser || { name: "Unassigned", username: "" };
+        const tags = device.tags.length
+            ? device.tags.map(tag => `<span class="device-row-tag">${escapeDeviceHTML(tag)}</span>`).join("")
+            : `<span class="device-row-tag">Untagged</span>`;
+        const status = device.status === "Online" ? "Active" :
+            device.status === "Warning" ? "Unknown" : "Offline";
+
+        return `<tr>
+            <td><input class="device-select" type="checkbox" data-device-select="${escapeDeviceHTML(device.id)}" aria-label="Select ${escapeDeviceHTML(device.name)}" ${selected.has(device.id) ? "checked" : ""}></td>
+            <td><div class="device-name-cell">
+                <div class="device-symbol ${symbolClass}">${symbol}</div>
+                <div><strong>${escapeDeviceHTML(device.name)}</strong></div>
+            </div></td>
+            <td>${escapeDeviceHTML(device.ip || "—")}</td>
+            <td>${escapeDeviceHTML(device.publicIp || "—")}</td>
+            <td><div class="device-assigned-cell"><span class="device-user-avatar">${escapeDeviceHTML((user.name || "U").split(" ").map(part => part[0] || "").join("").slice(0, 2).toUpperCase())}</span><div><strong>${escapeDeviceHTML(user.name || "Unassigned")}</strong><small>${escapeDeviceHTML(user.username ? "@" + user.username : "No user assigned")}</small></div></div></td>
+            <td><span class="device-type-label">${escapeDeviceHTML(device.type)}</span></td>
+            <td>${escapeDeviceHTML(device.os)}</td>
+            <td>${escapeDeviceHTML(device.cpu)}</td>
+            <td>${escapeDeviceHTML(device.ram)}</td>
+            <td>${escapeDeviceHTML(device.disk)}</td>
+            <td>${formatDeviceDate(device.addedAt)}</td>
+            <td>${formatDeviceDate(device.lastSeen)}</td>
+            <td><span class="status-pill ${getDeviceStatusClass(device.status)}">${status}</span></td>
+            <td><div class="device-row-tags">${tags}</div></td>
+            <td><div class="device-actions">
+                <button type="button" class="device-actions-trigger" data-device-new-action="more" data-device-id="${escapeDeviceHTML(device.id)}" aria-label="Device actions" title="Device actions" aria-haspopup="true" aria-expanded="false">⋯</button>
+                <div class="device-actions-menu" data-device-menu hidden>
+                    <button type="button" data-device-menu-action="edit" data-device-id="${escapeDeviceHTML(device.id)}">Edit device</button>
+                    <button type="button" data-device-menu-action="package" data-device-id="${escapeDeviceHTML(device.id)}">Package deployment</button>
+                    <button type="button" data-device-menu-action="shutdown" data-device-id="${escapeDeviceHTML(device.id)}">Shutdown</button>
+                    <button type="button" data-device-menu-action="network" data-device-id="${escapeDeviceHTML(device.id)}">Kick from network</button>
+                    <button type="button" data-device-menu-action="connect" data-device-id="${escapeDeviceHTML(device.id)}">Connect</button>
+                    <button type="button" data-device-menu-action="monitor" data-device-id="${escapeDeviceHTML(device.id)}">Monitor</button>
+                    <button type="button" data-device-menu-action="vpn" data-device-id="${escapeDeviceHTML(device.id)}">VPN action</button>
+                    <button type="button" class="device-actions-danger" data-device-menu-action="delete" data-device-id="${escapeDeviceHTML(device.id)}">Delete device</button>
+                </div>
+            </div></td>
+        </tr>`;
+    }).join("");
+}
+
+function renderDevicesModule() {
+    const moduleView = $("#module-view");
+    if (!moduleView || state.module !== "Devices") return;
+    setModulePlaceholderVisible(false);
+
+    let workspace = $("#devices-workspace");
+    if (!workspace) {
+        workspace = document.createElement("div");
+        workspace.id = "devices-workspace";
+        workspace.className = "devices-workspace";
+        moduleView.appendChild(workspace);
+    }
+
+    const all = getDeviceEnhancedData();
+    const osOptions = [...new Set(all.map(d => d.os))];
+    const typeOptions = [...new Set(all.map(d => d.type))];
+    const tagOptions = getDeviceTags();
+    const selectedCount = deviceViewState.selected.length;
+
+    workspace.innerHTML = `
+        <div class="devices-redesign-heading">
+            <div><h1>Devices</h1><p>Manage and monitor your endpoint inventory.</p></div>
+            <button type="button" class="primary-button" data-device-action="add">＋ Add device</button>
+        </div>
+        ${renderDeviceStats()}
+        <section class="devices-controls">
+            <label class="devices-search"><span aria-hidden="true">⌕</span>
+                <input type="search" id="devices-search-input" placeholder="Search name, user, OS, CPU, RAM, disk or tag..." value="${escapeDeviceHTML(deviceViewState.search)}" aria-label="Search devices">
+            </label>
+            <div class="devices-filter-controls">
+                <label>Sort
+                    <select id="devices-sort">
+                        <option value="newest" ${deviceViewState.sort === "newest" ? "selected" : ""}>Newest first</option>
+                        <option value="oldest" ${deviceViewState.sort === "oldest" ? "selected" : ""}>Oldest first</option>
+                        <option value="type" ${deviceViewState.sort === "type" ? "selected" : ""}>Device type</option>
+                        <option value="os" ${deviceViewState.sort === "os" ? "selected" : ""}>Operating system</option>
+                        <option value="status" ${deviceViewState.sort === "status" ? "selected" : ""}>Activity status</option>
+                    </select>
+                </label>
+                <label>Type
+                    <select id="devices-type-filter">
+                        <option value="all">All types</option>
+                        ${typeOptions.map(v => `<option value="${escapeDeviceHTML(v)}" ${deviceViewState.type === v ? "selected" : ""}>${escapeDeviceHTML(v)}</option>`).join("")}
+                    </select>
+                </label>
+                <label>Operating system
+                    <select id="devices-os-filter">
+                        <option value="all">All systems</option>
+                        ${osOptions.map(v => `<option value="${escapeDeviceHTML(v)}" ${deviceViewState.os === v ? "selected" : ""}>${escapeDeviceHTML(v)}</option>`).join("")}
+                    </select>
+                </label>
+                <label>Status
+                    <select id="devices-status-filter">
+                        <option value="all">All statuses</option>
+                        <option value="Online" ${deviceViewState.status === "Online" ? "selected" : ""}>Active</option>
+                        <option value="Offline" ${deviceViewState.status === "Offline" ? "selected" : ""}>Offline</option>
+                        <option value="Warning" ${deviceViewState.status === "Warning" ? "selected" : ""}>Unknown</option>
+                    </select>
+                </label>
+                <label>Tags
+                    <select id="devices-tag-filter">
+                        <option value="All devices" ${deviceViewState.filter === "All devices" ? "selected" : ""}>All tags</option>
+                        ${tagOptions.map(tag => `<option value="${escapeDeviceHTML(tag)}" ${deviceViewState.filter === tag ? "selected" : ""}>${escapeDeviceHTML(tag)}</option>`).join("")}
+                    </select>
+                </label>
+            </div>
+            <div class="devices-toolbar-right">
+                <button type="button" class="secondary-button" id="devices-clear-filters">Clear Filters</button>
+                <button type="button" class="secondary-button" data-device-action="import-json">Import JSON</button>
+                <button type="button" class="secondary-button" data-device-action="export-json">Export JSON</button>
+                <button type="button" class="secondary-button" data-device-action="reset">Reset demo data</button>
+                <input type="file" id="devices-json-file" accept=".json,application/json" hidden>
+            </div>
+        </section>
+        <section class="devices-table-panel">
+            <div class="devices-panel-heading">
+                <div><h2>Device inventory</h2><p>Demo inventory · ${all.length} devices registered</p></div>
+                <div class="devices-inventory-heading-actions">
+                    <span class="section-count">${getDeviceFilteredData().length} SHOWN</span>
+                    <div class="devices-inventory-actions">
+                        <button type="button" class="secondary-button devices-inventory-actions-trigger" data-device-new-action="inventory-more" aria-haspopup="true" aria-expanded="false">Actions <span aria-hidden="true">⌄</span></button>
+                        <div class="device-actions-menu devices-inventory-actions-menu" data-device-menu hidden>
+                            <div class="devices-inventory-selection-count">${selectedCount} selected</div>
+                            <button type="button" data-device-new-action="package">Package deployment</button>
+                            <button type="button" data-device-new-action="shutdown">Shutdown</button>
+                            <button type="button" data-device-new-action="network">Kick from network</button>
+                            <button type="button" data-device-new-action="export-selected">Export selected JSON</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="devices-table-wrap">
+                <table class="devices-table devices-table-modern">
+                    <thead><tr>
+                        <th><input type="checkbox" id="devices-select-visible" aria-label="Select visible devices" ${getDeviceFilteredData().length && getDeviceFilteredData().every(d => deviceViewState.selected.includes(d.id)) ? "checked" : ""}></th>
+                        <th>DEVICE</th><th>PRIVATE IP</th><th>PUBLIC IP</th><th>ASSIGNED TO</th><th>TYPE</th><th>OPERATING SYSTEM</th><th>CPU</th><th>RAM</th><th>DISK</th><th>ADDED</th><th>LAST SEEN</th><th>STATUS</th><th>TAGS</th><th>ACTIONS</th>
+                    </tr></thead>
+                    <tbody>${renderDeviceRows()}</tbody>
+                </table>
+            </div>
+        </section>
+        <p class="devices-demo-note">Demo inventory. Hardware details and user assignments are sample data; live endpoint actions require backend integrations.</p>
+    `;
+}
+
+function openDeviceModal(device = null) {
+    const editing = Boolean(device);
+    deviceViewState.editingId = device?.id || null;
+    const currentAssignedUser = device ? (device.assignedUser || getDeviceEnhancedData().find(item => item.id === device.id)?.assignedUser) : null;
+
+    $("#devices-modal-backdrop")?.remove();
+
+    const selectedTags = new Set(device?.tags || []);
+    const tags = getDeviceTags();
+
+    const tagOptions = tags.map(tag => `
+        <label class="device-tag-option">
+            <input
+                type="checkbox"
+                name="device-tags"
+                value="${escapeDeviceHTML(tag)}"
+                ${selectedTags.has(tag) ? "checked" : ""}
+            >
+            <span>${escapeDeviceHTML(tag)}</span>
+        </label>
+    `).join("");
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "devices-modal-backdrop";
+    backdrop.className = "devices-modal-backdrop";
+
+    backdrop.innerHTML = `
+        <section
+            class="devices-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="device-modal-title"
+        >
+            <header class="devices-modal-header">
+                <div>
+                    <h2 id="device-modal-title">${editing ? "Edit device" : "Add device"}</h2>
+                    <p>Update the demo inventory entry.</p>
+                </div>
+                <button
+                    type="button"
+                    class="device-action-button"
+                    data-device-action="close-modal"
+                    aria-label="Close dialog"
+                >×</button>
+            </header>
+
+            <form id="device-form">
+                <div class="devices-modal-body">
+                    <div class="device-form-field">
+                        <label for="device-name">Device name *</label>
+                        <input
+                            id="device-name"
+                            name="name"
+                            required
+                            maxlength="100"
+                            autocomplete="off"
+                            placeholder="e.g. SRV-APP01"
+                            value="${escapeDeviceHTML(device?.name || "")}"
+                        >
+                    </div>
+
+                    <div class="device-form-grid">
+                        <div class="device-form-field">
+                            <label for="device-os">Operating system *</label>
+                            <input
+                                id="device-os"
+                                name="os"
+                                required
+                                maxlength="100"
+                                placeholder="e.g. Ubuntu Server 24.04"
+                                value="${escapeDeviceHTML(device?.os || "")}"
+                            >
+                        </div>
+
+                        <div class="device-form-field">
+                            <label for="device-ip">IP address</label>
+                            <input
+                                id="device-ip"
+                                name="ip"
+                                maxlength="100"
+                                placeholder="e.g. 192.168.1.60"
+                                value="${escapeDeviceHTML(device?.ip || "")}"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="device-form-field">
+                        <label for="device-status">Status</label>
+                        <select id="device-status" name="status">
+                            ${["Online", "Warning", "Offline"].map(status => `
+                                <option
+                                    value="${status}"
+                                    ${(device?.status || "Online") === status ? "selected" : ""}
+                                >${status}</option>
+                            `).join("")}
+                        </select>
+                    </div>
+                    <div class="device-form-field">
+                        <label for="device-assigned-user">Assigned to</label>
+                        <select id="device-assigned-user" name="assignedUser">
+                            <option value="" ${!currentAssignedUser || currentAssignedUser.name === "Unassigned" ? "selected" : ""}>Unassigned</option>
+                            <option value="Alex Morgan|amorgan" ${currentAssignedUser?.name === "Alex Morgan" ? "selected" : ""}>Alex Morgan (@amorgan)</option>
+                            <option value="Sarah Chen|schen" ${currentAssignedUser?.name === "Sarah Chen" ? "selected" : ""}>Sarah Chen (@schen)</option>
+                            <option value="Jordan Lee|jlee" ${currentAssignedUser?.name === "Jordan Lee" ? "selected" : ""}>Jordan Lee (@jlee)</option>
+                        </select>
+                    </div>
+
+
+                    <div class="device-form-field">
+                        <span class="device-form-label">Tags</span>
+                        <div class="device-form-tags" id="device-form-tags">
+                            ${tagOptions}
+                        </div>
+                        <div class="device-custom-tag-row">
+                            <input
+                                id="device-new-tag"
+                                maxlength="40"
+                                placeholder="Create a custom tag..."
+                            >
+                            <button
+                                type="button"
+                                class="secondary-button"
+                                data-device-action="add-tag-from-form"
+                            >＋ Add tag</button>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="devices-modal-footer">
+                    <button
+                        type="button"
+                        class="secondary-button"
+                        data-device-action="close-modal"
+                    >Cancel</button>
+                    <button type="submit" class="primary-button">
+                        ${editing ? "Save changes" : "Add device"}
+                    </button>
+                </footer>
+            </form>
+        </section>
+    `;
+
+    document.body.appendChild(backdrop);
+    $("#device-name")?.focus();
+}
+
+function addCustomDeviceTag() {
+    const input = $("#device-new-tag");
+    if (!input) return;
+
+    const tag = input.value.trim();
+
+    if (!tag) {
+        input.focus();
+        return;
+    }
+
+    const tags = getDeviceTags();
+
+    if (tags.some(existing => existing.toLowerCase() === tag.toLowerCase())) {
+        notify("That tag already exists.");
+        input.focus();
+        return;
+    }
+
+    tags.push(tag);
+    if (!saveDeviceTags(tags)) return;
+
+    const container = $("#device-form-tags");
+
+    if (container) {
+        const label = document.createElement("label");
+        label.className = "device-tag-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.name = "device-tags";
+        checkbox.value = tag;
+        checkbox.checked = true;
+
+        const span = document.createElement("span");
+        span.textContent = tag;
+
+        label.append(checkbox, span);
+        container.appendChild(label);
+    }
+
+    input.value = "";
+    input.focus();
+}
+
+function saveDeviceForm(event) {
+    event.preventDefault();
+
+    const form = $("#device-form");
+    if (!form || !form.reportValidity()) return;
+
+    const formData = new FormData(form);
+
+    const name = String(formData.get("name") || "").trim();
+    const os = String(formData.get("os") || "").trim();
+    const ip = String(formData.get("ip") || "").trim();
+    const status = String(formData.get("status") || "Online");
+    const assignedValue = String(formData.get("assignedUser") || "");
+    const [assignedName, assignedUsername] = assignedValue.split("|");
+    const assignedUser = assignedName
+        ? { name: assignedName, username: assignedUsername || "" }
+        : { name: "Unassigned", username: "" };
+
+    const tags = $$('input[name="device-tags"]:checked', form)
+        .map(input => input.value);
+
+    if (!name || !os) {
+        notify("Device name and operating system are required.");
+        return;
+    }
+
+    const devices = getDeviceData();
+    const editingId = deviceViewState.editingId;
+
+    if (devices.some(device =>
+        device.name.toLowerCase() === name.toLowerCase() &&
+        device.id !== editingId
+    )) {
+        notify("A device with that name already exists.");
+        return;
+    }
+
+    if (editingId) {
+        const index = devices.findIndex(device => device.id === editingId);
+
+        if (index === -1) {
+            notify("Device not found.");
+            return;
+        }
+
+        devices[index] = {
+            ...devices[index],
+            name,
+            os,
+            ip,
+            status,
+            assignedUser,
+            tags
+        };
+    } else {
+        devices.push({
+            id: `device-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            name,
+            os,
+            ip,
+            status,
+            assignedUser,
+            tags
+        });
+    }
+
+    if (!saveDeviceData(devices)) return;
+
+    $("#devices-modal-backdrop")?.remove();
+    deviceViewState.editingId = null;
+
+    renderDevicesModule();
+    notify(editingId ? "Device updated." : "Device added.");
+}
+
+function deleteDevice(id) {
+    const devices = getDeviceData();
+    const device = devices.find(item => item.id === id);
+
+    if (!device) return;
+
+    if (!window.confirm(`Delete "${device.name}" from the demo inventory?`)) {
+        return;
+    }
+
+    if (!saveDeviceData(devices.filter(item => item.id !== id))) return;
+
+    renderDevicesModule();
+    notify("Device removed from demo inventory.");
+}
+
+function resetDeviceDemoData() {
+    if (!window.confirm("Reset the device list to the original demo data?")) {
+        return;
+    }
+
+    const starterData = DEVICE_STARTER_DATA.map(device => ({
+        ...device,
+        tags: [...device.tags]
+    }));
+
+    if (!saveDeviceData(starterData)) return;
+
+    deviceViewState.filter = "All devices";
+    deviceViewState.search = "";
+
+    renderDevicesModule();
+    notify("Demo inventory reset.");
+}
+
+function openManageDeviceTags() {
+    $("#devices-modal-backdrop")?.remove();
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "devices-modal-backdrop";
+    backdrop.className = "devices-modal-backdrop";
+
+    backdrop.innerHTML = `
+        <section
+            class="devices-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="device-tags-title"
+        >
+            <header class="devices-modal-header">
+                <div>
+                    <h2 id="device-tags-title">Manage tags</h2>
+                    <p>Organize devices by type, environment or priority.</p>
+                </div>
+                <button
+                    type="button"
+                    class="device-action-button"
+                    data-device-action="close-modal"
+                    aria-label="Close dialog"
+                >×</button>
+            </header>
+
+            <div class="devices-modal-body">
+                <div class="device-custom-tag-row">
+                    <input
+                        id="manage-new-device-tag"
+                        maxlength="40"
+                        placeholder="Enter a new tag..."
+                    >
+                    <button
+                        type="button"
+                        class="primary-button"
+                        data-device-action="create-managed-tag"
+                    >Add tag</button>
+                </div>
+
+                <div class="devices-manage-tags">
+                    ${getDeviceTags().map(tag => {
+                        const inUse = getDeviceData().some(device =>
+                            device.tags.includes(tag)
+                        );
+
+                        return `
+                            <div class="devices-manage-tag-row">
+                                <span>${escapeDeviceHTML(tag)}</span>
+                                <button
+                                    type="button"
+                                    class="device-action-button delete"
+                                    data-device-action="delete-tag"
+                                    data-device-tag="${escapeDeviceHTML(tag)}"
+                                    ${inUse ? "disabled title='This tag is assigned to a device'" : ""}
+                                    aria-label="Delete ${escapeDeviceHTML(tag)}"
+                                >×</button>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+            </div>
+
+            <footer class="devices-modal-footer">
+                <button
+                    type="button"
+                    class="secondary-button"
+                    data-device-action="close-modal"
+                >Close</button>
+            </footer>
+        </section>
+    `;
+
+    document.body.appendChild(backdrop);
+}
+
+function createManagedDeviceTag() {
+    const input = $("#manage-new-device-tag");
+    if (!input) return;
+
+    const tag = input.value.trim();
+
+    if (!tag) {
+        input.focus();
+        return;
+    }
+
+    const tags = getDeviceTags();
+
+    if (tags.some(existing => existing.toLowerCase() === tag.toLowerCase())) {
+        notify("That tag already exists.");
+        input.focus();
+        return;
+    }
+
+    tags.push(tag);
+    if (!saveDeviceTags(tags)) return;
+
+    openManageDeviceTags();
+    notify("Tag created.");
+}
+
+function deleteManagedDeviceTag(tag) {
+    if (DEFAULT_DEVICE_TAGS.includes(tag)) {
+        notify("Default tags cannot be deleted.");
+        return;
+    }
+
+    if (getDeviceData().some(device => device.tags.includes(tag))) {
+        notify("Remove this tag from its devices before deleting it.");
+        return;
+    }
+
+    if (!saveDeviceTags(getDeviceTags().filter(item => item !== tag))) return;
+
+    openManageDeviceTags();
+    renderDevicesModule();
+    notify("Tag deleted.");
+}

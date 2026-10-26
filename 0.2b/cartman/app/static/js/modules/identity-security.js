@@ -1,0 +1,701 @@
+(() => {
+    "use strict";
+
+    const roots = document.querySelectorAll(
+        '.workspace-module.identity-security[data-identity-security]'
+    );
+    if (!roots.length) return;
+
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+
+    const badge = (text, kind = "") =>
+        `<span class="isec-badge ${esc(kind)}">${esc(text)}</span>`;
+    const button = (label, action, id = "", kind = "") =>
+        `<button type="button" class="isec-btn ${esc(kind)}" data-action="${esc(action)}" ${id ? `data-id="${esc(id)}"` : ""}>${esc(label)}</button>`;
+    const panel = (title, body, subtitle = "", right = "") => `
+        <section class="isec-panel">
+          <div class="isec-panel-head"><div><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div>${right}</div>
+          ${body}
+        </section>`;
+    const table = (headers, rows) => `
+        <div class="isec-table-wrap"><table class="isec-table">
+          <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead>
+          <tbody>${rows || `<tr><td colspan="${headers.length}"><div class="isec-empty">No matching records found.</div></td></tr>`}</tbody>
+        </table></div>`;
+    const metrics = (items) => `
+        <div class="isec-metrics">${items.map(m => `
+          <article class="isec-metric">
+            <span class="isec-metric-label">${esc(m.label)}</span>
+            <div class="isec-metric-value">${esc(m.value)}</div>
+            <span class="isec-metric-foot">${esc(m.foot)}</span>
+          </article>`).join("")}</div>`;
+    const banner = (title, copy) => `
+        <div class="isec-banner"><div><strong>${esc(title)}</strong><p>${esc(copy)}</p></div>
+        <span class="isec-demo"><span class="isec-dot"></span> LOCAL DEMO · NO LIVE DATA</span></div>`;
+
+    const state = {
+        requests: [
+            {id:"REQ-1042", name:"Jordan Lee", email:"jordan.lee@example.test", role:"Infrastructure Admin", scope:"Production", age:"18 min ago", status:"Pending"},
+            {id:"REQ-1041", name:"Mina Patel", email:"mina.patel@example.test", role:"Read-only Operator", scope:"Monitoring", age:"42 min ago", status:"Pending"},
+            {id:"REQ-1038", name:"Alex Morgan", email:"alex.morgan@example.test", role:"Security Auditor", scope:"Identity", age:"Yesterday", status:"Pending"}
+        ],
+        users: [
+            {id:"USR-001",name:"Jordan Lee",email:"jordan.lee@example.test",role:"Infrastructure Admin",group:"Platform Operations",status:"Active",mfa:"Enrolled"},
+            {id:"USR-002",name:"Mina Patel",email:"mina.patel@example.test",role:"Read-only Operator",group:"Service Desk",status:"Active",mfa:"Enrolled"},
+            {id:"USR-003",name:"Alex Morgan",email:"alex.morgan@example.test",role:"Security Auditor",group:"Security",status:"Active",mfa:"Enrolled"},
+            {id:"USR-004",name:"Taylor Reed",email:"taylor.reed@example.test",role:"Helpdesk Analyst",group:"Service Desk",status:"Invited",mfa:"Not enrolled"},
+            {id:"USR-005",name:"Sam Rivera",email:"sam.rivera@example.test",role:"Read-only Operator",group:"Platform Operations",status:"Suspended",mfa:"Enrolled"}
+        ],
+        groups: [
+            {id:"GRP-001",name:"Platform Operations",members:12,scope:"Infrastructure",status:"Active"},
+            {id:"GRP-002",name:"Service Desk",members:8,scope:"IT Operations",status:"Active"},
+            {id:"GRP-003",name:"Security",members:4,scope:"Identity & Security",status:"Active"},
+            {id:"GRP-004",name:"External Contractors",members:3,scope:"Restricted",status:"Review"}
+        ],
+        roles: [
+            {id:"ROLE-001",name:"Infrastructure Admin",description:"Infrastructure administration",risk:"High",permissions:["devices.read","devices.reboot","inventory.read","inventory.edit","remote.sessions.manage"]},
+            {id:"ROLE-002",name:"Read-only Operator",description:"Read-only operational visibility",risk:"Low",permissions:["devices.read","inventory.read"]},
+            {id:"ROLE-003",name:"Security Auditor",description:"Read-only security and audit access",risk:"Low",permissions:["users.read","roles.read","audit.read","policies.read"]},
+            {id:"ROLE-004",name:"Helpdesk Analyst",description:"Service desk troubleshooting",risk:"Medium",permissions:["users.read","devices.read","inventory.read"]},
+            {id:"ROLE-005",name:"Identity Administrator",description:"Identity and role administration",risk:"Critical",permissions:["users.read","users.manage","roles.read","roles.manage","audit.read","policies.read"]}
+        ],
+        permissions: [
+            {id:"devices.read",label:"Read devices",area:"Devices"},
+            {id:"devices.reboot",label:"Reboot devices",area:"Devices"},
+            {id:"inventory.read",label:"Read inventory",area:"Inventory"},
+            {id:"inventory.edit",label:"Edit inventory",area:"Inventory"},
+            {id:"remote.sessions.manage",label:"Manage remote sessions",area:"Remote Access"},
+            {id:"users.read",label:"Read users",area:"Identity"},
+            {id:"users.manage",label:"Manage users",area:"Identity"},
+            {id:"roles.read",label:"Read roles",area:"Identity"},
+            {id:"roles.manage",label:"Manage roles",area:"Identity"},
+            {id:"audit.read",label:"Read audit logs",area:"Security"},
+            {id:"policies.read",label:"Read policies",area:"Security"},
+            {id:"secrets.rotate",label:"Rotate secrets",area:"Secrets"}
+        ],
+        assignments: [
+            {id:"ASN-001",principal:"USR-001",type:"User",roleId:"ROLE-001",scope:"Infrastructure"},
+            {id:"ASN-002",principal:"USR-002",type:"User",roleId:"ROLE-002",scope:"Monitoring"},
+            {id:"ASN-003",principal:"USR-003",type:"User",roleId:"ROLE-003",scope:"Identity"},
+            {id:"ASN-004",principal:"USR-004",type:"User",roleId:"ROLE-004",scope:"Service Desk"},
+            {id:"ASN-005",principal:"GRP-001",type:"Group",roleId:"ROLE-002",scope:"Infrastructure"}
+        ],
+        rbacSimUser:"USR-001",
+        rbacSimPermission:"devices.read",
+        providers: [
+            {id:"IDP-01",name:"Corporate SSO",type:"SAML 2.0",domain:"corp.example.test",status:"Active",sync:"Preview only",users:42},
+            {id:"IDP-02",name:"Workforce Identity",type:"OpenID Connect",domain:"login.example.test",status:"Active",sync:"Preview only",users:18},
+            {id:"IDP-03",name:"Legacy Directory",type:"LDAP",domain:"directory.example.test",status:"Disabled",sync:"Not connected",users:0}
+        ],
+        policies: [
+            {id:"POL-001",name:"Require MFA for administrators",scope:"Privileged roles",effect:"Require MFA",priority:10,enabled:true},
+            {id:"POL-002",name:"Restrict production access",scope:"Production",effect:"Require approval",priority:20,enabled:true},
+            {id:"POL-003",name:"Block legacy authentication",scope:"All users",effect:"Deny legacy auth",priority:30,enabled:true},
+            {id:"POL-004",name:"Contractor session limit",scope:"External contractors",effect:"Limit session",priority:40,enabled:false}
+        ],
+        audit: [
+            {time:"2026-10-23 14:32:08",actor:"jordan.lee@example.test",action:"access.requested",resource:"Production / Admin",result:"Pending",severity:"Medium"},
+            {time:"2026-10-23 14:18:41",actor:"mina.patel@example.test",action:"session.created",resource:"Workforce Identity",result:"Success",severity:"Low"},
+            {time:"2026-10-23 13:56:02",actor:"alex.morgan@example.test",action:"policy.reviewed",resource:"POL-001",result:"Success",severity:"Low"},
+            {time:"2026-10-23 12:43:19",actor:"system.demo",action:"mfa.challenge",resource:"USR-004",result:"Failed",severity:"High"},
+            {time:"2026-10-23 11:09:55",actor:"taylor.reed@example.test",action:"login.attempt",resource:"Corporate SSO",result:"Success",severity:"Low"},
+            {time:"2026-10-22 16:25:10",actor:"system.demo",action:"provider.sync",resource:"Legacy Directory",result:"Skipped",severity:"Medium"}
+        ],
+        secrets: [
+            {id:"SEC-001",name:"Production API credential",kind:"API credential",owner:"Platform Operations",updated:"2026-10-18",rotation:"Due in 12 days",status:"Active"},
+            {id:"SEC-002",name:"Directory bind credential",kind:"Directory credential",owner:"Identity Services",updated:"2026-10-02",rotation:"Overdue",status:"Review"},
+            {id:"SEC-003",name:"OIDC client credential",kind:"Client credential",owner:"Corporate SSO",updated:"2026-10-20",rotation:"Due in 45 days",status:"Active"},
+            {id:"SEC-004",name:"Automation token",kind:"Service token",owner:"Platform Operations",updated:"2026-09-28",rotation:"Due in 3 days",status:"Active"}
+        ],
+        usersTab:"users",
+        toast:"",
+        toastTimer:null
+    };
+
+    function statusKind(value) {
+        if (["Active","Success","Enrolled","Enabled","Approved"].includes(value)) return "good";
+        if (["Pending","Invited","Review","Medium","Skipped","Due soon"].includes(value)) return "warn";
+        if (["Suspended","Disabled","Failed","High","Denied","Overdue"].includes(value)) return "bad";
+        return "";
+    }
+    function searchableRow(values, cells) {
+        return `<tr data-searchable="${esc(values.join(" ").toLowerCase())}">${cells}</tr>`;
+    }
+    function renderIdentity() {
+        const pending = state.requests.filter(r => r.status === "Pending");
+        const requestRows = pending.map(r => searchableRow(
+            [r.id,r.name,r.email,r.role,r.scope],
+            `<td><div class="isec-primary-text">${esc(r.id)}</div><div class="isec-secondary-text">${esc(r.age)}</div></td>
+             <td><div class="isec-primary-text">${esc(r.name)}</div><div class="isec-secondary-text">${esc(r.email)}</div></td>
+             <td>${esc(r.role)}</td><td>${esc(r.scope)}</td>
+             <td><div class="isec-actions">${button("Approve","request-approve",r.id,"primary")}${button("Deny","request-deny",r.id,"danger")}</div></td>`
+        )).join("");
+        const approved = state.requests.filter(r => r.status === "Approved").length;
+        return `${banner("Identity control center","Review access posture, approval queues and privileged access assignments. All actions are local demo simulations.")}
+          ${metrics([
+            {label:"IDENTITY REQUESTS",value:state.requests.length,foot:"Sample request records"},
+            {label:"PENDING APPROVALS",value:pending.length,foot:"Require reviewer action"},
+            {label:"ACTIVE USERS",value:state.users.filter(u=>u.status==="Active").length,foot:"Local sample directory"},
+            {label:"POLICIES ENABLED",value:state.policies.filter(p=>p.enabled).length,foot:"Local policy configuration"}
+          ])}
+          <div class="isec-grid-two">
+            ${panel("Access requests", " " + table(["Request","Requester","Requested role","Scope","Actions"],requestRows), "Approve or deny a request in this browser preview.")}
+            ${panel("Access posture", `<div class="isec-panel-body"><div class="isec-list">
+              <div class="isec-list-item"><div><div class="isec-primary-text">Multi-factor authentication</div><p>Sample accounts enrolled in MFA</p></div>${badge("4 / 5 enrolled","good")}</div>
+              <div class="isec-list-item"><div><div class="isec-primary-text">Privileged access</div><p>Administrator access should be reviewed regularly</p></div>${badge("Review recommended","warn")}</div>
+              <div class="isec-list-item"><div><div class="isec-primary-text">Approval history</div><p>${approved} request(s) approved in this session</p></div>${badge("Local session","")}</div>
+            </div></div>`, "Illustrative indicators, not a security assessment.")}
+          </div>
+          <p class="isec-footnote">This screen does not enforce access controls. Decisions update only the in-memory demo state and are discarded when the page is refreshed.</p>`;
+    }
+
+    function renderRbacPanel() {
+        const roleRows = state.roles.map(role => searchableRow(
+            [role.id, role.name, role.description, role.risk, ...role.permissions],
+            `<td><div class="isec-primary-text">${esc(role.name)}</div>
+                 <div class="isec-secondary-text">${esc(role.id)} · ${esc(role.description)}</div></td>
+             <td>${esc(role.permissions.length)} permissions</td>
+             <td>${badge(role.risk, role.risk === "Critical" || role.risk === "High" ? "bad" : role.risk === "Medium" ? "warn" : "good")}</td>
+             <td><div class="isec-actions">${button("Edit permissions","rbac-role-edit",role.id)}</div></td>`
+        )).join("");
+
+        const assignmentRows = state.assignments.map(a => {
+            const principal = a.type === "User"
+                ? state.users.find(u => u.id === a.principal)
+                : state.groups.find(g => g.id === a.principal);
+            const role = state.roles.find(r => r.id === a.roleId);
+            return searchableRow(
+                [a.id, a.principal, a.type, principal?.name || "Unknown principal",
+                 role?.name || "Missing role", a.scope],
+                `<td><div class="isec-primary-text">${esc(principal?.name || "Unknown principal")}</div>
+                     <div class="isec-secondary-text">${esc(a.principal)} · ${esc(a.type)}</div></td>
+                 <td>${esc(role?.name || "Missing role")}</td>
+                 <td>${esc(a.scope)}</td>
+                 <td><div class="isec-actions">
+                     ${button("Change role","rbac-assign",a.id)}
+                     ${button("Remove","rbac-remove",a.id,"danger")}
+                 </div></td>`
+            );
+        }).join("");
+
+        const userOptions = state.users.map(u =>
+            `<option value="${esc(u.id)}" ${u.id === state.rbacSimUser ? "selected" : ""}>${esc(u.name)} (${esc(u.id)})</option>`
+        ).join("");
+
+        const permissionOptions = state.permissions.map(p =>
+            `<option value="${esc(p.id)}" ${p.id === state.rbacSimPermission ? "selected" : ""}>${esc(p.id)} — ${esc(p.label)}</option>`
+        ).join("");
+
+        return `<div class="isec-app isec-rbac-stack">
+            ${panel(
+                "Role catalog",
+                table(["Role","Permissions","Risk","Actions"], roleRows),
+                "RBAC roles define the permissions available to an assigned principal.",
+                button("Create demo role","rbac-role-add","","primary")
+            )}
+            ${panel(
+                "Role assignments",
+                table(["Principal","Assigned role","Scope","Actions"], assignmentRows),
+                "Direct user and group assignments are evaluated by the local simulator.",
+                button("Assign demo role","rbac-add","","primary")
+            )}
+            ${panel(
+                "Permission simulator",
+                `<div class="isec-panel-body">
+                    <div class="isec-toolbar">
+                        <label style="min-width:220px;flex:1">
+                            <span class="isec-secondary-text">User</span>
+                            <select class="isec-select" data-rbac-user aria-label="Simulator user">${userOptions}</select>
+                        </label>
+                        <label style="min-width:260px;flex:2">
+                            <span class="isec-secondary-text">Permission</span>
+                            <select class="isec-select" data-rbac-permission aria-label="Simulator permission">${permissionOptions}</select>
+                        </label>
+                        ${button("Evaluate permission","rbac-simulate","","primary")}
+                    </div>
+                    <p class="isec-footnote" style="margin-top:12px">
+                        Simulation checks the selected user's direct assignment first, then a matching group assignment.
+                        This is illustrative RBAC logic, not an authorization enforcement point.
+                    </p>
+                </div>`,
+                "Test whether a sample role grants a specific permission."
+            )}
+            <div class="isec-notice">
+                <strong>Demo boundary:</strong> role changes, assignments and evaluation results exist only in browser memory.
+                They do not grant or revoke real Cartman permissions.
+            </div>
+        </div>`;
+    }
+
+    function renderUsers() {
+        const usersMode = state.usersTab === "users";
+        const rows = usersMode ? state.users.map(u => searchableRow(
+            [u.id,u.name,u.email,u.role,u.group,u.status,u.mfa],
+            `<td><div class="isec-primary-text">${esc(u.name)}</div><div class="isec-secondary-text">${esc(u.id)}</div></td>
+             <td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${esc(u.group)}</td>
+             <td>${badge(u.status,statusKind(u.status))}</td><td>${badge(u.mfa,u.mfa==="Enrolled"?"good":"warn")}</td>`
+        )).join("") : state.groups.map(g => searchableRow(
+            [g.id,g.name,g.scope,g.status],
+            `<td><div class="isec-primary-text">${esc(g.name)}</div><div class="isec-secondary-text">${esc(g.id)}</div></td>
+             <td>${esc(g.scope)}</td><td>${esc(g.members)}</td><td>${badge(g.status,statusKind(g.status))}</td>
+             <td>${button("Add member","group-member",g.id)}</td>`
+        )).join("");
+        const headers = usersMode ? ["User","Email","Role","Group","Status","MFA"] : ["Group","Scope","Members","Status","Action"];
+        return `${banner("Directory management","Inspect sample user accounts, group membership and MFA enrollment. No directory is connected.")}
+          ${metrics([
+            {label:"TOTAL USERS",value:state.users.length,foot:"Sample accounts"},
+            {label:"ACTIVE USERS",value:state.users.filter(u=>u.status==="Active").length,foot:"Local demo state"},
+            {label:"GROUPS",value:state.groups.length,foot:"Sample access groups"},
+            {label:"MFA NOT ENROLLED",value:state.users.filter(u=>u.mfa!=="Enrolled").length,foot:"Review recommended"}
+          ])}
+          ${panel("Directory",`<div class="isec-panel-body"><div class="isec-toolbar" style="justify-content:space-between">
+            <div class="isec-tabs" role="tablist" aria-label="Directory view">
+              <button type="button" class="isec-tab" role="tab" aria-selected="${usersMode}" data-action="users-tab" data-id="users">Users</button>
+              <button type="button" class="isec-tab" role="tab" aria-selected="${!usersMode}" data-action="users-tab" data-id="groups">Groups</button>
+            </div>
+            <div class="isec-actions">${button(usersMode?"Add demo user":"Add demo group",usersMode?"add-user":"add-group","", "primary")}</div>
+          </div></div>${table(headers,rows)}`, "Sample directory records. Additions exist only until refresh.")}
+          ${renderRbacPanel()}`;
+    }
+
+    function renderProviders() {
+        const rows = state.providers.map(p => searchableRow(
+            [p.id,p.name,p.type,p.domain,p.status,p.sync],
+            `<td><div class="isec-primary-text">${esc(p.name)}</div><div class="isec-secondary-text">${esc(p.id)}</div></td>
+             <td>${esc(p.type)}</td><td>${esc(p.domain)}</td><td>${esc(p.users)}</td>
+             <td>${badge(p.status,statusKind(p.status))}</td>
+             <td><div class="isec-actions">${button("Details","provider-details",p.id)}${button(p.status==="Active"?"Disable":"Enable","provider-toggle",p.id)}</div></td>`
+        )).join("");
+        return `${banner("Federation & directory providers","Review example SAML, OpenID Connect and LDAP connections. This page does not authenticate or synchronize identities.")}
+          ${metrics([
+            {label:"PROVIDERS",value:state.providers.length,foot:"Configured sample entries"},
+            {label:"ACTIVE",value:state.providers.filter(p=>p.status==="Active").length,foot:"Local preview status"},
+            {label:"SAMPLE IDENTITIES",value:state.providers.reduce((n,p)=>n+p.users,0),foot:"Illustrative counts only"},
+            {label:"LIVE CONNECTIONS",value:"0",foot:"No integration configured"}
+          ])}
+          ${panel("Identity providers",table(["Provider","Protocol","Domain","Users","Status","Actions"],rows),"Example configuration inventory.",button("Add demo provider","provider-add","","primary"))}
+          <div class="isec-notice">Provider status toggles are visual demo actions only. No credentials are sent, no metadata is fetched, and no SSO flow is initiated.</div>`;
+    }
+
+    function renderPolicies() {
+        const rows = state.policies.map(p => searchableRow(
+            [p.id,p.name,p.scope,p.effect,p.priority,p.enabled?"enabled":"disabled"],
+            `<td><div class="isec-primary-text">${esc(p.name)}</div><div class="isec-secondary-text">${esc(p.id)}</div></td>
+             <td>${esc(p.scope)}</td><td>${esc(p.effect)}</td><td>${esc(p.priority)}</td>
+             <td>${badge(p.enabled?"Enabled":"Disabled",p.enabled?"good":"")}</td>
+             <td><div class="isec-actions"><button class="isec-btn" type="button" data-action="policy-toggle" data-id="${esc(p.id)}">${p.enabled?"Disable":"Enable"}</button>${button("Simulate","policy-simulate",p.id)}</div></td>`
+        )).join("");
+        return `${banner("Policy administration","Inspect sample access rules and priorities. Enable/disable and simulation controls do not enforce real policies.")}
+          ${metrics([
+            {label:"TOTAL POLICIES",value:state.policies.length,foot:"Sample rule set"},
+            {label:"ENABLED",value:state.policies.filter(p=>p.enabled).length,foot:"Local configuration"},
+            {label:"DISABLED",value:state.policies.filter(p=>!p.enabled).length,foot:"Not enforced"},
+            {label:"EVALUATION MODE",value:"Demo",foot:"No real authorization checks"}
+          ])}
+          ${panel("Access policies",table(["Policy","Scope","Effect","Priority","State","Actions"],rows),"Lower priority numbers are evaluated first in this illustration.",button("Create demo policy","policy-add","","primary"))}
+          <p class="isec-footnote">A simulated result is not an authorization decision. Real enforcement requires a backend policy engine and verified identity context.</p>
+          ${renderRbacPanel()}`;
+    }
+
+    function renderAudit() {
+        const rows = state.audit.map((a,i) => searchableRow(
+            [a.time,a.actor,a.action,a.resource,a.result,a.severity],
+            `<td><div class="isec-primary-text">${esc(a.time)}</div></td>
+             <td>${esc(a.actor)}</td><td><code>${esc(a.action)}</code></td><td>${esc(a.resource)}</td>
+             <td>${badge(a.result,statusKind(a.result))}</td><td>${badge(a.severity,statusKind(a.severity))}</td>`
+        )).join("");
+        return `${banner("Audit event explorer","Search and export illustrative events. These rows are sample data, not a production audit trail.")}
+          ${metrics([
+            {label:"SAMPLE EVENTS",value:state.audit.length,foot:"Local example records"},
+            {label:"HIGH SEVERITY",value:state.audit.filter(a=>a.severity==="High").length,foot:"Sample events"},
+            {label:"FAILED RESULTS",value:state.audit.filter(a=>a.result==="Failed").length,foot:"Sample events"},
+            {label:"DATA SOURCE",value:"Local",foot:"No live event ingestion"}
+          ])}
+          ${panel("Audit events",`<div class="isec-panel-body"><div class="isec-toolbar">
+              <input class="isec-input isec-search" type="search" placeholder="Filter actor, action, resource…" aria-label="Filter audit events" data-audit-search>
+              <select class="isec-select" aria-label="Filter result" data-audit-result>
+                <option value="">All results</option><option>Success</option><option>Failed</option><option>Pending</option><option>Skipped</option>
+              </select>
+              <select class="isec-select" aria-label="Filter severity" data-audit-severity>
+                <option value="">All severity</option><option>Low</option><option>Medium</option><option>High</option>
+              </select>
+              ${button("Export CSV","export-audit","","primary")}
+            </div></div>${table(["Timestamp","Actor","Action","Resource","Result","Severity"],rows)}`, "Filter locally and export the current sample event set.")}`;
+    }
+
+    function renderCredentials() {
+        const rows = state.secrets.map(s => searchableRow(
+            [s.id,s.name,s.kind,s.owner,s.updated,s.rotation,s.status],
+            `<td><div class="isec-primary-text">${esc(s.name)}</div><div class="isec-secondary-text">${esc(s.id)}</div></td>
+             <td>${esc(s.kind)}</td><td>${esc(s.owner)}</td>
+             <td><span class="isec-secret-value" aria-label="Secret value hidden">••••••••••••••</span></td>
+             <td>${esc(s.updated)}</td><td>${badge(s.rotation,s.rotation==="Overdue"?"bad":"warn")}</td>
+             <td><div class="isec-actions">${button("Simulate rotation","secret-rotate",s.id)}</div></td>`
+        )).join("");
+        return `${banner("Credential inventory","Review secret metadata and rotation status. This preview contains no actual passwords, tokens, API keys or private keys.")}
+          ${metrics([
+            {label:"INVENTORY ITEMS",value:state.secrets.length,foot:"Sample metadata only"},
+            {label:"ACTIVE",value:state.secrets.filter(s=>s.status==="Active").length,foot:"Local demo state"},
+            {label:"ROTATION OVERDUE",value:state.secrets.filter(s=>s.rotation==="Overdue").length,foot:"Review sample metadata"},
+            {label:"SECRET VALUES",value:"Masked",foot:"No secret material stored"}
+          ])}
+          ${panel("Credentials & secrets",table(["Name","Type","Owner","Value","Last updated","Rotation","Actions"],rows),"Metadata-only preview. Values are intentionally never revealed.",button("Add demo entry","secret-add","","primary"))}
+          <div class="isec-notice"><strong>Security boundary:</strong> Values shown above are decorative masking characters, not real secrets. Rotation updates sample metadata only. Do not paste production credentials into this demo.</div>`;
+    }
+
+    function render(root) {
+        const slug = root.dataset.identitySecurity;
+        const renderers = {
+            "identity":renderIdentity,
+            "users-groups":renderUsers,
+            "identity-providers":renderProviders,
+            "policies":renderPolicies,
+            "audit":renderAudit,
+            "credentials-secrets":renderCredentials
+        };
+        const renderer = renderers[slug];
+        if (!renderer) {
+            root.innerHTML = `<div class="isec-empty">Unknown Identity &amp; Security page.</div>`;
+            return;
+        }
+        root.innerHTML = `<div class="isec-app" data-isec-content>${renderer()}${state.toast ? `<div class="isec-toast" role="status" aria-live="polite">${esc(state.toast)}</div>` : ""}</div>`;
+    }
+
+    function notify(message, root) {
+        state.toast = message;
+        render(root);
+        if (state.toastTimer) clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => {
+            state.toast = "";
+            render(root);
+        }, 3200);
+    }
+
+    function ask(label, placeholder = "") {
+        const value = window.prompt(label, placeholder);
+        if (value === null) return "";
+        return value.trim();
+    }
+
+    function exportAudit(root) {
+        const search = root.querySelector("[data-audit-search]")?.value.trim().toLowerCase() || "";
+        const result = root.querySelector("[data-audit-result]")?.value || "";
+        const severity = root.querySelector("[data-audit-severity]")?.value || "";
+        const data = state.audit.filter(a =>
+            [a.time,a.actor,a.action,a.resource,a.result,a.severity].join(" ").toLowerCase().includes(search) &&
+            (!result || a.result === result) && (!severity || a.severity === severity)
+        );
+        const fields = ["time","actor","action","resource","result","severity"];
+        const csvCell = value => `"${String(value ?? "").replace(/"/g,'""')}"`;
+        const csv = [fields.join(","), ...data.map(a => fields.map(f => csvCell(a[f])).join(","))].join("\r\n");
+        const url = URL.createObjectURL(new Blob(["\uFEFF",csv], {type:"text/csv;charset=utf-8;"}));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "cartman-demo-audit-events.csv";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        notify(`Exported ${data.length} local demo event(s) to CSV.`, root);
+    }
+
+    function handleAction(action, id, root) {
+        const slug = root.dataset.identitySecurity;
+        if (action === "request-approve" || action === "request-deny") {
+            const request = state.requests.find(r => r.id === id);
+            if (!request || request.status !== "Pending") return;
+            request.status = action === "request-approve" ? "Approved" : "Denied";
+            state.audit.unshift({
+                time:new Date().toISOString().replace("T"," ").slice(0,19),
+                actor:"local.demo.reviewer",
+                action:action === "request-approve" ? "access.request.approved" : "access.request.denied",
+                resource:request.id,
+                result:request.status,
+                severity:"Medium"
+            });
+            notify(`${request.id} marked ${request.status.toLowerCase()} in local demo state.`, root);
+        } else if (action === "rbac-simulate") {
+            const user = state.users.find(u => u.id === state.rbacSimUser);
+            const permission = state.permissions.find(p => p.id === state.rbacSimPermission);
+            if (!user || !permission) {
+                notify("Select a valid demo user and permission.", root);
+                return;
+            }
+
+            const assignment =
+                state.assignments.find(a => a.type === "User" && a.principal === user.id) ||
+                state.assignments.find(a =>
+                    a.type === "Group" &&
+                    state.groups.some(g => g.id === a.principal && g.name === user.group)
+                );
+            const role = assignment ? state.roles.find(r => r.id === assignment.roleId) : null;
+            const allowed = Boolean(role && role.permissions.includes(permission.id));
+            const result = allowed ? "Allowed" : "Denied";
+
+            state.audit.unshift({
+                time:new Date().toISOString().replace("T"," ").slice(0,19),
+                actor:"local.demo.simulator",
+                action:"rbac.permission.simulated",
+                resource:`${user.id} / ${permission.id}`,
+                result,
+                severity:allowed ? "Low" : "Medium"
+            });
+
+            notify(
+                `${result}: ${user.name} — ${role ? role.name : "No assigned role"} — ${permission.id}. Demo simulation only.`,
+                root
+            );
+        } else if (action === "rbac-assign") {
+            const assignment = state.assignments.find(a => a.id === id);
+            if (!assignment) return;
+
+            const currentRole = state.roles.find(r => r.id === assignment.roleId);
+            const roleName = ask(
+                "Enter the exact role name:",
+                currentRole ? currentRole.name : ""
+            );
+            if (!roleName) return;
+
+            const nextRole = state.roles.find(r => r.name.toLowerCase() === roleName.toLowerCase());
+            if (!nextRole) {
+                notify("Role not found. Use a name from the Role catalog.", root);
+                return;
+            }
+
+            assignment.roleId = nextRole.id;
+            if (assignment.type === "User") {
+                const assignedUser = state.users.find(u => u.id === assignment.principal);
+                if (assignedUser) assignedUser.role = nextRole.name;
+            }
+
+            render(root);
+            notify(`Demo role assignment updated to ${nextRole.name}. No real access changed.`, root);
+        } else if (action === "rbac-remove") {
+            const assignment = state.assignments.find(a => a.id === id);
+            if (!assignment) return;
+
+            if (!window.confirm("Remove this demo role assignment?")) return;
+
+            if (assignment.type === "User") {
+                const assignedUser = state.users.find(u => u.id === assignment.principal);
+                if (assignedUser) assignedUser.role = "Unassigned";
+            }
+            state.assignments = state.assignments.filter(a => a.id !== id);
+            render(root);
+            notify("Demo role assignment removed. No real access changed.", root);
+        } else if (action === "rbac-add") {
+            const principalId = ask(
+                "Enter an existing user ID or group ID:",
+                "USR-001"
+            );
+            if (!principalId) return;
+
+            const user = state.users.find(u => u.id === principalId);
+            const group = state.groups.find(g => g.id === principalId);
+            if (!user && !group) {
+                notify("Principal not found. Use an existing USR-xxx or GRP-xxx ID.", root);
+                return;
+            }
+
+            const roleName = ask("Enter the exact role name:", "Read-only Operator");
+            if (!roleName) return;
+            const role = state.roles.find(r => r.name.toLowerCase() === roleName.toLowerCase());
+            if (!role) {
+                notify("Role not found. Create or select a role from the catalog.", root);
+                return;
+            }
+
+            const scope = ask("Assignment scope:", group ? group.scope : "User scope");
+            if (!scope) return;
+
+            const duplicate = state.assignments.some(a =>
+                a.principal === principalId && a.roleId === role.id && a.scope === scope
+            );
+            if (duplicate) {
+                notify("That demo assignment already exists.", root);
+                return;
+            }
+
+            state.assignments.unshift({
+                id:`ASN-${String(Date.now()).slice(-6)}`,
+                principal:principalId,
+                type:user ? "User" : "Group",
+                roleId:role.id,
+                scope
+            });
+            if (user) user.role = role.name;
+
+            render(root);
+            notify(`Demo role ${role.name} assigned to ${user ? user.name : group.name}.`, root);
+        } else if (action === "rbac-role-add") {
+            const name = ask("New demo role name:");
+            if (!name) return;
+            if (state.roles.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+                notify("A role with that name already exists.", root);
+                return;
+            }
+
+            const rawPermissions = ask(
+                "Permission IDs separated by commas:",
+                "devices.read,inventory.read"
+            );
+            if (!rawPermissions) return;
+
+            const requested = [...new Set(rawPermissions.split(",").map(v => v.trim()).filter(Boolean))];
+            const validIds = new Set(state.permissions.map(p => p.id));
+            const permissions = requested.filter(permissionId => validIds.has(permissionId));
+            if (!permissions.length) {
+                notify("No valid permission IDs were selected.", root);
+                return;
+            }
+
+            state.roles.push({
+                id:`ROLE-${String(Date.now()).slice(-6)}`,
+                name,
+                description:"Custom local demo role",
+                risk:"Custom",
+                permissions
+            });
+            render(root);
+            notify(`Demo role created with ${permissions.length} permission(s).`, root);
+        } else if (action === "rbac-role-edit") {
+            const role = state.roles.find(r => r.id === id);
+            if (!role) return;
+
+            const rawPermissions = ask(
+                "Replace permissions using comma-separated IDs:",
+                role.permissions.join(",")
+            );
+            if (!rawPermissions) return;
+
+            const requested = [...new Set(rawPermissions.split(",").map(v => v.trim()).filter(Boolean))];
+            const validIds = new Set(state.permissions.map(p => p.id));
+            const permissions = requested.filter(permissionId => validIds.has(permissionId));
+            if (!permissions.length) {
+                notify("At least one valid permission ID is required.", root);
+                return;
+            }
+
+            role.permissions = permissions;
+            render(root);
+            notify(`Permissions updated for ${role.name}. Demo only.`, root);
+        } else if (action === "users-tab") {
+            state.usersTab = id === "groups" ? "groups" : "users";
+            render(root);
+        } else if (action === "add-user") {
+            const name = ask("Demo user's display name:");
+            if (!name) return;
+            const email = ask("Demo user's email:", "new.user@example.test");
+            if (!email) return;
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                notify("Enter a valid demo email address.", root); return;
+            }
+            state.users.unshift({id:`USR-${String(Date.now()).slice(-6)}`,name,email,role:"Read-only Operator",group:"Service Desk",status:"Invited",mfa:"Not enrolled"});
+            render(root); notify("Demo user added locally. No invitation was sent.", root);
+        } else if (action === "add-group") {
+            const name = ask("Demo group name:");
+            if (!name) return;
+            state.groups.unshift({id:`GRP-${String(Date.now()).slice(-6)}`,name,members:0,scope:"Custom demo scope",status:"Active"});
+            render(root); notify("Demo group added locally. No permissions were provisioned.", root);
+        } else if (action === "group-member") {
+            const group = state.groups.find(g => g.id === id);
+            if (!group) return;
+            const email = ask(`Email to associate with ${group.name} (demo only):`);
+            if (!email) return;
+            group.members += 1;
+            render(root); notify(`Sample member count updated for ${group.name}. No real membership changed.`, root);
+        } else if (action === "provider-toggle") {
+            const provider = state.providers.find(p => p.id === id);
+            if (!provider) return;
+            provider.status = provider.status === "Active" ? "Disabled" : "Active";
+            render(root); notify(`${provider.name}: preview status set to ${provider.status}. No connection changed.`, root);
+        } else if (action === "provider-details") {
+            const p = state.providers.find(item => item.id === id);
+            if (p) notify(`${p.name} · ${p.type} · ${p.domain} · ${p.sync}. Preview only; no credentials or metadata loaded.`, root);
+        } else if (action === "provider-add") {
+            const name = ask("Demo provider name:");
+            if (!name) return;
+            const type = ask("Protocol (SAML 2.0, OpenID Connect, or LDAP):","OpenID Connect");
+            if (!type) return;
+            state.providers.unshift({id:`IDP-${String(Date.now()).slice(-5)}`,name,type,domain:"not-configured.example.test",status:"Disabled",sync:"Not connected",users:0});
+            render(root); notify("Demo provider entry created. Federation is not configured.", root);
+        } else if (action === "policy-toggle") {
+            const p = state.policies.find(item => item.id === id);
+            if (!p) return;
+            p.enabled = !p.enabled;
+            render(root); notify(`${p.name}: local preview state ${p.enabled?"enabled":"disabled"}. No policy is enforced.`, root);
+        } else if (action === "policy-simulate") {
+            const p = state.policies.find(item => item.id === id);
+            if (p) notify(`Demo simulation: "${p.effect}" would be evaluated for ${p.scope}. This is not an access decision.`, root);
+        } else if (action === "policy-add") {
+            const name = ask("Demo policy name:");
+            if (!name) return;
+            const scope = ask("Policy scope:","All users");
+            if (!scope) return;
+            state.policies.push({id:`POL-${String(Date.now()).slice(-5)}`,name,scope,effect:"Require review",priority:state.policies.length*10+10,enabled:false});
+            render(root); notify("Demo policy created disabled. No enforcement configured.", root);
+        } else if (action === "export-audit") {
+            exportAudit(root);
+        } else if (action === "secret-rotate") {
+            const s = state.secrets.find(item => item.id === id);
+            if (!s) return;
+            s.updated = new Date().toISOString().slice(0,10);
+            s.rotation = "Due in 90 days";
+            render(root); notify(`${s.name}: demo rotation metadata updated. No secret was generated or rotated.`, root);
+        } else if (action === "secret-add") {
+            const name = ask("Demo credential label (metadata only):");
+            if (!name) return;
+            state.secrets.unshift({id:`SEC-${String(Date.now()).slice(-5)}`,name,kind:"Demo credential",owner:"Unassigned",updated:"Not rotated",rotation:"Review",status:"Review"});
+            render(root); notify("Metadata-only demo entry added. No secret value was created.", root);
+        }
+    }
+
+    roots.forEach(root => {
+        render(root);
+
+        root.addEventListener("click", event => {
+            const target = event.target.closest("[data-action]");
+            if (!target || !root.contains(target)) return;
+            handleAction(target.dataset.action, target.dataset.id || "", root);
+        });
+
+        root.addEventListener("input", event => {
+            const search = event.target.closest("[data-audit-search]");
+            if (search) applyAuditFilters(root);
+            else if (event.target.matches(".isec-search")) applySearch(root, event.target.value);
+        });
+        root.addEventListener("change", event => {
+            if (event.target.matches("[data-audit-result], [data-audit-severity]")) {
+                applyAuditFilters(root);
+            }
+            if (event.target.matches("[data-rbac-user]")) {
+                state.rbacSimUser = event.target.value;
+            }
+            if (event.target.matches("[data-rbac-permission]")) {
+                state.rbacSimPermission = event.target.value;
+            }
+        });
+    });
+
+    function applySearch(root, value) {
+        const term = String(value || "").trim().toLowerCase();
+        root.querySelectorAll("[data-searchable]").forEach(row => {
+            row.hidden = !row.dataset.searchable.includes(term);
+        });
+    }
+    function applyAuditFilters(root) {
+        const term = root.querySelector("[data-audit-search]")?.value.trim().toLowerCase() || "";
+        const result = root.querySelector("[data-audit-result]")?.value || "";
+        const severity = root.querySelector("[data-audit-severity]")?.value || "";
+        root.querySelectorAll("[data-searchable]").forEach(row => {
+            const haystack = row.dataset.searchable || "";
+            const rowResult = state.audit.find(a => haystack.includes(a.action.toLowerCase()) && haystack.includes(a.actor.toLowerCase()));
+            const matchesSearch = haystack.includes(term);
+            const matchesResult = !result || (rowResult && rowResult.result === result);
+            const matchesSeverity = !severity || (rowResult && rowResult.severity === severity);
+            row.hidden = !(matchesSearch && matchesResult && matchesSeverity);
+        });
+    }
+})();

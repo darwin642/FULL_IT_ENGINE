@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Cartman | Tasks &amp; Automation</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/it-operations-demo.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/it-operations-demo.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">&#9672;</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE / TASKS</div>
+                <h1>Tasks &amp; Automation</h1>
+                <p>Review scheduled tasks, automation and execution results.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Tasks &amp; Automation workspace">
+            <div class="workspace-eyebrow">TASKS &amp; AUTOMATION</div>
+
+            <div class="workspace-toolbar">
+                <input class="workspace-search"
+                    type="search"
+                    data-page-search
+                    placeholder="Search tasks &amp; automation..."
+                    aria-label="Search Tasks &amp; Automation">
+                <span class="workspace-demo-label">UI PREVIEW · NO LIVE DATA</span>
+            </div>
+
+            <div class="workspace-stats">
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Configured</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Active</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Pending review</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Data source</span>
+                    <strong class="workspace-stat-value">—</strong>
+                </article>
+            </div>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <h2>Tasks &amp; Automation resources</h2>
+                    <span class="workspace-row-count" data-row-count>1 preview row(s)</span>
+                </div>
+                <div class="workspace-table-wrap">
+                    <table class="workspace-table">
+                        <thead><tr><th>Job</th><th>Queue</th><th>Created</th><th>Attempts</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr data-search-text="tasks Cartman | Tasks &amp; Automation Review scheduled tasks, automation and execution results. DEMO-TASKS Default Not scheduled 0 Preview only">
+                                <td>DEMO-TASKS</td><td>Default</td><td>Not scheduled</td><td>0</td><td>Preview only</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="workspace-empty hidden" data-empty-state>No matching rows.</p>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Local UI preview · No live data or remote actions</span>
+        </footer>
+    </main>
+</body>
+</html>
