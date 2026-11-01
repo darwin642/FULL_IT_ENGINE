@@ -1,0 +1,403 @@
+"use strict";
+
+/* CARTMAN — CENTRAL EVENT HANDLERS */
+function setupCartmanEvents() {
+/* =========================================================
+   EVENT LISTENERS
+   ========================================================= */
+
+$("#theme-toggle")?.addEventListener("click", () => {
+    applyTheme(state.theme === "dark" ? "light" : "dark");
+});
+
+$("#menu-toggle")?.addEventListener("click", () => {
+    setMenu(!document.body.classList.contains("menu-open"));
+});
+
+$("#page-backdrop")?.addEventListener("click", () => setMenu(false));
+
+$("#profile-toggle")?.addEventListener("click", () => {
+    toggleDropdown("#profile-menu", "#profile-toggle");
+});
+
+$("#language-toggle")?.addEventListener("click", () => {
+    toggleDropdown("#language-menu", "#language-toggle");
+});
+
+$("#language-menu")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-language]");
+    if (!button) return;
+
+    void applyLanguage(button.dataset.language);
+});
+
+document.addEventListener("click", event => {
+    const groupToggle = event.target.closest("[data-nav-group-toggle]");
+
+    if (groupToggle) {
+        const groupId = groupToggle.dataset.navGroupToggle;
+        const submenu = document.getElementById(groupId);
+        if (!submenu) return;
+
+        const willExpand = submenu.hidden;
+        submenu.hidden = !willExpand;
+        groupToggle.setAttribute("aria-expanded", String(willExpand));
+        return;
+    }
+
+    const page = event.target.closest("[data-page]");
+
+    if (page) {
+        event.preventDefault();
+        const moduleName = page.dataset.page;
+
+        if (moduleName === "Home") {
+            window.location.assign("/");
+        } else if (moduleTranslationKeys[moduleName]) {
+            const slug = moduleTranslationKeys[moduleName];
+            window.location.assign(`/pages/${slug}/`);
+        } else {
+            openModule(moduleName);
+        }
+        return;
+    }
+
+    const filterButton = event.target.closest("[data-device-filter]");
+
+    if (filterButton) {
+        deviceViewState.filter = filterButton.dataset.deviceFilter;
+        renderDevicesModule();
+        return;
+    }
+
+    const button = event.target.closest("[data-device-action]");
+    if (!button) return;
+
+    const action = button.dataset.deviceAction;
+    const id = button.dataset.deviceId;
+
+    switch (action) {
+        case "import-json":
+            $("#devices-json-file")?.click();
+            break;
+
+        case "export-json":
+            exportDevicesJSON();
+            break;
+
+        case "add":
+            openDeviceModal();
+            break;
+
+        case "edit": {
+            const device = getDeviceData().find(item => item.id === id);
+            if (device) openDeviceModal(device);
+            break;
+        }
+
+        case "delete":
+            deleteDevice(id);
+            break;
+
+        case "manage-tags":
+            openManageDeviceTags();
+            break;
+
+        case "reset":
+            resetDeviceDemoData();
+            break;
+
+        case "close-modal":
+            $("#devices-modal-backdrop")?.remove();
+            deviceViewState.editingId = null;
+            break;
+
+        case "add-tag-from-form":
+            addCustomDeviceTag();
+            break;
+
+        case "create-managed-tag":
+            createManagedDeviceTag();
+            break;
+
+        case "delete-tag":
+            deleteManagedDeviceTag(button.dataset.deviceTag);
+            break;
+    }
+});
+
+document.addEventListener("change", async event => {
+    if (event.target.id !== "devices-json-file") return;
+
+    const input = event.target;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    try {
+        await importDevicesJSON(file);
+    } catch (error) {
+        console.error("Device import failed:", error);
+        notify("Could not import the JSON file.");
+    } finally {
+        input.value = "";
+    }
+});
+
+document.addEventListener("input", event => {
+    if (event.target.id !== "global-search") return;
+    filterModules();
+});
+
+document.addEventListener("input", event => {
+    if (event.target.id !== "devices-search-input") return;
+
+    deviceViewState.search = event.target.value;
+
+    const workspace = $("#devices-workspace");
+    if (!workspace || state.module !== "Devices") return;
+
+    const tbody = $(".devices-table tbody", workspace);
+    if (tbody) tbody.innerHTML = renderDeviceRows();
+
+    const count = $(".devices-table-panel .section-count", workspace);
+
+    if (count) {
+        count.textContent = `${getDeviceFilteredData().length} SHOWN`;
+    }
+});
+
+document.addEventListener("click", event => {
+    const tab = event.target.closest("[data-device-tab]");
+    if (!tab) return;
+
+    const form = tab.closest("#device-form");
+    if (!form) return;
+
+    const targetName = tab.dataset.deviceTab;
+
+    form.querySelectorAll("[data-device-tab]").forEach(item => {
+        const active = item === tab;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-selected", String(active));
+        item.setAttribute("tabindex", active ? "0" : "-1");
+    });
+
+    form.querySelectorAll("[data-device-panel]").forEach(panel => {
+        panel.hidden = panel.dataset.devicePanel !== targetName;
+    });
+});
+
+document.addEventListener("submit", event => {
+    if (event.target.id === "device-form") {
+        saveDeviceForm(event);
+    }
+
+    if (event.target.id === "terminal-form") {
+        event.preventDefault();
+
+        const input = $("#terminal-command");
+        if (!input) return;
+
+        const command = input.value;
+        input.value = "";
+
+        void executeCommand(command).then(() => input.focus());
+    }
+});
+
+$("#back-home")?.addEventListener("click", openHome);
+
+$("#terminal-toggle")?.addEventListener("click", () => {
+    setTerminal(!document.body.classList.contains("terminal-open"));
+});
+
+$("#quick-open-terminal")?.addEventListener("click", () => setTerminal(true));
+$("#module-open-terminal")?.addEventListener("click", () => setTerminal(true));
+$("#terminal-close")?.addEventListener("click", () => setTerminal(false));
+$("#terminal-clear")?.addEventListener("click", clearTerminal);
+
+$("#refresh-dashboard")?.addEventListener("click", async () => {
+    await checkApiStatus();
+
+    notify(
+        translate(
+            "dashboardRefreshed",
+            "Dashboard status refreshed. Displayed dashboard values are sample data."
+        )
+    );
+});
+
+document.addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        $("#global-search")?.focus();
+    }
+
+    if (event.key === "Escape") {
+        setMenu(false);
+        setTerminal(false);
+        closeDropdowns();
+        $("#devices-modal-backdrop")?.remove();
+        deviceViewState.editingId = null;
+    }
+
+    if (event.key === "Enter" && event.target.id === "device-new-tag") {
+        event.preventDefault();
+        addCustomDeviceTag();
+    }
+
+    if (event.key === "Enter" && event.target.id === "manage-new-device-tag") {
+        event.preventDefault();
+        createManagedDeviceTag();
+    }
+});
+
+
+/* CARTMAN DEVICES REDESIGN V1 — controls */
+document.addEventListener("change", event => {
+    const target = event.target;
+    const stateMap = {
+        "devices-sort": "sort",
+        "devices-type-filter": "type",
+        "devices-os-filter": "os",
+        "devices-status-filter": "status",
+        "devices-tag-filter": "filter"
+    };
+    if (stateMap[target.id]) {
+        deviceViewState[stateMap[target.id]] = target.value;
+        renderDevicesModule();
+        return;
+    }
+    if (target.id === "devices-select-visible") {
+        const visible = getDeviceFilteredData().map(d => d.id);
+        const current = new Set(deviceViewState.selected);
+        visible.forEach(id => target.checked ? current.add(id) : current.delete(id));
+        deviceViewState.selected = [...current];
+        renderDevicesModule();
+        return;
+    }
+    if (target.matches("[data-device-select]")) {
+        const id = target.dataset.deviceSelect;
+        const selected = new Set(deviceViewState.selected);
+        target.checked ? selected.add(id) : selected.delete(id);
+        deviceViewState.selected = [...selected];
+        const count = document.querySelector(".devices-bulk-toolbar span");
+        if (count) count.textContent = `${selected.size} selected`;
+        return;
+    }
+});
+
+document.addEventListener("click", event => {
+    const menuItem = event.target.closest("[data-device-menu-action]");
+    if (menuItem) {
+        const id = menuItem.dataset.deviceId;
+        const choice = menuItem.dataset.deviceMenuAction;
+        const original = getDeviceData().find(d => d.id === id);
+
+        menuItem.closest("[data-device-menu]")?.setAttribute("hidden", "");
+        menuItem.closest(".device-actions")?.querySelector(".device-actions-trigger")?.setAttribute("aria-expanded", "false");
+
+        if (choice === "edit" && original) {
+            openDeviceModal(original);
+        } else if (choice === "delete" && id) {
+            deleteDevice(id);
+        } else if (["package", "shutdown", "network", "connect", "monitor", "vpn"].includes(choice)) {
+            const labels = {
+                package: "Package deployment",
+                shutdown: "Shutdown",
+                network: "Kick from network",
+                connect: "Connect",
+                monitor: "Monitor",
+                vpn: "VPN action"
+            };
+            notify(`${labels[choice]} is demo-only. No endpoint was contacted.`);
+        }
+        return;
+    }
+
+    const button = event.target.closest("[data-device-new-action]");
+    if (!button) return;
+    const action = button.dataset.deviceNewAction;
+    const id = button.dataset.deviceId;
+
+    if (action === "export-selected") {
+        exportSelectedDevicesJSON();
+        return;
+    }
+    if ((action === "more" && id) || action === "inventory-more") {
+        const trigger = button;
+        const owner = trigger.closest(".device-actions, .devices-inventory-actions");
+        const menu = trigger._cartmanDeviceMenu ||
+            owner?.querySelector("[data-device-menu]");
+        if (!menu) return;
+
+        // Inventory's general Actions menu keeps its original layout.
+        if (action === "inventory-more") {
+            document.querySelectorAll("[data-device-menu]").forEach(item => {
+                if (item !== menu) item.hidden = true;
+            });
+            menu.hidden = !menu.hidden;
+            trigger.setAttribute("aria-expanded", String(!menu.hidden));
+            return;
+        }
+
+        document.querySelectorAll("[data-device-menu]").forEach(item => {
+            if (item !== menu) {
+                item.hidden = true;
+                item.style.position = "";
+                item.style.left = "";
+                item.style.top = "";
+            }
+        });
+
+        if (menu.hidden) {
+            menu.hidden = false;
+            trigger._cartmanDeviceMenu = menu;
+            document.body.appendChild(menu);
+            menu.style.position = "fixed";
+            menu.style.zIndex = "100000";
+            menu.style.right = "auto";
+            menu.style.bottom = "auto";
+            menu.style.width = "210px";
+            menu.style.maxWidth = "calc(100vw - 24px)";
+            menu.style.maxHeight = "70vh";
+            menu.style.overflowY = "auto";
+
+            const rect = trigger.getBoundingClientRect();
+            const width = Math.min(210, window.innerWidth - 24);
+            const height = Math.min(menu.scrollHeight, window.innerHeight * 0.7);
+            const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
+            const top = rect.bottom + height + 8 <= window.innerHeight
+                ? rect.bottom + 6
+                : Math.max(12, rect.top - height - 6);
+
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+            trigger.setAttribute("aria-expanded", "true");
+            menu.dataset.floatingDeviceMenu = "true";
+        } else {
+            menu.hidden = true;
+            menu.style.position = "";
+            menu.style.left = "";
+            menu.style.top = "";
+            delete menu.dataset.floatingDeviceMenu;
+            trigger.setAttribute("aria-expanded", "false");
+        }
+        return;
+    }
+    if (["package", "shutdown", "network"].includes(action)) {
+        if (!deviceViewState.selected.length) {
+            notify("Select at least one device first.");
+            return;
+        }
+        const labels = {
+            package: "Package deployment",
+            shutdown: "Shutdown",
+            network: "Kick from network"
+        };
+        notify(`${labels[action]} is demo-only. No endpoint was contacted.`);
+    }
+});
+
+}

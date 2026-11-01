@@ -1,0 +1,43 @@
+
+/* Cartman IAM support routing and availability panel */
+.iam-support-routing{margin-top:22px;padding:22px!important}
+.iam-support-routing .isr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+.iam-support-routing .isr-eyebrow{display:block;font-size:10px;letter-spacing:1.6px;font-weight:800;color:#8b9bc0;margin-bottom:8px}
+.iam-support-routing h2{font-size:clamp(20px,2.4vw,27px);line-height:1.2;margin:0 0 8px;color:var(--text-primary,#edf2ff)}
+.iam-support-routing .isr-head p{max-width:740px;font-size:12px;line-height:1.6;margin:0;color:var(--text-secondary,#97a5c2)}
+.iam-support-routing .isr-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.iam-support-routing .isr-summary>div{display:flex;flex-direction:column;gap:7px;padding:14px;border:1px solid var(--border-color,rgba(130,150,190,.18));border-radius:10px;background:var(--surface-primary,rgba(19,28,49,.45))}
+.iam-support-routing .isr-summary span{font-size:10px;color:var(--text-secondary,#97a5c2)}
+.iam-support-routing .isr-summary strong{font-size:22px;color:var(--text-primary,#edf2ff)}
+.iam-support-routing .isr-alert{padding:11px 13px;margin-bottom:12px;border-radius:8px;border:1px solid rgba(93,206,155,.25);font-size:11px;color:var(--text-primary,#e8edf8);background:rgba(93,206,155,.06)}
+.iam-support-routing .isr-alert.is-error{border-color:rgba(241,110,119,.4);background:rgba(241,110,119,.07)}
+.iam-support-routing .isr-table-wrap{overflow-x:auto;border:1px solid var(--border-color,rgba(130,150,190,.15));border-radius:10px}
+.iam-support-routing .isr-table{width:100%;min-width:720px;border-collapse:collapse;text-align:left}
+.iam-support-routing .isr-table th{padding:12px 14px;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-secondary,#8796b3);background:rgba(130,150,190,.04)}
+.iam-support-routing .isr-table td{padding:13px 14px;border-top:1px solid var(--border-color,rgba(130,150,190,.12));font-size:11px;vertical-align:middle;color:var(--text-primary,#e8edf8)}
+.iam-support-routing .isr-table td strong,.iam-support-routing .isr-table td small{display:block}
+.iam-support-routing .isr-table td small{font-size:9px;line-height:1.5;margin-top:4px;color:var(--text-secondary,#8796b3)}
+.iam-support-routing .isr-table select{min-width:160px;border:1px solid var(--border-color,rgba(130,150,190,.22));border-radius:8px;background:var(--surface-secondary,rgba(130,150,190,.06));color:var(--text-primary,#e8edf8);padding:9px;font:inherit;font-size:11px}
+.iam-support-routing .isr-switch{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:10px;color:var(--text-secondary,#97a5c2)}
+.iam-support-routing .isr-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.iam-support-routing .isr-switch-track{position:relative;width:36px;height:20px;border-radius:20px;background:#576178;transition:background .15s ease;flex:0 0 36px}
+.iam-support-routing .isr-switch-track::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:white;transition:transform .15s ease}
+.iam-support-routing .isr-switch input:checked+.isr-switch-track{background:#4fba91}
+.iam-support-routing .isr-switch input:checked+.isr-switch-track::after{transform:translateX(16px)}
+.iam-support-routing .isr-switch input:focus-visible+.isr-switch-track{outline:2px solid #7773f1;outline-offset:3px}
+.iam-support-routing .isr-switch input:disabled+.isr-switch-track{opacity:.4;cursor:not-allowed}
+.iam-support-routing .isr-switch input:disabled~strong{opacity:.6}
+.iam-support-routing .isr-linked{font-size:10px;font-weight:750;color:#55d6a1}
+.iam-support-routing .isr-unlinked{font-size:10px;font-weight:750;color:#f3bd64}
+.iam-support-routing .isr-footnote{margin:13px 0 0;font-size:10px;line-height:1.6;color:var(--text-secondary,#8796b3)}
+.iam-support-routing .isr-self{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;margin:0 0 16px;border:1px solid rgba(119,115,241,.28);border-radius:11px;background:rgba(119,115,241,.055)}
+.iam-support-routing .isr-self-copy{display:flex;flex-direction:column;gap:5px}.iam-support-routing .isr-self-copy .isr-eyebrow{margin:0;color:#aaa7ff}.iam-support-routing .isr-self-copy>strong{font-size:12px;color:var(--text-primary,#edf2ff)}.iam-support-routing .isr-self-copy small{font-size:10px;line-height:1.5;color:var(--text-secondary,#97a5c2)}
+.iam-support-routing .isr-self-switch{white-space:nowrap}.iam-support-routing .isr-self-switch .is-online{color:#55d6a1}
+@media(max-width:800px){.iam-support-routing .isr-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.iam-support-routing .isr-head{flex-direction:column}}
+@media(max-width:520px){.iam-support-routing .isr-summary{gap:7px}.iam-support-routing .isr-summary>div{padding:11px}.iam-support-routing .isr-summary strong{font-size:19px}}
+
+/* Availability is displayed read-only here; each user controls their own status from Overview. */
+.iam-support-routing .isr-status{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:5px 8px;font-size:10px;font-weight:800;white-space:nowrap}
+.iam-support-routing .isr-status.is-online{color:#55d6a1;background:rgba(93,206,155,.09)}
+.iam-support-routing .isr-status.is-offline{color:var(--text-secondary,#97a5c2);background:rgba(130,150,190,.08)}
+

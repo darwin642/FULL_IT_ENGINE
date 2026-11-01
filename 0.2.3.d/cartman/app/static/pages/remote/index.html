@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
+  <title>Cartman | VPN Sessions</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/css/modules/vpn-remote-access.css">
+  <script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+  <script src="/static/js/core/module-definitions.js" defer></script>
+  <script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+  <script src="/static/js/modules/vpn-control-plane.js" defer></script>
+<script src="/static/js/modules/vpn-remote-access.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-area"><a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a></div>
+    <div class="top-actions"><a class="secondary-button" href="/">&#8592; Dashboard</a></div>
+  </header>
+  <main class="vpn-workspace" data-vpn-page="remote" data-vpn-title="VPN Sessions" data-vpn-action="New VPN session" data-vpn-columns="id|name|source|gateway|activity|status">
+    <section class="vpn-hero">
+      <div class="vpn-hero-copy">
+        <div class="vpn-kicker">VPN &amp; REMOTE ACCESS / VPN SESSIONS</div>
+        <h1>↗ &nbsp;VPN Sessions</h1>
+        <p>View connected VPN users, devices, gateways and session state. Live telemetry requires the Cartman VPN engine and client integration.</p>
+      </div>
+      <div class="vpn-hero-actions">
+        <button class="vpn-btn" type="button" data-vpn-refresh>Refresh view ↻</button>
+        <button class="vpn-btn vpn-btn-primary" type="button" data-vpn-action disabled title="Cartman VPN engine and client integration are not implemented">New VPN session · unavailable</button>
+      </div>
+    </section>
+
+    <div class="vpn-preview-banner"><span class="vpn-preview-dot"></span><span><strong>CONTROL PLANE CONNECTED</strong> &nbsp; The Cartman API is reachable, but live VPN sessions are unavailable until the Cartman VPN engine and client integration are implemented.</span></div>
+
+    <section class="vpn-metrics" data-vpn-stats aria-label="Remote Access metrics">
+      <article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">LIVE SESSIONS</span><span class="vpn-metric-icon">◉</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Unavailable until the VPN engine reports live session telemetry</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">REGISTERED PEERS</span><span class="vpn-metric-icon">↗</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Saved peer records from the Cartman API</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">PENDING REVIEW</span><span class="vpn-metric-icon">◇</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Pending or quarantined peers from the Cartman API</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">REGISTERED GATEWAYS</span><span class="vpn-metric-icon">⌁</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Saved gateway records · online status not verified</div></article>
+    </section>
+
+    <section class="vpn-layout">
+      <div class="vpn-panel">
+        <div class="vpn-panel-head">
+          <div><h2>VPN sessions</h2><p>Live session records will be shown when the Cartman VPN engine is integrated.</p></div>
+          <div class="vpn-panel-tools">
+            <input class="vpn-search" type="search" data-vpn-search placeholder="Search records..." aria-label="Search VPN sessions">
+            <select class="vpn-select" data-vpn-filter aria-label="Filter records">
+              <option value="all">All statuses</option>
+              <option value="active">Healthy / active</option>
+              <option value="attention">Needs attention</option>
+              <option value="offline">Offline / denied</option>
+            </select>
+          </div>
+        </div>
+        <div class="vpn-table-wrap">
+          <table class="vpn-table">
+            <thead><tr><th>Session</th><th>User / device</th><th>Source network</th><th>Gateway</th><th>Last activity</th><th>Status</th><th>DETAILS</th></tr></thead>
+            <tbody data-vpn-tbody></tbody>
+          </table>
+          <div class="vpn-empty" data-vpn-empty hidden><strong>Live session telemetry unavailable</strong>Cartman VPN engine and client integration are not implemented. Saved peer records are available under Peers &amp; Clients.</div>
+        </div>
+        <div class="vpn-table-foot"><span data-vpn-count>Loading records…</span><span>No live session telemetry · engine not implemented</span></div>
+      </div>
+    </section>
+
+    <section class="vpn-shortcuts" aria-label="VPN workspace navigation"><a class="vpn-shortcut" href="/pages/vpn-overview/"><span class="vpn-shortcut-icon">⌁</span><span><strong>VPN Overview</strong><small>VPN health and activity</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/gateways/"><span class="vpn-shortcut-icon">⇄</span><span><strong>Gateways</strong><small>Gateway inventory</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/peers-clients/"><span class="vpn-shortcut-icon">♙</span><span><strong>Peers & Clients</strong><small>Devices and peer addresses</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/access-policies/"><span class="vpn-shortcut-icon">◈</span><span><strong>Access Policies</strong><small>Rules and authorization</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/vpn-audit-logs/"><span class="vpn-shortcut-icon">≡</span><span><strong>VPN Audit Logs</strong><small>Security event history</small></span><span class="vpn-shortcut-arrow">↗</span></a></section>
+    <p class="vpn-footer-note">Cartman Infrastructure Management · Live VPN sessions will appear after Cartman VPN engine and client integration are implemented.</p>
+    <div data-vpn-modal-host></div>
+  </main>
+  <footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+</body>
+</html>

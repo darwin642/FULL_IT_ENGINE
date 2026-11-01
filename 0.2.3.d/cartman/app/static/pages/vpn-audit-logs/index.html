@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
+  <title>Cartman | VPN Audit Logs</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/css/modules/vpn-remote-access.css">
+  <script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+  <script src="/static/js/core/module-definitions.js" defer></script>
+  <script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+  <script src="/static/js/modules/vpn-control-plane.js" defer></script>
+<script src="/static/js/modules/vpn-remote-access.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-area"><a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a></div>
+    <div class="top-actions"><a class="secondary-button" href="/">&#8592; Dashboard</a></div>
+  </header>
+  <main class="vpn-workspace" data-vpn-page="vpn-audit-logs" data-vpn-title="VPN Audit Logs" data-vpn-action="Export CSV" data-vpn-columns="time|actor|event|target|ip|outcome">
+    <section class="vpn-hero">
+      <div class="vpn-hero-copy">
+        <div class="vpn-kicker">VPN & REMOTE ACCESS / AUDIT</div>
+        <h1>≡ &nbsp;VPN Audit Logs</h1>
+        <p>Inspect recorded activity, actors, source addresses and event outcomes.</p>
+      </div>
+      <div class="vpn-hero-actions">
+        <button class="vpn-btn" type="button" data-vpn-refresh>Refresh view ↻</button>
+        <button class="vpn-btn" type="button" data-vpn-export>Export CSV</button>
+      </div>
+    </section>
+
+    <div class="vpn-preview-banner"><span class="vpn-preview-dot"></span><span><strong>CONTROL PLANE CONNECTED</strong> &nbsp; Audit entries load from the Cartman API. These are recorded control-plane events; live tunnel telemetry is not available.</span></div>
+
+    <section class="vpn-metrics" data-vpn-stats aria-label="VPN Audit Logs metrics">
+      <article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">EVENTS LOADED</span><span class="vpn-metric-icon">◉</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Latest audit entries loaded · maximum 200</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">SUCCESS OUTCOMES</span><span class="vpn-metric-icon">↗</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Loaded entries whose outcome contains success</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">WARNING EVENTS</span><span class="vpn-metric-icon">◇</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Loaded entries with warning severity</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">DENIED / FAILED</span><span class="vpn-metric-icon">⌁</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Entries matching denied, blocked or failed</div></article>
+    </section>
+
+    <section class="vpn-layout">
+      <div class="vpn-panel">
+        <div class="vpn-panel-head">
+          <div><h2>Audit event stream</h2><p>Search, filter and inspect recorded control-plane audit events from the Cartman API.</p></div>
+          <div class="vpn-panel-tools">
+            <input class="vpn-search" type="search" data-vpn-search placeholder="Search records..." aria-label="Search VPN Audit Logs">
+            <select class="vpn-select" data-vpn-filter aria-label="Filter records">
+              <option value="all">All statuses</option>
+              <option value="active">Healthy / active</option>
+              <option value="attention">Needs attention</option>
+              <option value="offline">Offline / denied</option>
+            </select>
+          </div>
+        </div>
+        <div class="vpn-table-wrap">
+          <table class="vpn-table">
+            <thead><tr><th>Timestamp</th><th>Actor</th><th>Event</th><th>Target</th><th>Source IP</th><th>Outcome</th><th>DETAILS</th></tr></thead>
+            <tbody data-vpn-tbody></tbody>
+          </table>
+          <div class="vpn-empty" data-vpn-empty hidden><strong>No matching records</strong>Try a different search term or status filter.</div>
+        </div>
+        <div class="vpn-table-foot"><span data-vpn-count>Loading records…</span><span>API-backed audit entries · latest 200 maximum</span></div>
+      </div>
+    </section>
+
+    <section class="vpn-shortcuts" aria-label="VPN workspace navigation"><a class="vpn-shortcut" href="/pages/remote/"><span class="vpn-shortcut-icon">↗</span><span><strong>VPN Sessions</strong><small>Connected users and devices</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/vpn-overview/"><span class="vpn-shortcut-icon">⌁</span><span><strong>VPN Overview</strong><small>VPN health and activity</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/gateways/"><span class="vpn-shortcut-icon">⇄</span><span><strong>Gateways</strong><small>Gateway inventory</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/peers-clients/"><span class="vpn-shortcut-icon">♙</span><span><strong>Peers & Clients</strong><small>Devices and peer addresses</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/access-policies/"><span class="vpn-shortcut-icon">◈</span><span><strong>Access Policies</strong><small>Rules and authorization</small></span><span class="vpn-shortcut-arrow">↗</span></a></section>
+    <p class="vpn-footer-note">Cartman Infrastructure Management · Audit records reflect recorded control-plane events; live network telemetry is not implemented.</p>
+    <div data-vpn-modal-host></div>
+  </main>
+  <footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+</body>
+</html>

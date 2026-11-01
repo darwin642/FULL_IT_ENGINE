@@ -1,0 +1,2140 @@
+
+(() => {
+"use strict";
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const path = location.pathname.toLowerCase();
+// CARTMAN_KNOWLEDGE_LIST_AND_DETAIL_PAGE_V1
+const knowledgeArticleMatch = path.match(/\/pages\/knowledge\/article\/(kb-\d+)\/?$/i);
+const knowledgeArticleKey = knowledgeArticleMatch ? knowledgeArticleMatch[1].toUpperCase() : null;
+const slug = ["ticketing","knowledge","tasks","workflows","notifications","reports"].find(x => path.includes("/pages/"+x+"/")) || "ticketing";
+const root = $(".workspace-module");
+if (!root) return;
+let knowledgeArticleLoadStarted = false;
+
+const tickets = [
+ {id:"INC-1048",title:"Production API latency spike",type:"Incident",priority:"Critical",status:"In progress",owner:"Alex Morgan",team:"Infrastructure",time:"4 min ago",desc:"API response times are above the agreed threshold. Review recent deployment and upstream dependencies.",sla:"12 min"},
+ {id:"INC-1047",title:"File server disk usage at 92%",type:"Incident",priority:"High",status:"Open",owner:"Sam Rivera",team:"Systems",time:"18 min ago",desc:"Volume D: is nearing capacity. Identify large files and check retention policies.",sla:"38 min"},
+ {id:"REQ-0832",title:"New starter workstation setup",type:"Request",priority:"Normal",status:"Pending",owner:"Jordan Lee",team:"Service Desk",time:"42 min ago",desc:"Prepare endpoint, install approved software and validate access.",sla:"6 hours"},
+ {id:"INC-1046",title:"VPN authentication failures",type:"Incident",priority:"High",status:"In progress",owner:"Taylor Kim",team:"Network",time:"1 hour ago",desc:"Several users report intermittent VPN sign-in failures.",sla:"55 min"},
+ {id:"REQ-0831",title:"Shared folder access request",type:"Request",priority:"Low",status:"Resolved",owner:"Sam Rivera",team:"Service Desk",time:"Yesterday",desc:"Access request completed and verified with requester.",sla:"Met"}
+];
+const articles = [
+ {id:"KB-001",cat:"Networking",title:"Troubleshoot VPN authentication failures",desc:"A practical checklist for client, gateway, DNS and identity-provider issues.",time:"6 min read",tag:"VPN",steps:["Confirm the user account is active and not locked.","Check device time and certificate validity.","Resolve the VPN gateway hostname and verify connectivity.","Review authentication logs and MFA challenges.","Capture timestamps and escalate with relevant logs if unresolved."]},
+ {id:"KB-002",cat:"Windows",title:"Investigate high disk usage on Windows servers",desc:"Find large directories, inspect event logs and reduce disk pressure safely.",time:"8 min read",tag:"Storage",steps:["Confirm the affected volume and current free space.","Use approved tools to identify large directories and files.","Check application logs, temporary files and retention settings.","Do not delete system or application data without owner approval.","Document the cleanup and monitor free space."]},
+ {id:"KB-003",cat:"Networking",title:"DNS resolution troubleshooting",desc:"Check resolver configuration, records, cache and network reachability.",time:"5 min read",tag:"DNS",steps:["Verify the configured DNS servers.","Query the hostname against the configured resolver.","Compare with an authoritative or known-good resolver.","Check record TTL, suffix search list and client cache.","Record the failing hostname, resolver and timestamps."]},
+ {id:"KB-004",cat:"Identity",title:"Account lockout investigation",desc:"Trace repeated lockouts across endpoints, services and saved credentials.",time:"7 min read",tag:"Identity",steps:["Confirm the account and lockout timestamp.","Review identity-provider or domain controller security logs.","Check scheduled tasks, services and stored credentials.","Validate the user's active sessions and enrolled devices.","Document the source before resetting credentials."]},
+ {id:"KB-005",cat:"Linux",title:"Diagnose a Linux service that will not start",desc:"A systemd-focused checklist for failed units and dependency issues.",time:"6 min read",tag:"systemd",steps:["Inspect the unit state and recent journal entries.","Check configuration syntax and file permissions.","Verify required ports, paths and dependent services.","Apply the smallest safe correction and restart the unit.","Confirm service health and capture the root cause."]}
+];
+let tasks = [
+ {id:"TSK-021",title:"Review server patch compliance",project:"Infrastructure",owner:"Alex Morgan",due:"Today",status:"In progress",priority:"High"},
+ {id:"TSK-022",title:"Validate backup restore procedure",project:"Resilience",owner:"Sam Rivera",due:"Tomorrow",status:"To do",priority:"High"},
+ {id:"TSK-023",title:"Update VPN troubleshooting runbook",project:"Knowledge",owner:"Jordan Lee",due:"Oct 26",status:"To do",priority:"Normal"},
+ {id:"TSK-024",title:"Audit inactive endpoint agents",project:"Endpoints",owner:"Taylor Kim",due:"Oct 27",status:"Review",priority:"Normal"},
+ {id:"TSK-025",title:"Document DNS change window",project:"Network",owner:"Alex Morgan",due:"Oct 24",status:"Done",priority:"Low"},
+ {id:"TSK-026",title:"Check disk alerts on file servers",project:"Infrastructure",owner:"Sam Rivera",due:"Today",status:"In progress",priority:"High"}
+];
+let workflows = [
+ {id:"WF-001",name:"Critical alert triage",trigger:"Critical monitoring alert",condition:"Severity = Critical",action:"Create incident + notify on-call",runs:128,success:98,enabled:true},
+ {id:"WF-002",name:"New starter onboarding",trigger:"Approved access request",condition:"Request category = Onboarding",action:"Create setup tasks",runs:42,success:100,enabled:true},
+ {id:"WF-003",name:"Disk capacity escalation",trigger:"Volume usage threshold",condition:"Usage > 90%",action:"Open ticket + notify Systems",runs:67,success:94,enabled:true},
+ {id:"WF-004",name:"Weekly compliance summary",trigger:"Schedule · Monday 09:00",condition:"All managed endpoints",action:"Generate report",runs:18,success:100,enabled:false}
+];
+let notices = [
+ {id:1,type:"Critical",title:"Critical alert: API latency",body:"Production API latency exceeded the configured threshold.",time:"2 min ago",read:false,source:"Monitoring"},
+ {id:2,type:"Ticket",title:"Ticket INC-1048 assigned to you",body:"Production API latency spike · Infrastructure queue.",time:"8 min ago",read:false,source:"Ticketing"},
+ {id:3,type:"Workflow",title:"Critical alert triage completed",body:"Workflow WF-001 completed successfully.",time:"24 min ago",read:false,source:"Automation"},
+ {id:4,type:"Warning",title:"File server storage nearing limit",body:"Volume D: is reporting 92% utilization.",time:"41 min ago",read:true,source:"Monitoring"},
+ {id:5,type:"System",title:"Nightly inventory sync completed",body:"Demo summary: 248 endpoints checked.",time:"Yesterday",read:true,source:"Inventory"}
+];
+let activeFilter = "All";
+
+const workMgmtState = {
+  tab: "tasks", loaded: false, loading: false, saving: false,
+  taskModal: false, automationModal: false, completionModal: null, completionSaving: false, completionError: "", error: "", notice: "",
+  automations: [], executions: [], canManage: false, canRun: false,
+  currentUser: null, taskDraft: null, automationDraft: null
+};
+
+const workItemState = {loaded: false, loading: false, saving: false, modal: false, error: "", draft: null};
+
+// CARTMAN_KNOWLEDGE_BASE_UI_V1
+const knowledgeState = {
+  items: [],
+  categories: [],
+  summary: {total: 0, published: 0, draft: 0, archived: 0},
+  canManage: false,
+  loaded: false,
+  loading: false,
+  saving: false,
+  statusFilter: "All",
+  editor: null,
+  error: ""
+};
+const badge = (text, cls="") => `<span class="io-badge ${cls}">${esc(text)}</span>`;
+const btn = (text, action, extra="") => `<button type="button" class="io-btn ${extra}" data-action="${action}">${text}</button>`;
+const stat = (label,value,note,cls="") => `<article class="io-stat"><span>${esc(label)}</span><strong class="${cls}">${esc(value)}</strong><small>${esc(note)}</small></article>`;
+const shell = (eyebrow,title,desc,actions="") => `<div class="io-head"><div><div class="io-eyebrow">${eyebrow}</div><h2>${title}</h2><p>${desc}</p></div><div class="io-head-actions">${actions}</div></div>`;
+const search = (placeholder="Search...") => `<input class="io-search" type="search" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}" data-search>`;
+const tabs = (values, selected) => `<div class="io-tabs">${values.map(v=>`<button type="button" class="io-tab ${v===selected?"active":""}" data-filter="${esc(v)}">${esc(v)}</button>`).join("")}</div>`;
+const panel = (title,sub,content,actions="") => `<section class="io-panel"><div class="io-panel-head"><div><h3>${title}</h3>${sub?`<p>${sub}</p>`:""}</div>${actions}</div>${content}</section>`;
+const empty = `<div class="io-empty">No matching items. Try another search or filter.</div>`;
+const priorityClass = p => p==="Critical"?"critical":p==="High"?"high":p==="Normal"?"normal":"low";
+const statusClass = s => s==="Resolved"||s==="Done"||s==="Enabled"?"good":s==="In progress"||s==="Review"?"info":s==="Pending"?"warn":"";
+const set = html => { root.classList.add("itops-redesigned"); root.innerHTML = html; };
+const ticketState = {
+  items: [], summary: {open: 0, critical: 0, pending: 0, resolved: 0}, total: 0,
+  query: "", filter: "All", selectedKey: null, detail: null,
+  loading: false, detailLoading: false, loaded: false, error: "",
+  modal: false, composerMode: "reply", saving: false, scope: "all",
+  currentUser: null, currentUserLoaded: false, currentUserLoading: false
+};
+const ticketFilters = ["All", "Critical", "High", "Normal", "Open", "In progress", "Pending", "Waiting for requester", "Resolved", "Closed"];
+const ticketTime = value => value ? String(value).replace("T", " ").replace(/\.\d+Z?$/, "") : "—";
+// CARTMAN_ATTACHMENT_UI_V1
+// CARTMAN_MARKDOWN_README_V1
+function cartmanMdEscape(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function cartmanMdSafeUrl(raw, image = false) {
+  const value = String(raw || "").trim();
+  if (!value || /[\u0000-\u0020<>"']/u.test(value)) return "";
+  if (/^https?:\/\/[^\s]+$/i.test(value)) return value;
+  if (!image && /^mailto:[^\s]+$/i.test(value)) return value;
+  if (/^\/(?!\/)[^\s]*$/.test(value)) return value;
+  if (/^\.\.?\/[^\s]*$/.test(value)) return value;
+  if (/^[#?][^\s]*$/.test(value)) return value;
+  return "";
+}
+function cartmanMarkdownInline(rawValue) {
+  const tokens = [];
+  const stash = html => {
+    const token = `CARTMANMDTOKEN${tokens.length}END`;
+    tokens.push(html);
+    return token;
+  };
+  let value = String(rawValue ?? "");
+  value = value.replace(/`([^`\n]+)`/g, (_, code) => stash(`<code>${cartmanMdEscape(code)}</code>`));
+  value = value.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (all, alt, rawUrl, title) => {
+    const url = cartmanMdSafeUrl(rawUrl, true);
+    if (!url) return all;
+    const titleAttr = title ? ` title="${cartmanMdEscape(title)}"` : "";
+    return stash(`<img class="cartman-md-image" src="${cartmanMdEscape(url)}" alt="${cartmanMdEscape(alt)}" loading="lazy"${titleAttr}>`);
+  });
+  value = value.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (all, label, rawUrl, title) => {
+    const url = cartmanMdSafeUrl(rawUrl, false);
+    if (!url) return all;
+    const titleAttr = title ? ` title="${cartmanMdEscape(title)}"` : "";
+    return stash(`<a href="${cartmanMdEscape(url)}"${titleAttr}>${cartmanMdEscape(label)}</a>`);
+  });
+  value = cartmanMdEscape(value);
+  value = value.replace(/~~([^~\n]+)~~/g, "<del>$1</del>")
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/__([^_\n]+)__/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/(^|[^_])_([^_\n]+)_(?!_)/g, "$1<em>$2</em>");
+  value = value.replace(/CARTMANMDTOKEN(\d+)END/g, (_, index) => tokens[Number(index)] || "");
+  return value;
+}
+function cartmanMarkdown(value) {
+  const lines = String(value ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const output = [];
+  let paragraph = [];
+  let listItems = [];
+  let listType = "";
+  let quoteLines = [];
+  let codeLines = null;
+  let codeLanguage = "";
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      output.push(`<p>${paragraph.map(line => cartmanMarkdownInline(line)).join("<br>\n")}</p>`);
+      paragraph = [];
+    }
+  };
+  const flushList = () => {
+    if (!listItems.length) return;
+    const tag = listType === "ol" ? "ol" : "ul";
+    output.push(`<${tag}>${listItems.map(item => `<li>${cartmanMarkdownInline(item)}</li>`).join("")}</${tag}>`);
+    listItems = [];
+    listType = "";
+  };
+  const flushQuote = () => {
+    if (!quoteLines.length) return;
+    output.push(`<blockquote>${quoteLines.map(line => `<p>${cartmanMarkdownInline(line)}</p>`).join("")}</blockquote>`);
+    quoteLines = [];
+  };
+  const splitTable = line => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
+  const isTableDivider = line => {
+    if (!line.includes("|")) return false;
+    const cells = splitTable(line);
+    return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
+  };
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const fence = line.match(/^\s*```\s*([\w-]*)\s*$/);
+    if (fence) {
+      flushParagraph(); flushList(); flushQuote();
+      if (codeLines === null) { codeLines = []; codeLanguage = fence[1] || ""; }
+      else {
+        const langClass = codeLanguage ? ` class="language-${cartmanMdEscape(codeLanguage)}"` : "";
+        output.push(`<pre><code${langClass}>${cartmanMdEscape(codeLines.join("\n"))}</code></pre>`);
+        codeLines = null; codeLanguage = "";
+      }
+      continue;
+    }
+    if (codeLines !== null) { codeLines.push(line); continue; }
+    if (!line.trim()) { flushParagraph(); flushList(); flushQuote(); continue; }
+    if (i + 1 < lines.length && line.includes("|") && isTableDivider(lines[i + 1])) {
+      flushParagraph(); flushList(); flushQuote();
+      const headers = splitTable(line);
+      i += 1;
+      const rows = [];
+      while (i + 1 < lines.length && lines[i + 1].includes("|") && lines[i + 1].trim()) {
+        i += 1; rows.push(splitTable(lines[i]));
+      }
+      output.push(`<div class="cartman-md-table-wrap"><table><thead><tr>${headers.map(cell => `<th>${cartmanMarkdownInline(cell)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${headers.map((_, n) => `<td>${cartmanMarkdownInline(row[n] || "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+      continue;
+    }
+    const heading = line.match(/^\s*(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      flushParagraph(); flushList(); flushQuote();
+      const level = heading[1].length;
+      output.push(`<h${level}>${cartmanMarkdownInline(heading[2])}</h${level}>`);
+      continue;
+    }
+    if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)) {
+      flushParagraph(); flushList(); flushQuote(); output.push("<hr>"); continue;
+    }
+    const quote = line.match(/^\s*    >?\s?(.*)$/);
+    if (/^\s*>/.test(line)) {
+      flushParagraph(); flushList();
+      quoteLines.push(line.replace(/^\s*>\s?/, ""));
+      continue;
+    }
+    const list = line.match(/^\s*(?:([-+*])|(\d+)\.)\s+(.+)$/);
+    if (list) {
+      flushParagraph(); flushQuote();
+      const nextType = list[2] ? "ol" : "ul";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      listItems.push(list[3]);
+      continue;
+    }
+    flushList(); flushQuote(); paragraph.push(line);
+  }
+  flushParagraph(); flushList(); flushQuote();
+  if (codeLines !== null) output.push(`<pre><code>${cartmanMdEscape(codeLines.join("\n"))}</code></pre>`);
+  return `<div class="cartman-markdown-body">${output.join("\n")}</div>`;
+}
+function cartmanInsertAttachmentMarkdown(source, attachments, cursor) {
+  const markdown = (Array.isArray(attachments) ? attachments : []).map(item => {
+    const id = Number(item?.id || 0);
+    if (!Number.isSafeInteger(id) || id <= 0) return "";
+    const name = String(item.original_name || "Attachment").replace(/[\[\]]/g, "").trim() || "Attachment";
+    return item.is_image || /^image\/(png|jpeg|webp|gif|bmp)$/i.test(String(item.content_type || ""))
+      ? `![${name}](/api/attachments/file/${id}?inline=true)`
+      : `[${name}](/api/attachments/file/${id})`;
+  }).filter(Boolean).join("\n\n");
+  if (!markdown) return String(source || "");
+  const text = String(source || "");
+  const fallback = text.length;
+  const requested = Number.isFinite(Number(cursor)) ? Number(cursor) : fallback;
+  const position = Math.max(0, Math.min(text.length, requested));
+  const before = text.slice(0, position);
+  const after = text.slice(position);
+  const left = before && !before.endsWith("\n") ? "\n\n" : "";
+  const right = after && !after.startsWith("\n") ? "\n\n" : "";
+  return before + left + markdown + right + after;
+}
+
+function attachmentSizeLabel(value) {
+  const n = Number(value || 0);
+  return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+function attachmentCollectionMarkup(items) {
+  if (!Array.isArray(items) || !items.length) return "";
+  return `<section class="io-kb-attachments"><h3>Attachments <span>${items.length}</span></h3><div class="io-kb-attachment-grid">${items.map(item => {
+    const id = Number(item.id || 0);
+    const url = `/api/attachments/file/${id}`;
+    const image = Boolean(item.is_image);
+    return `<article class="io-kb-attachment">${image ? `<a href="${url}?inline=true" target="_blank" rel="noopener"><img src="${url}?inline=true" alt="${esc(item.original_name || "Attachment")}" loading="lazy"></a>` : `<div class="io-kb-attachment-file">▤</div>`}<a class="io-kb-attachment-name" href="${url}">${esc(item.original_name || "Attachment")}</a><small>${esc(attachmentSizeLabel(item.size_bytes))} · ${esc(item.uploaded_by || "Unknown")}</small></article>`;
+  }).join("")}</div></section>`;
+}
+async function uploadCartmanAttachment(entityType, entityKey, file) {
+  const query = new URLSearchParams({entity_type: entityType, entity_key: entityKey});
+  const response = await fetch(`/api/attachments?${query.toString()}`, {
+    method: "POST",
+    headers: {"X-Filename": encodeURIComponent(file.name), "Content-Type": file.type || "application/octet-stream"},
+    body: file
+  });
+  const raw = await response.text();
+  let payload = null;
+  if (raw) { try { payload = JSON.parse(raw); } catch { payload = {detail: raw}; } }
+  if (!response.ok) throw new Error(payload?.detail || `Upload failed (${response.status})`);
+  return payload;
+}
+
+const ticketClosed = t => ["Resolved", "Closed"].includes(t?.status);
+const ticketStatusClass = status => status === "Waiting for requester" ? "warn" : statusClass(status);
+const ticketScopeMarkup = () => `<div class="ct-scope-toggle" role="group" aria-label="Ticket queue scope"><button type="button" data-ticket-scope="all" class="${ticketState.scope === "all" ? "is-active" : ""}">All tickets</button><button type="button" data-ticket-scope="mine" class="${ticketState.scope === "mine" ? "is-active" : ""}">My active</button></div>`;
+const ticketFilterMarkup = () => `<div class="ct-filters">${ticketFilters.map(value => `<button type="button" class="ct-filter ${ticketState.filter===value?"is-active":""}" data-ticket-filter="${esc(value)}">${esc(value)}</button>`).join("")}</div>`;
+
+async function ticketApi(path, options={}) {
+  const init = {method: options.method || "GET", headers: {Accept: "application/json"}};
+  if (options.body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(options.body);
+  }
+  const response = await fetch(path, init);
+  let payload = null;
+  if (response.status !== 204) {
+    const text = await response.text();
+    if (text) { try { payload = JSON.parse(text); } catch { payload = {detail: text}; } }
+  }
+  if (!response.ok) throw new Error(payload?.detail || `${response.status} ${response.statusText}`);
+  return payload;
+}
+
+function ticketQueryUrl() {
+  const params = new URLSearchParams();
+  if (ticketState.query.trim()) params.set("q", ticketState.query.trim());
+  if (["Critical", "High", "Normal", "Low"].includes(ticketState.filter)) params.set("priority", ticketState.filter);
+  else if (ticketState.filter !== "All") params.set("status", ticketState.filter);
+  params.set("limit", "200");
+  params.set("scope", ticketState.scope);
+  return `/api/tickets?${params.toString()}`;
+}
+
+function ticketRender() { set(ticketMarkup()); }
+
+function renderTicketing() {
+  ticketRender();
+  if (!ticketState.currentUserLoaded && !ticketState.currentUserLoading) void loadTicketCurrentUser();
+  if (!ticketState.loaded && !ticketState.loading) void loadTicketList();
+}
+
+async function loadTicketCurrentUser() {
+  ticketState.currentUserLoading = true;
+  try {
+    const data = await ticketApi("/api/auth/me");
+    ticketState.currentUser = data?.user || null;
+  } catch (error) {
+    ticketState.error = `Could not read active Cartman user: ${error.message}`;
+  } finally {
+    ticketState.currentUserLoading = false;
+    ticketState.currentUserLoaded = true;
+    ticketRender();
+  }
+}
+
+async function loadTicketList() {
+  ticketState.loading = true;
+  ticketRender();
+  try {
+    const data = await ticketApi(ticketQueryUrl());
+    ticketState.items = Array.isArray(data?.items) ? data.items : [];
+    ticketState.total = Number(data?.total || 0);
+    ticketState.summary = data?.summary || {open: 0, critical: 0, pending: 0, resolved: 0};
+    ticketState.error = "";
+    ticketState.loaded = true;
+    if (ticketState.selectedKey && !ticketState.items.some(item => item.ticket_key === ticketState.selectedKey)) {
+      // A selected ticket can disappear from a filtered queue without being deleted.
+      ticketState.detail = ticketState.detail?.ticket_key === ticketState.selectedKey ? ticketState.detail : null;
+    }
+  } catch (error) {
+    ticketState.error = `Could not load tickets from Cartman API: ${error.message}`;
+    ticketState.loaded = true;
+  } finally {
+    ticketState.loading = false;
+    ticketRender();
+  }
+}
+
+async function openTicket(key) {
+  ticketState.selectedKey = key;
+  ticketState.detail = null;
+  ticketState.detailLoading = true;
+  ticketState.error = "";
+  ticketRender();
+  try {
+    ticketState.detail = await ticketApi(`/api/tickets/${encodeURIComponent(key)}`);
+  } catch (error) {
+    ticketState.error = `Could not open ${key}: ${error.message}`;
+  } finally {
+    ticketState.detailLoading = false;
+    ticketRender();
+  }
+}
+
+async function refreshCurrentTicket() {
+  const key = ticketState.selectedKey;
+  ticketState.loaded = false;
+  await loadTicketList();
+  if (key) await openTicket(key);
+}
+
+function ticketMarkup() {
+  const summary = ticketState.summary || {};
+  const rows = ticketState.items.map(t => `<tr class="ct-ticket-row ${ticketState.selectedKey===t.ticket_key?"is-selected":""}" data-action="select-ticket" data-ticket-key="${esc(t.ticket_key)}" tabindex="0" role="button" aria-label="Open ${esc(t.ticket_key)}">
+    <td><span class="ct-ticket-id">${esc(t.ticket_key)}</span><div class="ct-ticket-title">${esc(t.title)}</div><small>${esc(t.type || "Incident")} · ${esc(t.requester || "Unspecified")}</small></td>
+    <td>${badge(t.priority, priorityClass(t.priority))}</td>
+    <td><strong class="ct-assignee">${esc(t.assigned_to || "Unassigned")}</strong><small>${esc(t.team || "Service Desk")} · ${esc(t.escalation_level || "L1")}</small></td>
+    <td>${badge(t.status, ticketStatusClass(t.status))}</td><td class="ct-updated">${esc(ticketTime(t.updated_at || t.created_at))}</td>
+    <td><button type="button" class="io-link" data-action="select-ticket" data-ticket-key="${esc(t.ticket_key)}">Open →</button></td>
+  </tr>`).join("");
+  const detail = ticketState.detail && ticketState.detail.ticket_key === ticketState.selectedKey ? ticketDetailMarkup(ticketState.detail) : ticketState.detailLoading ? `<section class="ct-detail ct-detail-placeholder"><div class="ct-spinner"></div><strong>Loading conversation…</strong></section>` : `<section class="ct-detail ct-detail-placeholder"><div class="ct-placeholder-icon">↳</div><h3>Select a ticket to view the conversation</h3><p>Ticket messages, internal notes, assignment and escalation history will appear here.</p></section>`;
+  return shell("SERVICE OPERATIONS / TICKETING", "Ticket queue", "Incidents and service requests · select any ticket to open its conversation.", btn("+ New ticket", "new-ticket", "primary")) +
+    `<div class="io-stats">${stat("Open tickets", Number(summary.open || 0), "Not resolved or closed")}${stat("Critical", Number(summary.critical || 0), "Open critical tickets", "io-red")}${stat("Pending", Number(summary.pending || 0), "Waiting for action", "io-amber")}${stat("Resolved / closed", Number(summary.resolved || 0), "Completed tickets", "io-green")}</div>` +
+    `<div class="ct-queue-toolbar"><form class="ct-search-form" data-ticket-search-form><input class="io-search" type="search" name="q" value="${esc(ticketState.query)}" placeholder="Search ID, subject, requester, assignee…" aria-label="Search tickets"><button class="io-btn" type="submit">Search</button></form><button type="button" class="io-btn" data-action="refresh-tickets">↻ Refresh</button></div>` +
+    `<div class="ct-scope-row">${ticketScopeMarkup()}<span class="ct-scope-hint">My active hides tickets awaiting requester response.</span></div>` +
+    `<div class="ct-filter-wrap">${ticketFilterMarkup()}</div>` +
+    `<section class="io-panel ct-queue-panel"><div class="io-panel-head"><div><h3>Incident & request queue</h3><p>${ticketState.loading ? "Loading tickets…" : `${ticketState.total} ticket(s) matching the current view`}</p></div><span class="ct-live-label"><i></i> DATABASE</span></div><div class="io-table-wrap"><table class="io-table ct-ticket-table"><thead><tr><th>Ticket</th><th>Priority</th><th>Assignee / team</th><th>Status</th><th>Last updated</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6"><div class="ct-empty-queue"><div>${ticketState.loading ? "Loading tickets…" : "No tickets in this view"}</div><small>${ticketState.loading ? "Connecting to Cartman API" : "Create a ticket or change the search and filters."}</small></div></td></tr>`}</tbody></table></div></section>` +
+    (ticketState.error ? `<div class="ct-error" role="alert"><strong>Ticketing notice</strong><span>${esc(ticketState.error)}</span><button type="button" data-action="refresh-tickets">Retry</button></div>` : "") +
+    detail +
+    (ticketState.modal ? ticketCreateModalMarkup() : "");
+}
+
+function ticketDetailMarkup(t) {
+  const comments = Array.isArray(t.comments) ? t.comments : [];
+  const history = Array.isArray(t.history) ? t.history : [];
+  const level = t.escalation_level || (String(t.team || "").startsWith("L3") ? "L3" : String(t.team || "").startsWith("L2") ? "L2" : "L1");
+  const commentList = comments.length ? comments.map(c => `<article class="ct-message ${c.is_internal ? "ct-message-internal " : ""}${String(c.author_username || "").trim().toLowerCase() === String(ticketState.currentUser?.username || "").trim().toLowerCase() ? "ct-message-agent" : "ct-message-requester"}"><div class="ct-message-meta"><strong>${esc(c.author || "Unknown user")}</strong><time>${esc(ticketTime(c.created_at))}</time>${c.is_internal ? `<span class="ct-internal-chip">INTERNAL NOTE · TEAM ONLY</span>` : `<span class="ct-role-chip">${esc(c.author_role === "requester" ? "REQUESTER" : c.author_role === "agent" ? "ASSIGNED SUPPORT" : "SUPPORT")}</span>`}</div><div class="ct-message-body">${cartmanMarkdown(c.body)}</div></article>`).join("") : `<div class="ct-conversation-empty"><div class="ct-empty-chat-icon">☷</div><strong>No replies yet</strong><span>Send the first reply or add an internal note for the support team.</span></div>`;
+  const historyList = history.length ? history.slice(0, 12).map(h => `<div class="ct-history-item"><i></i><div><strong>${esc(h.action)}</strong><span>${esc(h.field_name ? `${h.field_name}: ${h.old_value || "—"} → ${h.new_value || "—"}` : (h.new_value || "Ticket activity"))}</span><small>${esc(h.actor || "Cartman Administrator")} · ${esc(ticketTime(h.created_at))}</small></div></div>`).join("") : `<p class="ct-muted">No history recorded.</p>`;
+  const composerLabel = ticketState.composerMode === "note" ? "Add internal note" : "Send reply";
+  const isClosed = ticketClosed(t);
+  return `<section class="ct-detail" aria-label="Ticket conversation">
+    <div class="ct-detail-head"><div class="ct-detail-heading"><div class="ct-detail-overline"><span>${esc(t.ticket_key)}</span><span>·</span><span>${esc(t.type || "Incident")}</span></div><h2>${esc(t.title)}</h2><div class="ct-detail-badges">${badge(t.status, ticketStatusClass(t.status))}${badge(t.priority, priorityClass(t.priority))}<span class="ct-level-chip">${esc(level)} support</span></div></div>
+      <div class="ct-detail-actions"><details class="ct-escalate"><summary class="io-btn">Escalate <span aria-hidden="true">⌄</span></summary><div class="ct-escalate-menu"><p>Route to a higher support tier</p><button type="button" data-action="escalate-ticket" data-level="L2"><span class="ct-menu-level">L2</span><span><strong>Support engineering</strong><small>Advanced troubleshooting</small></span></button><button type="button" data-action="escalate-ticket" data-level="L3"><span class="ct-menu-level">L3</span><span><strong>Engineering specialist</strong><small>Complex or product-level issue</small></span></button>${level !== "L1" ? `<button type="button" class="ct-return-l1" data-action="escalate-ticket" data-level="L1">Return to L1 support</button>` : ""}</div></details><button type="button" class="io-btn ${isClosed ? "" : "ct-close-btn"}" data-action="toggle-ticket-status">${isClosed ? "↻ Reopen" : "✓ Close ticket"}</button></div>
+    </div>
+    <div class="ct-ticket-summary"><div><span>Requester</span><strong>${esc(t.requester || "Unspecified")}</strong></div><div><span>Assigned to</span><strong>${esc(t.assigned_to || "Unassigned")}</strong></div><div><span>Team / queue</span><strong>${esc(t.team || "Service Desk")}</strong></div><div><span>Created</span><strong>${esc(ticketTime(t.created_at))}</strong></div></div>
+    ${t.description ? `<div class="ct-original-request"><span class="ct-section-kicker">ORIGINAL REQUEST</span>${cartmanMarkdown(t.description)}</div>` : ""}
+    <div class="ct-conversation-head"><div><h3>Conversation</h3><p>${comments.length} message(s) · replies and internal notes</p></div><button type="button" class="io-link" data-action="refresh-current-ticket">↻ Refresh</button></div>
+    <div class="ct-conversation">${commentList}</div>
+    ${isClosed ? `<div class="ct-closed-banner">This ticket is ${esc(t.status.toLowerCase())}. Reopen it to add a new reply or internal note.</div>` : `<form class="ct-composer ${ticketState.composerMode === "note" ? "ct-composer-note" : ""}" data-ticket-comment-form><div class="ct-composer-top"><div class="ct-composer-modes"><button type="button" data-action="composer-mode" data-mode="reply" class="${ticketState.composerMode === "reply" ? "is-active" : ""}">↗ Reply</button><button type="button" data-action="composer-mode" data-mode="note" class="${ticketState.composerMode === "note" ? "is-active" : ""}">▤ Internal note</button></div><span>${ticketState.composerMode === "note" ? "Visible to Cartman support staff only" : "Response saved to ticket history"}</span></div><textarea name="body" maxlength="10000" required placeholder="${ticketState.composerMode === "note" ? "Write an internal note for the support team…" : "Write a reply…"}" aria-label="${ticketState.composerMode === "note" ? "Internal note" : "Ticket reply"}"></textarea><label class="ct-attachment-picker">Insert files/photos into message <span>Markdown is inserted at the text cursor</span><input type="file" name="attachments" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.txt,.log,.csv,.md,.json,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"></label><div class="ct-composer-bottom"><span>Be clear, concise, and include relevant troubleshooting steps.</span><button type="submit" class="io-btn primary" ${ticketState.saving ? "disabled" : ""}>${ticketState.saving ? "Saving…" : composerLabel} <span aria-hidden="true">→</span></button></div></form>`}
+    <details class="ct-history"><summary>Activity history <span>${history.length} events</span></summary><div class="ct-history-list">${historyList}</div></details>
+  </section>`;
+}
+
+function ticketCreateModalMarkup() {
+  const currentName = ticketState.currentUser?.display_name || ticketState.currentUser?.username || "Signed-in Cartman user";
+  return `<div class="ct-modal-backdrop" data-action="modal-backdrop"><section class="ct-modal" role="dialog" aria-modal="true" aria-labelledby="ct-new-ticket-title"><div class="ct-modal-head"><div><span class="ct-section-kicker">SERVICE OPERATIONS</span><h2 id="ct-new-ticket-title">Create ticket</h2><p>Record an incident or service request.</p></div><button type="button" class="ct-modal-x" data-action="cancel-new-ticket" aria-label="Close">×</button></div><form data-ticket-create-form><label>Subject<input name="title" required minlength="3" maxlength="200" placeholder="Summarize the issue"></label><label>Description<textarea name="description" maxlength="10000" rows="4" placeholder="Symptoms, impact, and troubleshooting already attempted"></textarea></label><label class="ct-attachment-picker">Insert into description <span>Markdown image/link is inserted at the text cursor · max 12 MiB each</span><input type="file" name="attachments" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.txt,.log,.csv,.md,.json,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"></label><div class="ct-form-grid"><label>Type<select name="type"><option>Incident</option><option>Request</option><option>Problem</option><option>Change</option></select></label><label>Priority<select name="priority"><option>Normal</option><option>Low</option><option>High</option><option>Critical</option></select></label></div><div class="ct-routing-preview"><div><span>Requester</span><strong>${esc(currentName)}</strong><small>From your authenticated Cartman session</small></div><div><span>Assignment</span><strong>Automatic L1 routing</strong><small>Online L1 agent, or L1 Queue if none is available</small></div></div><div class="ct-modal-actions"><button type="button" class="io-btn" data-action="cancel-new-ticket">Cancel</button><button type="submit" class="io-btn primary" ${ticketState.saving ? "disabled" : ""}>${ticketState.saving ? "Creating…" : "Create ticket"}</button></div></form></section></div>`;
+}
+
+
+
+async function handleTicketingClick(event) {
+  const scopeButton = event.target.closest("[data-ticket-scope]");
+  if (scopeButton) {
+    ticketState.scope = scopeButton.dataset.ticketScope === "mine" ? "mine" : "all";
+    ticketState.loaded = false;
+    ticketState.loading = false;
+    ticketState.selectedKey = null;
+    ticketState.detail = null;
+    await loadTicketList();
+    return;
+  }
+  const filter = event.target.closest("[data-ticket-filter]");
+  if (filter) {
+    ticketState.filter = filter.dataset.ticketFilter || "All";
+    ticketState.loaded = false;
+    ticketState.loading = false;
+    await loadTicketList();
+    return;
+  }
+  const actionButton = event.target.closest("[data-action]");
+  if (!actionButton) return;
+  const action = actionButton.dataset.action;
+  try {
+    if (action === "select-ticket") {
+      await openTicket(actionButton.dataset.ticketKey);
+    } else if (action === "new-ticket") {
+      ticketState.error = ""; ticketState.modal = true; ticketRender();
+    } else if (action === "cancel-new-ticket") {
+      ticketState.modal = false; ticketRender();
+    } else if (action === "modal-backdrop" && event.target === actionButton) {
+      ticketState.modal = false; ticketRender();
+    } else if (action === "refresh-tickets") {
+      ticketState.loaded = false; ticketState.loading = false; await loadTicketList();
+    } else if (action === "refresh-current-ticket" && ticketState.selectedKey) {
+      await openTicket(ticketState.selectedKey);
+    } else if (action === "composer-mode") {
+      ticketState.composerMode = actionButton.dataset.mode === "note" ? "note" : "reply"; ticketRender();
+    } else if (action === "toggle-ticket-status" && ticketState.detail) {
+      const nextStatus = ticketClosed(ticketState.detail) ? "Open" : "Closed";
+      ticketState.saving = true; ticketRender();
+      await ticketApi(`/api/tickets/${encodeURIComponent(ticketState.selectedKey)}`, {method: "PUT", body: {status: nextStatus}});
+      ticketState.saving = false; await refreshCurrentTicket();
+    } else if (action === "escalate-ticket" && ticketState.detail) {
+      const level = actionButton.dataset.level;
+      const teams = {L1: "Service Desk", L2: "L2 Support", L3: "L3 Engineering"};
+      if (!teams[level]) return;
+      ticketState.saving = true; ticketRender();
+      await ticketApi(`/api/tickets/${encodeURIComponent(ticketState.selectedKey)}`, {method: "PUT", body: {escalation_level: level}});
+      ticketState.saving = false; ticketState.error = `Ticket routed to ${level} · ${teams[level]}.`;
+      await refreshCurrentTicket();
+    }
+  } catch (error) {
+    ticketState.saving = false;
+    ticketState.error = `Action failed: ${error.message}`;
+    ticketRender();
+  }
+}
+
+async function handleTicketingSubmit(event) {
+  const form = event.target;
+  if (form.matches("[data-ticket-search-form]")) {
+    event.preventDefault();
+    ticketState.query = String(new FormData(form).get("q") || "");
+    ticketState.loaded = false; ticketState.loading = false;
+    await loadTicketList();
+    return;
+  }
+  if (form.matches("[data-ticket-create-form]")) {
+    event.preventDefault();
+    if (ticketState.saving) return;
+    const data = new FormData(form);
+    const attachmentFiles = data.getAll("attachments").filter(file => file && typeof file.size === "number" && file.size > 0);
+    const body = Object.fromEntries(["title", "description", "type", "priority"].map(key => [key, String(data.get(key) || "").trim()]));
+    const descriptionField = form.elements.namedItem("description");
+    const descriptionCursor = Number(descriptionField?.selectionStart ?? body.description.length);
+    ticketState.saving = true; ticketState.error = ""; ticketRender();
+    try {
+      const ticket = await ticketApi("/api/tickets", {method: "POST", body});
+      const uploadedAttachments = [];
+      for (const file of attachmentFiles) uploadedAttachments.push(await uploadCartmanAttachment("ticket", ticket.ticket_key, file));
+      if (uploadedAttachments.length) {
+        const updatedDescription = cartmanInsertAttachmentMarkdown(body.description, uploadedAttachments, descriptionCursor);
+        await ticketApi(`/api/tickets/${encodeURIComponent(ticket.ticket_key)}`, {method: "PUT", body: {description: updatedDescription}});
+      }
+      ticketState.modal = false; ticketState.saving = false; ticketState.filter = "All"; ticketState.query = ""; ticketState.selectedKey = ticket.ticket_key;
+      await loadTicketList();
+      await openTicket(ticket.ticket_key);
+    } catch (error) {
+      ticketState.saving = false; ticketState.error = `Could not create ticket: ${error.message}`; ticketState.modal = true; ticketRender();
+    }
+    return;
+  }
+  if (form.matches("[data-ticket-comment-form]")) {
+    event.preventDefault();
+    if (ticketState.saving || !ticketState.selectedKey) return;
+    const data = new FormData(form);
+    const body = String(data.get("body") || "").trim();
+    const attachmentFiles = data.getAll("attachments").filter(file => file && typeof file.size === "number" && file.size > 0);
+    const bodyField = form.elements.namedItem("body");
+    const bodyCursor = Number(bodyField?.selectionStart ?? body.length);
+    if (!body && !attachmentFiles.length) return;
+    ticketState.saving = true; ticketState.error = ""; ticketRender();
+    try {
+      const uploadedAttachments = [];
+      for (const file of attachmentFiles) uploadedAttachments.push(await uploadCartmanAttachment("ticket", ticketState.selectedKey, file));
+      const commentBody = cartmanInsertAttachmentMarkdown(body, uploadedAttachments, bodyCursor);
+      if (!commentBody.trim()) throw new Error("Write a reply or attach a file first.");
+      await ticketApi(`/api/tickets/${encodeURIComponent(ticketState.selectedKey)}/comments`, {method: "POST", body: {body: commentBody, is_internal: ticketState.composerMode === "note"}});
+      ticketState.saving = false;
+      if (ticketState.scope === "mine" && ticketState.composerMode === "reply" && ticketState.detail && ticketState.detail.assigned_to_username === ticketState.currentUser?.username && ticketState.detail.requester_username !== ticketState.currentUser?.username) {
+        ticketState.selectedKey = null;
+        ticketState.detail = null;
+        ticketState.loaded = false;
+        await loadTicketList();
+      } else {
+        await refreshCurrentTicket();
+      }
+    } catch (error) {
+      ticketState.saving = false; ticketState.error = `Could not save message: ${error.message}`; ticketRender();
+    }
+  }
+}
+
+function ticketingSubmitListener(event) {
+  const form = event.target;
+  if (slug === "ticketing") {
+    void handleTicketingSubmit(event);
+    return;
+  }
+  if (slug === "knowledge" && form.matches("[data-kb-form]")) {
+    event.preventDefault();
+    void submitKnowledgeForm(form);
+    return;
+  }
+  if (slug === "tasks" && form.matches("[data-work-item-form]")) {
+    event.preventDefault();
+    void submitWorkItemForm(form);
+    return;
+  }
+  if (slug === "tasks" && form.matches("[data-automation-form]")) {
+    event.preventDefault();
+    void submitAutomationForm(form);
+  }
+}
+
+async function knowledgeApi(url, options = {}) {
+  const init = {
+    method: options.method || "GET",
+    credentials: "same-origin",
+    headers: {Accept: "application/json"}
+  };
+  if (options.body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(url, init);
+  let payload = null;
+
+  if (response.status !== 204) {
+    const text = await response.text();
+    if (text) {
+      try { payload = JSON.parse(text); }
+      catch { payload = {detail: text}; }
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(payload?.detail || `${response.status} ${response.statusText}`);
+  }
+  return payload;
+}
+
+async function loadKnowledgeArticles(force = false) {
+  if (knowledgeState.loading || (knowledgeState.loaded && !force)) return;
+
+  knowledgeState.loading = true;
+  knowledgeState.error = "";
+
+  try {
+    // CARTMAN_KB_LIST_ADMIN_FLAG_FALLBACK_V1
+    const [data, session] = await Promise.all([
+      knowledgeApi("/api/knowledge/articles?limit=500"),
+      knowledgeApi("/api/auth/me").catch(() => null)
+    ]);
+    knowledgeState.items = Array.isArray(data?.items) ? data.items : [];
+    knowledgeState.categories = Array.isArray(data?.categories) ? data.categories : [];
+    knowledgeState.summary = data?.summary || {total: 0, published: 0, draft: 0, archived: 0};
+    knowledgeState.canManage = Boolean(
+      data?.can_manage || session?.user?.role === "admin"
+    );
+    knowledgeState.loaded = true;
+
+    const requestedEditKey = new URLSearchParams(location.search).get("edit");
+    if (knowledgeState.canManage && requestedEditKey && !knowledgeState.editor) {
+      const requestedArticle = knowledgeState.items.find(
+        item => item.article_key === requestedEditKey
+      );
+      if (requestedArticle) {
+        knowledgeState.editor = {
+          mode: "edit",
+          article: requestedArticle,
+          draft: null
+        };
+        window.history.replaceState({}, "", location.pathname);
+      }
+    }
+  } catch (error) {
+    knowledgeState.loaded = true;
+    knowledgeState.error = error.message || "Could not load Knowledge Base.";
+  } finally {
+    knowledgeState.loading = false;
+    renderKnowledge();
+  }
+}
+
+function knowledgeEditorMarkup() {
+  const editor = knowledgeState.editor;
+  if (!editor) return "";
+
+  const article = editor.article || {};
+  const key = article.article_key || "";
+
+  if (editor.mode === "read") {
+    const actions = [
+      knowledgeState.canManage
+        ? `<button type="button" class="io-btn" data-action="edit-article" data-id="${esc(key)}">Edit article</button>`
+        : "",
+      btn("Close", "close-kb-editor")
+    ].join("");
+
+    return panel(
+      esc(article.title || "Knowledge article"),
+      `${esc(key)} · ${esc(article.category || "General")} · ${esc(article.status || "Published")}`,
+      `<div class="io-kb-reader">
+        <p class="io-kb-summary">${esc(article.summary || "")}</p>
+        <div class="io-kb-content">${cartmanMarkdown(article.content || "")}</div>
+        <div class="io-kb-tags">${(article.tags || []).map(tag => badge(tag, "info")).join(" ")}</div>
+        <div class="io-kb-meta">Author: ${esc(article.author_username || "Unknown")} · Updated: ${esc(article.updated_at || "—")}</div>
+      </div>`,
+      actions
+    );
+  }
+
+  const values = editor.draft || article;
+  const tags = Array.isArray(values.tags) ? values.tags.join(", ") : (values.tags || "");
+
+  return panel(
+    editor.mode === "edit" ? "Edit knowledge article" : "Create knowledge article",
+    editor.mode === "edit"
+      ? `${esc(key)} · Changes are saved to Cartman`
+      : "Add a reusable troubleshooting guide or operational runbook.",
+    `<form class="io-kb-form" data-kb-form data-kb-key="${esc(key)}">
+      <div class="io-kb-form-grid">
+        <label class="io-kb-field">Title
+          <input name="title" required minlength="3" maxlength="180" value="${esc(values.title || "")}" placeholder="e.g. Investigate DNS failures">
+        </label>
+        <label class="io-kb-field">Category
+          <input name="category" required maxlength="80" value="${esc(values.category || "General")}" placeholder="Networking, Windows, Identity…">
+        </label>
+      </div>
+      <label class="io-kb-field">Summary
+        <input name="summary" maxlength="600" value="${esc(values.summary || "")}" placeholder="What this guide helps diagnose or resolve">
+      </label>
+      <label class="io-kb-field">Article content
+        <textarea name="content" required maxlength="50000" rows="12" placeholder="Document symptoms, checks, remediation and validation steps…">${esc(values.content || "")}</textarea>
+      </label>
+      <label class="io-kb-field">Tags
+          <input name="tags" value="${esc(tags)}" placeholder="DNS, Networking, Windows (comma-separated)">
+        </label>
+      <label class="io-kb-field io-kb-upload-field">Insert files into article content <span>Images render inline; documents become Markdown links at the cursor · max 12 MiB each</span><input type="file" name="attachments" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.txt,.log,.csv,.md,.json,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"></label>
+      <div class="io-kb-form-actions">
+        <button type="button" class="io-btn" data-action="close-kb-editor">Cancel</button>
+        <button type="submit" class="io-btn primary" ${knowledgeState.saving ? "disabled" : ""}>${knowledgeState.saving ? "Saving…" : "Save article"}</button>
+      </div>
+    </form>`,
+    ""
+  );
+}
+
+async function submitKnowledgeForm(form) {
+  if (knowledgeState.saving) return;
+
+  const field = name => String(form.elements.namedItem(name)?.value || "").trim();
+  const payload = {
+    title: field("title"),
+    category: field("category"),
+    summary: field("summary"),
+    content: field("content"),
+    tags: field("tags").split(",").map(tag => tag.trim()).filter(Boolean)
+  };
+  const key = form.dataset.kbKey || "";
+  const attachmentFiles = Array.from(form.elements.namedItem("attachments")?.files || []);
+  const contentField = form.elements.namedItem("content");
+  const contentCursor = Number(contentField?.selectionStart ?? payload.content.length);
+
+  knowledgeState.saving = true;
+  knowledgeState.error = "";
+
+  try {
+    let savedArticle;
+    if (key) {
+      savedArticle = await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        body: payload
+      });
+    } else {
+      savedArticle = await knowledgeApi("/api/knowledge/articles", {
+        method: "POST",
+        body: payload
+      });
+    }
+    const attachmentKey = savedArticle?.article_key || key;
+    const uploadedAttachments = [];
+    for (const file of attachmentFiles) uploadedAttachments.push(await uploadCartmanAttachment("knowledge", attachmentKey, file));
+    if (uploadedAttachments.length) {
+      payload.content = cartmanInsertAttachmentMarkdown(payload.content, uploadedAttachments, contentCursor);
+      await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(attachmentKey)}`, {
+        method: "PUT",
+        body: payload
+      });
+    }
+
+    knowledgeState.editor = null;
+    activeFilter = "All";
+    knowledgeState.statusFilter = "All";
+    await loadKnowledgeArticles(true);
+  } catch (error) {
+    knowledgeState.error = error.message || "Could not save article.";
+    if (knowledgeState.editor) {
+      knowledgeState.editor.draft = payload;
+    }
+  } finally {
+    knowledgeState.saving = false;
+    renderKnowledge();
+  }
+}
+
+async function setKnowledgeArticleStatus(key, status) {
+  const article = knowledgeState.items.find(item => item.article_key === key);
+  if (!article) return;
+
+  try {
+    await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(key)}`, {
+      method: "PUT",
+      body: {
+        title: article.title,
+        category: article.category,
+        summary: article.summary || "",
+        content: article.content,
+        tags: article.tags || [],
+        status
+      }
+    });
+    await loadKnowledgeArticles(true);
+  } catch (error) {
+    knowledgeState.error = error.message || "Could not update article status.";
+    renderKnowledge();
+  }
+}
+
+async function deleteKnowledgeArticle(key) {
+  if (!knowledgeState.canManage) return;
+  if (!window.confirm(`Remove this article from the active Knowledge Base? Its record is retained as a soft delete. (${key})`)) return;
+
+  try {
+    await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(key)}`, {
+      method: "DELETE"
+    });
+    if (knowledgeArticleKey) {
+      window.location.assign("/pages/knowledge/");
+      return;
+    }
+    if (knowledgeState.editor?.article?.article_key === key) {
+      knowledgeState.editor = null;
+    }
+    await loadKnowledgeArticles(true);
+  } catch (error) {
+    knowledgeState.error = error.message || "Could not remove article.";
+    renderKnowledge();
+  }
+}
+
+
+// CARTMAN_KNOWLEDGE_LIST_AND_DETAIL_PAGE_V1
+function knowledgeContentMarkup(raw) {
+  const lines = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const blocks = [];
+  let listType = null;
+  let listItems = [];
+  let paragraph = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      blocks.push(`<p>${paragraph.map(esc).join("<br>")}</p>`);
+      paragraph = [];
+    }
+  };
+
+  const flushList = () => {
+    if (!listType || !listItems.length) {
+      listType = null;
+      listItems = [];
+      return;
+    }
+    blocks.push(
+      `<${listType} class="io-kb-content-list">` +
+      listItems.map(item => `<li>${esc(item)}</li>`).join("") +
+      `</${listType}>`
+    );
+    listType = null;
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+    const unordered = line.match(/^[-*•]\s+(.+)$/);
+
+    if (ordered || unordered) {
+      flushParagraph();
+      const nextType = ordered ? "ol" : "ul";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      listItems.push((ordered || unordered)[1]);
+      continue;
+    }
+
+    flushList();
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      blocks.push(`<h3 class="io-kb-content-heading">${esc(heading[1])}</h3>`);
+    } else {
+      paragraph.push(line);
+    }
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks.join("");
+}
+
+// CARTMAN_KB_DRAFT_DETAIL_CONTROLS_V1
+async function changeKnowledgeArticleStatus(key, status, reason = "") {
+  try {
+    const article = await knowledgeApi(
+      `/api/knowledge/articles/${encodeURIComponent(key)}`
+    );
+
+    const payload = {
+      title: article.title,
+      category: article.category,
+      summary: article.summary || "",
+      content: article.content,
+      tags: article.tags || [],
+      status
+    };
+
+    if (status === "Draft") {
+      const cleanReason = String(reason || "").trim();
+      if (!cleanReason) {
+        throw new Error("A reason is required to move an article to Draft.");
+      }
+      payload.draft_reason = cleanReason;
+    }
+
+    await knowledgeApi(
+      `/api/knowledge/articles/${encodeURIComponent(key)}`,
+      {method: "PUT", body: payload}
+    );
+
+    await loadKnowledgeArticlePage();
+  } catch (error) {
+    window.alert(error.message || "Could not update article status.");
+  }
+}
+
+async function loadKnowledgeArticlePage() {
+  try {
+    // CARTMAN_KB_DETAIL_ADMIN_FLAG_FALLBACK_V1
+    const [article, library, session] = await Promise.all([
+      knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(knowledgeArticleKey)}`),
+      knowledgeApi("/api/knowledge/articles?limit=1"),
+      knowledgeApi("/api/auth/me")
+    ]);
+
+    const canManageArticle = Boolean(
+      library?.can_manage || session?.user?.role === "admin"
+    );
+    knowledgeState.canManage = canManageArticle;
+    document.title = `Cartman | ${article.article_key} · ${article.title}`;
+
+    const topActions =
+      `<a class="io-btn" href="/pages/knowledge/">← All articles</a>`;
+
+    const draftNotice = article.status === "Draft"
+      ? `<aside class="io-kb-draft-notice">
+          <strong>This article is drafted by ${esc(article.drafted_by_username || article.author_username || "Unknown")} due to:</strong>
+          <p>${esc(article.draft_reason || "No reason recorded.")}</p>
+        </aside>`
+      : "";
+
+    let management = "";
+    if (canManageArticle) {
+      const editLink =
+        `<a class="io-btn" href="/pages/knowledge/?edit=${encodeURIComponent(article.article_key)}">Edit article</a>`;
+
+      const statusAction = article.status === "Draft"
+        ? `<button type="button" class="io-btn primary" data-action="publish-knowledge-article" data-id="${esc(article.article_key)}">Publish article</button>`
+        : article.status === "Archived"
+          ? `<button type="button" class="io-btn primary" data-action="publish-knowledge-article" data-id="${esc(article.article_key)}">Restore to Published</button>`
+          : `<button type="button" class="io-btn" data-action="draft-knowledge-article" data-id="${esc(article.article_key)}">Move to Draft</button>`;
+
+      const archiveButton = article.status !== "Archived"
+        ? `<button type="button" class="io-btn" data-action="archive-knowledge-article" data-id="${esc(article.article_key)}">Archive</button>`
+        : "";
+
+      management = `<section class="io-kb-management-footer">
+        <div class="io-kb-management-heading">
+          <h3>Article management</h3>
+          <p>These actions are restricted to Cartman administrators.</p>
+        </div>
+        <div class="io-kb-management-actions">
+          ${editLink}
+          ${statusAction}
+          ${archiveButton}
+          <button type="button" class="io-btn io-kb-delete-btn" data-action="delete-article" data-id="${esc(article.article_key)}">Delete article</button>
+        </div>
+      </section>`;
+    }
+
+    set(
+      shell(
+        "DOCUMENTATION / KNOWLEDGE BASE",
+        article.title,
+        `${article.article_key} · ${article.category || "General"}`,
+        topActions
+      ) +
+      `<article class="io-kb-standalone">
+        <div class="io-kb-detail-top">
+          ${badge(article.status || "Published", article.status === "Published" ? "good" : "warn")}
+          ${badge(article.category || "General", "info")}
+          <span class="io-muted">${esc(article.article_key)}</span>
+        </div>
+        <p class="io-kb-detail-summary">${esc(article.summary || "")}</p>
+        ${draftNotice}
+        <div class="io-kb-detail-content">${cartmanMarkdown(article.content || "")}</div>
+        <div class="io-kb-tags">
+          ${(article.tags || []).map(tag => badge(tag, "info")).join("") || `<span class="io-muted">No tags</span>`}
+        </div>
+        <div class="io-kb-detail-meta">
+          <div><span>Created by</span><strong>${esc(article.author_username || "Unknown")}</strong></div>
+          <div><span>Last updated</span><strong>${esc(article.updated_at || "—")}</strong></div>
+          <div><span>Published at</span><strong>${esc(article.published_at || "—")}</strong></div>
+        </div>
+      </article>
+      ${management}`
+    );
+  } catch (error) {
+    set(
+      shell(
+        "DOCUMENTATION / KNOWLEDGE BASE",
+        "Article unavailable",
+        "The requested article could not be loaded.",
+        `<a class="io-btn" href="/pages/knowledge/">← Back to Knowledge Base</a>`
+      ) +
+      panel("Unable to open article", "Cartman API", esc(error.message || "Unknown error"))
+    );
+  }
+}
+
+function renderKnowledgeArticle() {
+  set(
+    shell(
+      "DOCUMENTATION / KNOWLEDGE BASE",
+      "Loading article…",
+      "Retrieving the saved article from Cartman.",
+      `<a class="io-btn" href="/pages/knowledge/">← All articles</a>`
+    ) +
+    panel("Loading Knowledge Base article", "", "Connecting to Cartman API…")
+  );
+
+  if (!knowledgeArticleLoadStarted) {
+    knowledgeArticleLoadStarted = true;
+    void loadKnowledgeArticlePage();
+  }
+}
+
+function renderKnowledge() {
+  if (!knowledgeState.loaded && !knowledgeState.loading) {
+    void loadKnowledgeArticles();
+  }
+
+  const query = ($("[data-search]")?.value || "").trim().toLowerCase();
+  // CARTMAN_KB_SORT_DROPDOWN_V1
+  const preferredCategories = ["All", "Identity", "Linux", "Networking", "Windows", "Mac"];
+  const categories = [
+    ...preferredCategories,
+    ...knowledgeState.categories.filter(category =>
+      category && !preferredCategories.some(
+        preferred => preferred.toLowerCase() === category.toLowerCase()
+      )
+    )
+  ];
+  const categoryOptions = categories.map(category =>
+    `<option value="${esc(category)}" ${activeFilter === category ? "selected" : ""}>${esc(category)}</option>`
+  ).join("");
+  const categorySelect = `<label class="io-kb-sort"><span>Sort by:</span><select class="io-select" data-kb-category aria-label="Sort by category">${categoryOptions}</select></label>`;
+
+  const items = knowledgeState.items.filter(article => {
+    const categoryMatch = activeFilter === "All" || article.category === activeFilter;
+    const statusMatch =
+      knowledgeState.statusFilter === "All" ||
+      article.status === knowledgeState.statusFilter;
+
+    const searchable = [
+      article.article_key,
+      article.title,
+      article.summary,
+      article.category,
+      article.content,
+      ...(article.tags || [])
+    ].join(" ").toLowerCase();
+
+    return categoryMatch && statusMatch && searchable.includes(query);
+  });
+
+  const summary = knowledgeState.summary || {};
+  // CARTMAN_KB_CLEAN_HEADER_V2
+  const headerActions = knowledgeState.canManage
+    ? btn("+ New article", "new-article", "primary") : "";
+
+  const statusFilter = knowledgeState.canManage
+    ? `<label class="io-kb-status-filter">Status
+        <select class="io-select" data-kb-status>
+          ${["All", "Draft", "Published", "Archived"].map(value =>
+            `<option value="${value}" ${knowledgeState.statusFilter === value ? "selected" : ""}>${value}</option>`
+          ).join("")}
+        </select>
+      </label>`
+    : "";
+
+  const rows = items.map(article => {
+    const status = article.status || "Published";
+    const nextStatus = status === "Published" ? "Archived" : "Published";
+    return `<tr>
+      <td class="io-kb-id">${esc(article.article_key)}</td>
+      <td class="io-kb-title-cell">
+        <strong>${esc(article.title)}</strong>
+        <small>${esc(article.summary || "")}</small>
+      </td>
+      <td>${badge(article.category || "General", "info")}</td>
+      <td><div class="io-kb-tags">${(article.tags || []).map(tag => badge(tag)).join("") || "—"}</div></td>
+      <td>${badge(status, status === "Published" ? "good" : "warn")}</td>
+      <td>${esc(article.author_name || article.author_username || "Unknown")}</td>
+      <td class="io-kb-updated">${esc(article.updated_at || "—")}</td>
+      <td>
+        <div class="io-kb-table-actions">
+          <button type="button" class="io-btn primary" data-action="read-article" data-id="${esc(article.article_key)}">View</button>
+          
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  const errorMarkup = knowledgeState.error
+    ? `<div class="io-note io-kb-error">${esc(knowledgeState.error)}</div>`
+    : "";
+
+  set(
+    shell(
+      "DOCUMENTATION / KNOWLEDGE BASE",
+      "Knowledge Base",
+      "Search and manage operational guides, runbooks and troubleshooting articles.",
+      headerActions
+    ) +
+    `<div class="io-toolbar">
+      ${search("Search ID, title, content, category or tags…")}
+      ${categorySelect}
+      ${statusFilter}
+    </div>` +
+    errorMarkup +
+    (knowledgeState.editor
+      ? `<div class="io-kb-modal-backdrop">
+          <section class="io-kb-modal" role="dialog" aria-modal="true" aria-label="Knowledge article editor">
+            <button type="button" class="io-kb-modal-close" data-action="close-knowledge-editor" aria-label="Close editor" title="Close">×</button>
+            ${knowledgeEditorMarkup()}
+          </section>
+        </div>`
+      : "") +
+    `<section class="io-panel io-kb-list-panel">
+      <div class="io-kb-table-wrap">
+        <table class="io-kb-table">
+          <thead><tr>
+            <th>ID</th><th>Article</th><th>Category</th><th>Tags</th>
+            <th>Status</th><th>Created by</th><th>Last updated</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" class="io-kb-empty">${knowledgeState.loading ? "Loading articles…" : "No articles match this search."}</td></tr>`}</tbody>
+        </table>
+      </div>
+    </section>` +
+    `<div class="io-note">Article records are stored in Cartman's database. Only real administrators can create, edit, publish, archive or delete articles. Other roles can read Published articles only.</div>`
+  );
+}
+
+function workManagementTabs(){
+ const choices=workMgmtState.currentUser?.role==="admin"
+  ? [["tasks","Tasks"],["automations","Automations"],["history","Execution History"]]
+  : [["tasks","My Tasks"]];
+ return `<div class="io-tabs wm-tabs" role="tablist" aria-label="Tasks and automation views">${choices.map(([key,label])=>`<button type="button" role="tab" aria-selected="${workMgmtState.tab===key}" class="io-tab ${workMgmtState.tab===key?"active":""}" data-action="work-tab" data-tab="${key}">${label}${key==="automations"?` <span>${workMgmtState.automations.length}</span>`:key==="history"?` <span>${workMgmtState.executions.length}</span>`:""}</button>`).join("")}</div>`;
+}
+
+function wmProjectOptions(selectedValue){
+ const selected=String(selectedValue||"");
+ const items=Array.isArray(workMgmtState.projectCatalog)?workMgmtState.projectCatalog:[];
+ let options=items.filter(item=>item&&item.is_active!==0).map(item=>`<option value="${esc(item.name)}" ${String(item.name)===selected?"selected":""}>${esc(item.name)}</option>`).join("");
+ if(selected&&!items.some(item=>String(item.name)===selected))options=`<option value="${esc(selected)}" selected>${esc(selected)} (legacy)</option>`+options;
+ return options||`<option value="" disabled selected>No projects configured</option>`;
+}
+
+function workProjectModalMarkup(){
+ return `<div class="ct-modal-backdrop" data-action="close-work-project-modal"><section class="ct-modal wm-project-modal" role="dialog" aria-modal="true" aria-labelledby="wm-project-title"><div class="ct-modal-head"><div><span class="ct-section-kicker">WORK MANAGEMENT</span><h2 id="wm-project-title">Manage projects</h2><p>Projects are saved in Cartman's database and shared by Tasks and Automation.</p></div><button type="button" class="ct-modal-x" data-action="close-work-project-modal" aria-label="Close">×</button></div><form data-work-project-form><label>New project name<input name="name" required minlength="2" maxlength="80" value="${esc(workMgmtState.projectDraftName||"")}" placeholder="e.g. Endpoint Management"></label><div class="ct-modal-actions"><button type="button" class="io-btn" data-action="close-work-project-modal">Cancel</button><button type="submit" class="io-btn primary" ${workMgmtState.projectSaving?"disabled":""}>${workMgmtState.projectSaving?"Saving…":"Add project"}</button></div></form><div class="io-panel-head"><div><h3>Current projects</h3><p>Only active projects appear in selection lists. In-use projects should be archived instead of deleted.</p></div></div><div class="wm-project-list">${(workMgmtState.projectCatalog||[]).map(project=>`<div class="wm-project-row"><span>${esc(project.name)}</span><small>${esc(project.created_by_username||"system")}</small></div>`).join("")||`<div class="io-empty">No projects yet.</div>`}</div></section></div>`;
+}
+
+// CARTMAN_WM_AUTOMATION_TARGET_OPTIONS_FIX_V1
+function wmAutomationTargetOptions(category, selectedRef = "") {
+    const catalog = workMgmtState.targetCatalog;
+    const selected = String(selectedRef || "");
+    const entries = [];
+
+    if (!catalog) {
+        const message = workMgmtState.targetCatalogError
+            || "Assignment targets are still loading…";
+        return `<option value="" selected disabled>${esc(message)}</option>`;
+    }
+
+    const add = (type, item, label, detail = "") => {
+        if (!item || item.id == null || String(item.id).trim() === "") {
+            return;
+        }
+
+        const value = `${type}:${String(item.id)}`;
+        const text = detail ? `${label} — ${detail}` : label;
+        entries.push({ value, text });
+    };
+
+    if (category === "user") {
+        (catalog.users || []).forEach(user => {
+            const label = String(user.name || user.username || user.id);
+            const details = [
+                user.username ? `@${user.username}` : "",
+                user.status && user.status !== "Active" ? user.status : ""
+            ].filter(Boolean).join(" · ");
+
+            add("user", user, label, details);
+        });
+    } else {
+        (catalog.departments || []).forEach(department => {
+            add("department", department, String(department.name || department.id));
+        });
+
+        (catalog.groups || []).forEach(group => {
+            const details = group.status && group.status !== "Active"
+                ? group.status
+                : (group.scope || "");
+
+            add("group", group, String(group.name || group.id), details);
+        });
+    }
+
+    if (!entries.length) {
+        return `<option value="" selected disabled>No assignment targets available</option>`;
+    }
+
+    const hasSelected = entries.some(entry => entry.value === selected);
+    const placeholder = `<option value="" disabled ${hasSelected ? "" : "selected"}>Choose a target…</option>`;
+
+    return placeholder + entries.map(entry =>
+        `<option value="${esc(entry.value)}"${entry.value === selected ? " selected" : ""}>${esc(entry.text)}</option>`
+    ).join("");
+}
+
+function taskCreateModalMarkup(){
+ const draft=workMgmtState.taskDraft||{};
+ const targetCategory=draft.target_category||"user";
+ const targetRef=draft.target_ref||"";
+ const targetOptions=wmAutomationTargetOptions(targetCategory,targetRef);
+ const targetCatalog=workMgmtState.targetCatalog;
+ const targetError=workMgmtState.targetCatalogError||"";
+ return `<div class="ct-modal-backdrop" data-action="dismiss-work-modal"><section class="ct-modal" role="dialog" aria-modal="true" aria-labelledby="wm-task-title"><div class="ct-modal-head"><div><span class="ct-section-kicker">WORK MANAGEMENT</span><h2 id="wm-task-title">Create task</h2><p>Save an operational work item and assign its owner target.</p></div><button type="button" class="ct-modal-x" data-action="cancel-new-task" aria-label="Close">×</button></div><form data-work-item-form><label>Task title<input name="title" required minlength="3" maxlength="200" value="${esc(draft.title||"")}" placeholder="Summarize the work"></label><label>Description<textarea name="description" maxlength="5000" rows="3" placeholder="Context, requirements or validation steps">${esc(draft.description||"")}</textarea></label><div class="ct-form-grid"><label>Project / workstream<select name="project" required>${wmProjectOptions(draft.project||"Operations")}</select></label>${workMgmtState.canManage?`<button type="button" class="io-btn wm-manage-projects" data-action="manage-work-projects">+ Manage projects</button>`:""}</div><section class="wm-automation-target wm-task-target"><div class="io-panel-head"><div><h3>Assign task to</h3><p>Choose one user or a department / IAM group.</p></div></div><div class="wm-target-choices" role="radiogroup" aria-label="Task assignment type"><label class="wm-target-choice"><input type="radio" name="task_target_category" value="user" ${targetCategory==="user"?"checked":""}><span><strong>User</strong><small>One IAM user</small></span></label><label class="wm-target-choice"><input type="radio" name="task_target_category" value="department_group" ${targetCategory==="department_group"?"checked":""}><span><strong>Department / Group</strong><small>Department or IAM group</small></span></label></div><label>Target<select name="task_target_ref" data-task-target required>${targetOptions}</select></label>${targetError?`<div class="io-note" role="alert">Could not load assignment targets: ${esc(targetError)}.</div>`:""}${!targetCatalog?`<div class="io-note">Loading users, departments and groups…</div>`:""}</section><div class="ct-form-grid"><label>Due date<input name="due" type="date" value="${esc(draft.due||"")}"></label><label>Priority<select name="priority">${["Low","Normal","High","Critical"].map(x=>`<option ${x===(draft.priority||"Normal")?"selected":""}>${x}</option>`).join("")}</select></label></div><div class="ct-modal-actions"><button type="button" class="io-btn" data-action="cancel-new-task">Cancel</button><button type="submit" class="io-btn primary" ${workMgmtState.saving||!targetCatalog||targetError?"disabled":""}>${workMgmtState.saving?"Saving…":"Create task"}</button></div></form></section></div>`;
+}
+
+
+function automationCreateModalMarkup(){
+ const draft=workMgmtState.automationDraft||{};
+ const isEditing=Boolean(workMgmtState.automationEditId);
+ const triggerType=draft.trigger_type||"interval";
+ const actionType=draft.action_type||"create_task";
+ const skipOpen=draft.skip_if_open!==false;
+ const taskDisplay=actionType==="run_python"?"none":"block";
+ const scriptDisplay=actionType==="run_python"?"block":"none";
+ const targetCategory=draft.target_category||(draft.target_type==="department"||draft.target_type==="group"?"department_group":"user");
+ const targetRef=draft.target_ref||(draft.target_type&&draft.target_id?`${draft.target_type}:${draft.target_id}`:"");
+ const targetCatalog=workMgmtState.targetCatalog;
+ const targetOptions=wmAutomationTargetOptions(targetCategory,targetRef);
+ const targetError=workMgmtState.targetCatalogError||"";
+ return `<div class="ct-modal-backdrop" data-action="dismiss-work-modal"><section class="ct-modal" role="dialog" aria-modal="true" aria-labelledby="wm-automation-title"><div class="ct-modal-head"><div><span class="ct-section-kicker">AUTOMATION ENGINE</span><h2 id="wm-automation-title">${isEditing?"Edit automation":"Create automation"}</h2><p>New rules start disabled. Review trigger, target and action before enabling.</p></div><button type="button" class="ct-modal-x" data-action="cancel-new-automation" aria-label="Close">×</button></div><form data-automation-form><label>Automation name<input name="name" required minlength="3" maxlength="120" value="${esc(draft.name||"")}" placeholder="e.g. Daily patch compliance review"></label><label>Description<textarea name="description" maxlength="1000" rows="2" placeholder="What should this rule accomplish?">${esc(draft.description||"")}</textarea></label><div class="ct-form-grid"><label>Trigger<select name="trigger_type" data-automation-trigger><option value="manual" ${triggerType==="manual"?"selected":""}>Manual run</option><option value="interval" ${triggerType==="interval"?"selected":""}>Recurring interval</option></select></label><label>Repeat every (minutes)<input name="interval_minutes" type="number" min="1" max="10080" value="${esc(draft.interval_minutes||1440)}" ${triggerType!=="interval"?"disabled":""} required><small>1 minute to 7 days. Used for recurring rules.</small></label></div><section class="wm-automation-target"><div class="io-panel-head"><div><h3>Execution target</h3><p>Select the user, department or IAM group this automation is associated with.</p></div></div><div class="wm-target-choices" role="radiogroup" aria-label="Target category"><label class="wm-target-choice"><input type="radio" name="target_category" value="user" ${targetCategory==="user"?"checked":""}><span><strong>User</strong><small>Choose an IAM user</small></span></label><label class="wm-target-choice"><input type="radio" name="target_category" value="department_group" ${targetCategory==="department_group"?"checked":""}><span><strong>Department / Group</strong><small>Choose a department or IAM group</small></span></label></div><label>Target<select name="target_ref" data-automation-target required>${targetOptions}</select></label>${targetError?`<div class="io-note" role="alert">Could not load IAM targets: ${esc(targetError)}. Close and refresh Tasks &amp; Automation, then try again.</div>`:""}${!targetCatalog?`<div class="io-note">Loading IAM users, departments and groups…</div>`:""}<div class="io-note wm-target-explainer"><strong>What does Target mean?</strong><p>The selected user, department or IAM group is saved with this rule. For Python actions, Cartman passes its identity to the script through <code>CARTMAN_TARGET_TYPE</code>, <code>CARTMAN_TARGET_ID</code>, <code>CARTMAN_TARGET_NAME</code> and <code>CARTMAN_TARGET_JSON</code>.</p><p><strong>Important:</strong> Python currently runs on the Cartman server, not on the selected user's computer or all devices in a group. Remote device execution requires the CartmanClient connection. For a task action, use the <strong>Owner</strong> field below to assign a person; the Target choice alone does not assign the task.</p></div></section><!-- CARTMAN_AUTOMATION_ACTION_CLARITY_V1 --><div class="io-panel-head"><div><h3>Action</h3><p><strong>Action = what Cartman does.</strong> Trigger says when to start; Target says which user, department or group the rule is associated with.</p></div></div><div class="wm-action-choices" role="radiogroup" aria-label="Choose what Cartman should do"><label class="wm-action-choice"><input type="radio" name="action_type" data-automation-action data-automation-action-choice value="create_task" ${actionType==="create_task"?"checked":""}><span><strong>Create operational task</strong><small>Creates a work item in Tasks. A person completes it manually; this does not run code or change a device.</small></span></label><label class="wm-action-choice"><input type="radio" name="action_type" data-automation-action data-automation-action-choice value="run_python" ${actionType==="run_python"?"checked":""}><span><strong>Run Python script</strong><small>Runs the uploaded .py on the Cartman server and records its result.</small></span></label></div><div class="wm-action-explainer" aria-live="polite"><strong>What happens when this runs?</strong><p data-automation-action-copy>${actionType==="run_python"?"Cartman runs your uploaded Python file on the Cartman server. Output, exit code and errors are recorded in Execution History. It does not run on the selected user's computer or group devices.":"Cartman creates a task in the Tasks board. The Owner field below assigns the work to a person; Cartman does not perform the task automatically."}</p></div><div data-task-action-fields style="display:${taskDisplay}"><div class="io-note">Condition: skip creating a task if a task with the same title is still open. This condition applies only to the task action.</div><label class="io-small-label"><input type="checkbox" name="skip_if_open" ${skipOpen?"checked":""}> Skip when a matching task is still open</label><label>Task title<input name="task_title" required minlength="3" maxlength="200" value="${esc(draft.task_title||"")}" placeholder="Task created by this automation"></label><label>Task description<textarea name="task_description" maxlength="5000" rows="2" placeholder="Instructions for the assigned person">${esc(draft.task_description||"")}</textarea></label><div class="ct-form-grid"><label>Project<select name="task_project" required>${wmProjectOptions(draft.task_project||"Infrastructure")}</select></label><label>Owner<input name="task_owner" maxlength="120" value="${esc(draft.task_owner||"Unassigned")}"></label></div><div class="ct-form-grid"><label>Due date<input name="task_due" type="date" value="${esc(draft.task_due||"")}"></label><label>Priority<select name="task_priority">${["Low","Normal","High","Critical"].map(x=>`<option ${x===(draft.task_priority||"Normal")?"selected":""}>${x}</option>`).join("")}</select></label></div></div><div data-python-action-fields style="display:${scriptDisplay}"><label>Python script (.py)<input name="script_file" type="file" accept=".py,text/x-python" ${actionType==="run_python"&&!isEditing?"required":""}><small>Maximum 128 KiB. The code is stored with this automation and syntax-checked before saving.</small></label><div class="io-note">Trusted server-side execution only. Runs as the Cartman server OS user with a 60-second timeout and resource limits; this is not a full filesystem/network sandbox. Upload only trusted code.</div></div><div class="ct-modal-actions"><button type="button" class="io-btn" data-action="cancel-new-automation">Cancel</button><button type="submit" class="io-btn primary" ${workMgmtState.saving||!targetCatalog||targetError?"disabled":""}>${workMgmtState.saving?"Saving…":(isEditing?"Save changes":"Create disabled automation")}</button></div></form></section></div>`;
+}
+async function loadWorkManagement(force=false){
+ if(workMgmtState.loading || (workMgmtState.loaded&&!force)) return;
+ workMgmtState.loading=true;
+ workMgmtState.error="";
+
+ try{
+  const session=await ticketApi("/api/auth/me").catch(()=>null);
+  workMgmtState.currentUser=session?.user||null;
+
+  const role=workMgmtState.currentUser?.role;
+  const isAdmin=role==="admin";
+  const isSupportAgent=role==="support_agent";
+
+  workMgmtState.canManage=isAdmin;
+  workMgmtState.canRun=isAdmin;
+
+  if(!isAdmin&&!isSupportAgent){
+   tasks=[];
+   workMgmtState.automations=[];
+   workMgmtState.executions=[];
+   workMgmtState.projectCatalog=[];
+   workMgmtState.targetCatalog=null;
+   workMgmtState.loaded=true;
+   return;
+  }
+
+  if(isSupportAgent){
+   const taskData=await ticketApi("/api/work-items?limit=500");
+   tasks=Array.isArray(taskData?.items)?taskData.items:[];
+   workMgmtState.automations=[];
+   workMgmtState.executions=[];
+   workMgmtState.projectCatalog=[];
+   workMgmtState.targetCatalog=null;
+   workMgmtState.tab="tasks";
+   workMgmtState.loaded=true;
+   startWorkItemPresenceRefresh();
+   return;
+  }
+
+  const [taskData,automationData,executionData,projectData]=await Promise.all([
+   ticketApi("/api/work-items?limit=500"),
+   (isAdmin ? ticketApi("/api/operations/automations?limit=200") : Promise.resolve({items:[]})),
+   (isAdmin ? ticketApi("/api/operations/executions?limit=200") : Promise.resolve({items:[]})),
+   (isAdmin ? ticketApi("/api/operations/projects") : Promise.resolve({items:[]})).catch(()=>({items:[]}))
+  ]);
+
+  tasks=Array.isArray(taskData?.items)?taskData.items:[];
+  workMgmtState.automations=Array.isArray(automationData?.items)?automationData.items:[];
+  workMgmtState.executions=Array.isArray(executionData?.items)?executionData.items:[];
+  workMgmtState.projectCatalog=Array.isArray(projectData?.items)?projectData.items:[];
+  workMgmtState.targetCatalogError="";
+
+  try{
+   workMgmtState.targetCatalog=await ticketApi("/api/operations/automation-targets");
+  }catch(targetError){
+   workMgmtState.targetCatalog=null;
+   workMgmtState.targetCatalogError=targetError.message||"Target catalog could not be loaded.";
+  }
+
+  workMgmtState.loaded=true;
+  startWorkItemPresenceRefresh();
+ }catch(error){
+        // CARTMAN_WORK_ITEM_LOAD_FAILSAFE_V1: never display local demo records to support agents.
+        if (workMgmtState.currentUser?.role === "support_agent") {
+            try { if (Array.isArray(tasks)) tasks.splice(0, tasks.length); } catch (_) {}
+            workMgmtState.automations = [];
+            workMgmtState.executions = [];
+            workMgmtState.projectCatalog = [];
+            workMgmtState.loaded = true;
+        }
+
+  workMgmtState.loaded=true;
+  workMgmtState.error=error.message||"Could not load Tasks & Automation data.";
+ }finally{
+  workMgmtState.loading=false;
+  renderTasks();
+ }
+}
+
+function startWorkItemPresenceRefresh(){
+ if(
+  slug!=="tasks" ||
+  !["admin","support_agent"].includes(workMgmtState.currentUser?.role) ||
+  window.__cartmanWorkItemPresenceTimer
+ ) return;
+
+ window.__cartmanWorkItemPresenceTimer=window.setInterval(async()=>{
+  if(
+   document.visibilityState==="hidden" ||
+   !["admin","support_agent"].includes(workMgmtState.currentUser?.role) ||
+   workMgmtState.loading ||
+   window.__cartmanWorkItemPresenceBusy
+  ) return;
+
+  window.__cartmanWorkItemPresenceBusy=true;
+  try{
+   const data=await ticketApi("/api/work-items?limit=500");
+   tasks=Array.isArray(data?.items)?data.items:[];
+   renderTasks();
+  }catch(_error){
+   // Keep the existing task list visible if a refresh fails.
+  }finally{
+   window.__cartmanWorkItemPresenceBusy=false;
+  }
+ },30000);
+}
+
+async function submitWorkItemForm(form){
+ if(workMgmtState.saving)return;
+ const data=new FormData(form);
+ const targetCategory=String(data.get("task_target_category")||"user");
+ const targetRef=String(data.get("task_target_ref")||"");
+ const targetSplit=targetRef.indexOf(":");
+ if(targetSplit<1||targetSplit===targetRef.length-1){workMgmtState.error="Choose a User, Department or Group for this task.";renderTasks();return;}
+ const payload={title:String(data.get("title")||"").trim(),description:String(data.get("description")||"").trim(),project:String(data.get("project")||"Operations").trim(),owner:"Unassigned",due:String(data.get("due")||"").trim()||"Unscheduled",priority:String(data.get("priority")||"Normal"),target_type:targetRef.slice(0,targetSplit),target_id:targetRef.slice(targetSplit+1),target_category:targetCategory,target_ref:targetRef};
+ workMgmtState.saving=true;workMgmtState.error="";workMgmtState.taskDraft=payload;renderTasks();
+ try{
+  await ticketApi("/api/work-items",{method:"POST",body:payload});
+  workMgmtState.taskModal=false;workMgmtState.taskDraft=null;workMgmtState.saving=false;workMgmtState.notice="Task saved to Cartman.";
+  await loadWorkManagement(true);
+ }catch(error){workMgmtState.saving=false;workMgmtState.error=error.message||"Could not create task.";renderTasks();}
+}
+
+async function submitAutomationForm(form){
+ if(workMgmtState.saving)return;
+ const data=new FormData(form);
+ const editingId=String(workMgmtState.automationEditId||"");
+ const existing=workMgmtState.automations.find(item=>item.automation_id===editingId);
+ const triggerType=String(data.get("trigger_type")||"manual");
+ const actionType=String(data.get("action_type")||"create_task");
+ const targetRef=String(data.get("target_ref")||"");
+ const targetSplit=targetRef.indexOf(":");
+ if(targetSplit<1||targetSplit===targetRef.length-1){workMgmtState.error="Choose a User, Department or Group target.";renderTasks();return;}
+ const payload={name:String(data.get("name")||"").trim(),description:String(data.get("description")||"").trim(),trigger_type:triggerType,interval_minutes:Number(data.get("interval_minutes")||1440),skip_if_open:actionType==="create_task"?data.has("skip_if_open"):false,action_type:actionType,target_type:targetRef.slice(0,targetSplit),target_id:targetRef.slice(targetSplit+1),target_category:String(data.get("target_category")||"user"),target_ref:targetRef,task_title:String(data.get("task_title")||"").trim(),task_description:String(data.get("task_description")||"").trim(),task_project:String(data.get("task_project")||"Operations").trim()||"Operations",task_owner:String(data.get("task_owner")||"Unassigned").trim()||"Unassigned",task_due:String(data.get("task_due")||"").trim()||"Unscheduled",task_priority:String(data.get("task_priority")||"Normal")};
+ let selectedFile=data.get("script_file");
+ if(actionType==="run_python"){
+  if(selectedFile&&typeof selectedFile.text==="function"&&selectedFile.name){
+   if(!selectedFile.name.toLowerCase().endsWith(".py")){workMgmtState.error="Only .py files are supported.";renderTasks();return;}
+   if(selectedFile.size>131072){workMgmtState.error="Python scripts are limited to 128 KiB.";renderTasks();return;}
+   payload.script_filename=selectedFile.name;
+  }else if(editingId&&existing&&existing.action_type==="run_python"){
+   payload.script_filename=existing.script_filename;
+   // Backend retains the existing content if no replacement file is uploaded.
+  }else{workMgmtState.error="Choose a Python (.py) file for this action.";renderTasks();return;}
+ }
+ workMgmtState.saving=true;workMgmtState.error="";workMgmtState.automationDraft=payload;renderTasks();
+ try{
+  if(actionType==="run_python"&&selectedFile&&typeof selectedFile.text==="function"&&selectedFile.name){payload.script_content=await selectedFile.text();if(!payload.script_content.trim())throw new Error("The selected Python file is empty.");}
+  const url=editingId?`/api/operations/automations/${encodeURIComponent(editingId)}`:"/api/operations/automations";
+  const method=editingId?"PUT":"POST";
+  await ticketApi(url,{method,body:payload});
+  workMgmtState.automationModal=false;workMgmtState.automationDraft=null;workMgmtState.automationEditId="";workMgmtState.saving=false;workMgmtState.tab="automations";workMgmtState.notice=editingId?"Changes saved. The rule is disabled until an administrator reviews and re-enables it.":(actionType==="run_python"?"Python script saved with this automation; review it before enabling.":"Automation saved disabled. Review it, then enable it when ready.");
+  await loadWorkManagement(true);
+ }catch(error){workMgmtState.saving=false;workMgmtState.error=error.message||"Could not save automation.";workMgmtState.automationModal=true;renderTasks();}
+}
+
+
+async function updateWorkItemStatus(taskKey,status){
+ const task=tasks.find(item=>item.id===taskKey);if(!task)return;
+ const previous=task.status;task.status=status;renderTasks();
+ try{await ticketApi(`/api/work-items/${encodeURIComponent(taskKey)}`,{method:"PUT",body:{status}});await loadWorkManagement(true);}
+ catch(error){task.status=previous;workMgmtState.error=error.message||"Could not update task.";renderTasks();}
+}
+
+async function toggleOperationAutomation(automationId,enabled){
+ const item=workMgmtState.automations.find(rule=>rule.automation_id===automationId);if(!item)return;
+ const previous=item.enabled;item.enabled=enabled;renderTasks();
+ try{
+  await ticketApi(`/api/operations/automations/${encodeURIComponent(automationId)}`,{method:"PUT",body:{enabled}});
+  workMgmtState.notice=enabled?(item.trigger_type==="interval"?"Automation enabled; its first scheduled run is in the future interval.":"Manual automation enabled."):"Automation disabled.";
+  await loadWorkManagement(true);
+ }catch(error){item.enabled=previous;workMgmtState.error=error.message||"Could not update automation.";renderTasks();}
+}
+
+async function runOperationAutomation(automationId){
+ try{
+  workMgmtState.saving=true;workMgmtState.error="";renderTasks();
+  const result=await ticketApi(`/api/operations/automations/${encodeURIComponent(automationId)}/run`,{method:"POST",body:{}});
+  workMgmtState.saving=false;
+  workMgmtState.tab="history";
+  workMgmtState.notice=`${result.status}: ${result.summary}`;
+  await loadWorkManagement(true);
+ }catch(error){workMgmtState.saving=false;workMgmtState.error=error.message||"Automation run failed.";renderTasks();}
+}
+
+function renderTaskBoard(){
+ const statuses=["To do","In progress","Done"];
+ const filters=workMgmtState.taskFilters||(workMgmtState.taskFilters={query:"",status:"",priority:"",project:"",owner:"",sort:"newest"});
+ const isSupportAgent = workMgmtState.currentUser?.role==="support_agent";
+ const taskStats = isSupportAgent
+  ? `<div class="wm-task-total" data-wm-task-visible-count>Total tasks: ${tasks.filter(t=>t.status!=="Done").length}</div>`
+  : `<div class="io-stats">${stat("Total tasks",tasks.length,"Saved in database")}${stat("In progress",tasks.filter(t=>t.status==="In progress").length,"Currently being worked")}${stat("Awaiting review",tasks.filter(t=>t.status==="Review").length,"Needs validation","io-amber")}${stat("Completed",tasks.filter(t=>t.status==="Done"&&wmIsWithinLast24Hours(t.completed_at)).length,"Completed in last 24 hours","io-green")}</div>`;
+
+ const projectValues=[...new Set([...(workMgmtState.projectCatalog||[]).map(x=>x.name),...tasks.map(t=>t.project)].filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+ const owners=[...new Set(tasks.map(t=>String(t.target_name||t.owner||"Unassigned")).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+ const opts=(items,selected)=>items.map(x=>`<option value="${esc(x)}" ${String(x)===String(selected)?"selected":""}>${esc(x)}</option>`).join("");
+ const rows=tasks.map(t=>{
+  const key=String(t.id||t.task_key||"");
+  const displayKey=String(t.display_key||key);
+  const owner=String(t.target_name||t.owner||"Unassigned");
+  const targetType=String(t.target_type||"");
+  const targetLabel=targetType==="user"?"User":targetType==="department"?"Department":targetType==="group"?"IAM Group":targetType==="department_group"?"Department / Group":"";
+  const creator=String(t.created_by_username||t.created_by||"Not recorded");
+  const search=[displayKey,key,t.title,t.description,t.project,owner,t.owner,t.priority,t.status,t.due,t.target_name,targetType,creator].map(x=>String(x||"")).join(" ").toLowerCase();
+  return `<article class="wm-task-list-entry" data-wm-task-card data-task-key="${esc(key)}" data-status="${esc(t.status||"")}" data-priority="${esc(t.priority||"Normal")}" data-project="${esc(t.project||"")}" data-owner="${esc(owner)}" data-created="${esc(t.created_at||"")}" data-completed-at="${esc(t.completed_at||"")}" data-title="${esc(String(t.title||"").toLowerCase())}" data-search="${esc(search)}"><div class="wm-task-list-row"><div class="wm-task-primary"><button type="button" class="wm-task-open" data-wm-task-open="${esc(key)}" aria-expanded="false"><span class="wm-task-key">${esc(displayKey)}</span><strong>${esc(t.title||"Untitled task")}</strong><small>${esc(t.description||"No description")}</small></button><div class="wm-task-quickmeta"><span>${esc(t.project||"Operations")}</span><span>Assigned to: ${esc(owner)}</span>${targetLabel?`<span>${esc(targetLabel)}</span>`:""}</div></div><div class="wm-task-pillset"><div class="wm-task-pill"><small>STATUS</small>${badge(t.status||"To do",t.status==="Done"?"good":t.status==="Review"?"warn":"info")}</div><div class="wm-task-pill"><small>PRIORITY</small>${badge(t.priority||"Normal",priorityClass(t.priority||"Normal"))}</div><div class="wm-task-pill"><small>DUE</small><span>${esc(t.due||"Unscheduled")}</span></div><button type="button" class="wm-detail-nudge" data-wm-task-open="${esc(key)}" aria-label="Open task details">Details <span aria-hidden="true">⌄</span></button></div></div><section class="wm-task-expanded" data-wm-task-detail hidden><div class="wm-task-detail-top"><strong>Task details · ${esc(displayKey)}</strong><button type="button" class="io-btn" data-wm-task-close>Close details</button></div><div class="wm-task-detail-grid"><div><small>DESCRIPTION / INSTRUCTIONS</small><p>${esc(t.description||"No description provided.")}</p></div><div><small>CREATED BY</small><p>${esc(creator)}</p></div><div><small>ASSIGNED TARGET</small><p>${esc(owner)}${targetLabel?` · ${esc(targetLabel)}`:""}</p></div><div><small>PROJECT / WORKSTREAM</small><p>${esc(t.project||"Operations")}</p></div><div><small>CREATED AT</small><p>${esc(t.created_at||"Not recorded")}</p></div><div><small>LAST UPDATED</small><p>${esc(t.updated_at||"Not recorded")}</p></div>${t.completion_description?`<div><small>COMPLETION NOTES</small><p>${esc(t.completion_description)}</p></div>`:""}</div><div class="wm-task-status-action"><div><strong>Automatic assignment</strong><p>Cartman assigns a task only while the selected target has an active user with a recent authenticated session. Without an eligible online user, the task stays To do.</p></div>${(workMgmtState.canManage||t.can_complete)&&t.status!=="Done"?`<button type="button" class="io-btn primary" data-action="complete-work-item" data-task-key="${esc(key)}">✓ Complete</button>`:t.status==="Done"?`<span class="wm-task-completed-label">✓ Done${t.completed_at?` · Closed ${esc(t.completed_at)}`:""}</span>`:""}</div></section></article>`;
+ }).join("");
+ return `<section class="wm-task-panel wm-list-view" data-wm-task-panel>${taskStats}<div class="wm-filter-toolbar wm-filter-toolbar--tasks" aria-label="Task search and filters"><label class="wm-filter-search">Search tasks<input type="search" data-wm-task-filter="query" value="${esc(filters.query)}" placeholder="Task, ID, assignee, project…" autocomplete="off"></label><label>Status<select data-wm-task-filter="status"><option value="">All statuses</option>${opts(statuses,filters.status)}</select></label><label>Priority<select data-wm-task-filter="priority"><option value="">All priorities</option>${opts(["Critical","High","Normal","Low"],filters.priority)}</select></label><label>Project<select data-wm-task-filter="project"><option value="">All projects</option>${opts(projectValues,filters.project)}</select></label><label>Assigned to<select data-wm-task-filter="owner"><option value="">Everyone</option>${opts(owners,filters.owner)}</select></label><label>Sort by<select data-wm-task-filter="sort"><option value="newest" ${filters.sort==="newest"?"selected":""}>Newest first</option><option value="oldest" ${filters.sort==="oldest"?"selected":""}>Oldest first</option><option value="title-asc" ${filters.sort==="title-asc"?"selected":""}>Title A–Z</option><option value="priority-desc" ${filters.sort==="priority-desc"?"selected":""}>Priority high–low</option><option value="owner-asc" ${filters.sort==="owner-asc"?"selected":""}>Assignee A–Z</option></select></label><div class="wm-filter-actions"><button type="button" class="io-btn" data-action="reset-task-filters">Reset</button>${workMgmtState.canRun?btn("+ New task","new-task","primary"):""}</div></div><div class="wm-list-caption">${isSupportAgent?`<span>Completed tasks are hidden; search to find them.</span>`:`<span data-wm-task-visible-count>${tasks.length} tasks</span>`}<span>Completed tasks stay in the records; search to find them after they leave the active list. Click a task title or Details to inspect it.</span></div><div class="wm-task-list-scroll"><div class="wm-task-list" data-wm-task-list>${rows}<div class="io-empty" data-wm-task-empty hidden>No tasks match these filters.</div></div></div><div class="io-note">Tasks are work records for people. They do not run device commands by themselves.</div></section>`;
+}
+
+
+function renderAutomationsPanel(){
+ const rules=workMgmtState.automations;
+ const filters=workMgmtState.automationFilters||(workMgmtState.automationFilters={query:"",enabled:"",trigger:"",action:"",author:"",project:"",target:"",priority:"",sort:"newest"});
+ const authors=[...new Set(rules.map(r=>String((r.action_type==="run_python"?(r.script_created_by_username||r.created_by_username):r.created_by_username)||"system / legacy")))].sort((a,b)=>a.localeCompare(b));
+ const projects=[...new Set(rules.map(r=>String(r.task_project||"")).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+ const targets=[...new Set(rules.map(r=>String(r.target_name||"Not configured")))].sort((a,b)=>a.localeCompare(b));
+ const priorities=[...new Set(rules.map(r=>String(r.task_priority||"Normal")))].sort((a,b)=>a.localeCompare(b));
+ const opts=(values,selected)=>values.map(v=>`<option value="${esc(v)}" ${String(v)===String(selected)?"selected":""}>${esc(v)}</option>`).join("");
+ const rows=rules.map(rule=>{
+  const id=String(rule.automation_id||"");
+  const action=rule.action_type||"create_task";
+  const actionLabel=action==="run_python"?"Run Python script":"Create operational task";
+  const author=String((action==="run_python"?(rule.script_created_by_username||rule.created_by_username):rule.created_by_username)||"system / legacy");
+  const edited=String(rule.updated_by_username||rule.script_updated_by_username||"Not recorded");
+  const target=String(rule.target_name||"Not configured");
+  const canRunThis=workMgmtState.canRun&&(workMgmtState.canManage||action!=="run_python");
+  const search=[id,rule.name,rule.description,rule.task_title,rule.task_description,rule.task_project,rule.task_owner,target,rule.target_type,rule.script_filename,rule.trigger_type,action,author,edited,rule.last_status].map(x=>String(x||"")).join(" ").toLowerCase();
+  const taskActionDetails=action==="run_python"?`<p>Script: ${esc(rule.script_filename||"Python script not named")}. It executes on the Cartman server, not on target endpoints.</p>`:`<p>Task: ${esc(rule.task_title||"Title missing")}</p><p>${esc(rule.task_description||"No task instructions configured.")}</p>`;
+  return `<article class="wm-automation-item" data-wm-automation-item data-id="${esc(id)}" data-search="${esc(search)}" data-enabled="${rule.enabled?"enabled":"disabled"}" data-trigger="${esc(rule.trigger_type||"")}" data-action-type="${esc(action)}" data-author="${esc(author)}" data-project="${esc(rule.task_project||"")}" data-target="${esc(target)}" data-priority="${esc(rule.task_priority||"Normal")}" data-created="${esc(rule.created_at||"")}" data-last-run="${esc(rule.last_run_at||"")}" data-name="${esc(String(rule.name||"").toLowerCase())}" data-status="${esc(rule.last_status||"")}"><div class="wm-automation-row"><div class="wm-automation-primary"><button type="button" class="wm-automation-open" data-wm-automation-open="${esc(id)}" aria-expanded="false"><span class="wm-automation-key">${esc(id)}</span><strong>${esc(rule.name||"Untitled automation")}</strong><small>${esc(rule.description||"No description")}</small></button><div class="wm-automation-quickmeta"><span>${rule.trigger_type==="interval"?`Every ${Number(rule.interval_minutes)} minutes`:"Manual trigger"}</span><span>${esc(actionLabel)}</span><span>Target: ${esc(target)}</span><span>Created by: ${esc(author)}</span></div></div><div class="wm-automation-controls"><span class="wm-automation-state">${badge(rule.enabled?"Enabled":"Disabled",rule.enabled?"good":"warn")}</span><input type="hidden" data-automation-id value="${esc(id)}">${canRunThis?btn("Run now","run-automation"):""}${workMgmtState.canManage?`<button type="button" class="io-btn" data-action="edit-automation">Edit</button><button type="button" class="io-btn danger" data-action="delete-automation">Delete</button><label class="io-switch" title="Enable or disable automation"><input type="checkbox" data-automation-toggle="${esc(id)}" aria-label="Enable ${esc(rule.name)}" ${rule.enabled?"checked":""}><span></span><em>${rule.enabled?"Enabled":"Disabled"}</em></label>`:""}<button type="button" class="io-btn wm-detail-nudge" data-wm-automation-open="${esc(id)}" aria-expanded="false">Details <span aria-hidden="true">⌄</span></button></div></div><section class="wm-automation-expanded" data-wm-automation-detail hidden><div class="wm-task-detail-top"><strong>Automation details · ${esc(id)}</strong><button type="button" class="io-btn" data-wm-automation-close>Close details</button></div><div class="wm-automation-detail-grid"><div><small>CREATED BY</small><strong>${esc(author)}</strong></div><div><small>LAST EDITED BY</small><strong>${esc(edited)}</strong></div><div><small>STATE</small><strong>${rule.enabled?"Enabled":"Disabled"}</strong></div><div><small>TRIGGER</small><strong>${rule.trigger_type==="interval"?`Every ${Number(rule.interval_minutes)} minutes`:"Manual run"}</strong></div><div><small>ACTION</small><strong>${esc(actionLabel)}</strong>${taskActionDetails}</div><div><small>CONDITION</small><strong>${action==="create_task"?(rule.skip_if_open?"Skip if a matching task is open":"Always create a task"):"Trusted Python script on Cartman server"}</strong></div><div><small>TARGET</small><strong>${esc(target)}</strong><p>${esc(rule.target_type||"Not configured")} · ${esc(rule.target_id||"—")}</p></div><div><small>PROJECT / PRIORITY</small><strong>${esc(rule.task_project||"—")} · ${esc(rule.task_priority||"Normal")}</strong></div><div><small>LAST RUN</small><strong>${esc(rule.last_run_at||"Never")}</strong></div><div><small>NEXT RUN</small><strong>${esc(rule.next_run_at||"Not scheduled")}</strong></div><div><small>EXECUTION HISTORY</small><strong>${Number(rule.runs||0)} run(s) · ${esc(rule.last_status||"Never run")}</strong></div></div><div class="wm-automation-detail-actions"><input type="hidden" data-automation-id value="${esc(id)}">${canRunThis?btn("Run now","run-automation"):""}${workMgmtState.canManage?`<label class="io-switch"><input type="checkbox" data-automation-toggle="${esc(id)}" aria-label="Enable ${esc(rule.name)} from details" ${rule.enabled?"checked":""}><span></span><em>${rule.enabled?"Enabled":"Disabled"}</em></label><button type="button" class="io-btn" data-action="edit-automation">Edit automation</button><button type="button" class="io-btn danger" data-action="delete-automation">Delete automation</button>`:""}</div></section></article>`;
+ }).join("");
+ return `<section class="wm-automation-panel wm-list-view" data-wm-automation-panel><div class="io-stats">${stat("Automation rules",rules.length,"Stored in database")}${stat("Enabled",rules.filter(r=>r.enabled).length,"Currently active","io-green")}${stat("Scheduled",rules.filter(r=>r.enabled&&r.trigger_type==="interval").length,"Recurring rules")}${stat("Recorded runs",workMgmtState.executions.length,"Execution history")}</div><div class="wm-filter-toolbar wm-filter-toolbar--automation" aria-label="Automation search and filters"><label class="wm-filter-search">Search automations<input type="search" data-wm-automation-filter="query" value="${esc(filters.query)}" placeholder="Name, ID, script, target, author…" autocomplete="off"></label><label>State<select data-wm-automation-filter="enabled"><option value="">All states</option><option value="enabled" ${filters.enabled==="enabled"?"selected":""}>Enabled</option><option value="disabled" ${filters.enabled==="disabled"?"selected":""}>Disabled</option></select></label><label>Trigger<select data-wm-automation-filter="trigger"><option value="">All triggers</option>${opts(["manual","interval"],filters.trigger)}</select></label><label>Action<select data-wm-automation-filter="action"><option value="">All actions</option><option value="create_task" ${filters.action==="create_task"?"selected":""}>Create task</option><option value="run_python" ${filters.action==="run_python"?"selected":""}>Run Python</option></select></label><label>Created by<select data-wm-automation-filter="author"><option value="">All authors</option>${opts(authors,filters.author)}</select></label><label>Project<select data-wm-automation-filter="project"><option value="">All projects</option>${opts(projects,filters.project)}</select></label><label>Target<select data-wm-automation-filter="target"><option value="">All targets</option>${opts(targets,filters.target)}</select></label><label>Priority<select data-wm-automation-filter="priority"><option value="">All priorities</option>${opts(priorities,filters.priority)}</select></label><label>Sort by<select data-wm-automation-filter="sort"><option value="newest" ${filters.sort==="newest"?"selected":""}>Newest first</option><option value="oldest" ${filters.sort==="oldest"?"selected":""}>Oldest first</option><option value="name-asc" ${filters.sort==="name-asc"?"selected":""}>Name A–Z</option><option value="name-desc" ${filters.sort==="name-desc"?"selected":""}>Name Z–A</option><option value="last-run" ${filters.sort==="last-run"?"selected":""}>Last run</option></select></label><div class="wm-filter-actions"><button type="button" class="io-btn" data-action="reset-automation-filters">Reset filters</button>${workMgmtState.canManage?btn("+ New automation","new-automation","primary"):""}</div></div><div class="wm-list-caption"><span data-wm-automation-count>${rules.length} automations</span><span>Click a name or Details to inspect the rule. Enable/Disable saves to Cartman.</span></div><div class="wm-automation-list-scroll"><div class="wm-automation-list" data-wm-automation-list>${rows||`<div class="io-empty">No automation rules yet.${workMgmtState.canManage?" Create one to begin.":" Ask an administrator to configure one."}</div>`}<div class="io-empty" data-wm-automation-empty hidden>No automations match these filters.</div></div></div><div class="io-note">Create task records a work item; Run Python executes the trusted script on the Cartman server. Editing a rule disables it for review.</div></section>`;
+}
+
+
+function wmIsWithinLast24Hours(value){
+ const raw=String(value||"").trim();if(!raw)return false;
+ const normalized=raw.includes("T")?raw:raw.replace(" ","T");
+ // SQLite CURRENT_TIMESTAMP is UTC when no timezone suffix is present.
+ const iso=/([zZ]|[+-]\d{2}:?\d{2})$/.test(normalized)?normalized:normalized+"Z";
+ const timestamp=Date.parse(iso);if(!Number.isFinite(timestamp))return false;
+ const age=Date.now()-timestamp;
+ return age>=0&&age<24*60*60*1000;
+}
+
+function wmApplyTaskFilters(){
+ const panel=document.querySelector("[data-wm-task-panel]");if(!panel)return;
+ const value=name=>panel.querySelector(`[data-wm-task-filter="${name}"]`)?.value||"";
+ const query=value("query").trim().toLowerCase(),status=value("status"),priority=value("priority"),project=value("project"),owner=value("owner"),sort=value("sort")||"newest";
+ const list=panel.querySelector("[data-wm-task-list]");if(!list)return;
+ const all=[...list.querySelectorAll("[data-wm-task-card]")];
+ const isManager=workMgmtState.currentUser?.role==="admin";
+ const visible=all.filter(card=>(card.dataset.status!=="Done"||Boolean(query)||(isManager&&wmIsWithinLast24Hours(card.dataset.completedAt)))&&(!query||(card.dataset.search||"").includes(query))&&(!status||card.dataset.status===status)&&(!priority||card.dataset.priority===priority)&&(!project||card.dataset.project===project)&&(!owner||card.dataset.owner===owner));
+ const rank={Critical:4,High:3,Normal:2,Low:1};
+ visible.sort((a,b)=>sort==="oldest"?String(a.dataset.created||"").localeCompare(String(b.dataset.created||"")):sort==="title-asc"?String(a.dataset.title||"").localeCompare(String(b.dataset.title||"")):sort==="priority-desc"?(rank[b.dataset.priority]||0)-(rank[a.dataset.priority]||0):sort==="owner-asc"?String(a.dataset.owner||"").localeCompare(String(b.dataset.owner||"")):String(b.dataset.created||"").localeCompare(String(a.dataset.created||"")));
+ const empty=list.querySelector("[data-wm-task-empty]");
+ all.forEach(card=>{card.hidden=true;});
+ visible.forEach(card=>{card.hidden=false;if(empty)list.insertBefore(card,empty);else list.appendChild(card);});
+ const count=panel.querySelector("[data-wm-task-visible-count]");
+ if(count){
+  if(workMgmtState.currentUser?.role==="support_agent")count.textContent=`Total tasks: ${all.filter(card=>card.dataset.status!=="Done").length}`;
+  else count.textContent=`${visible.length} of ${all.length} tasks`;
+ }
+ if(empty)empty.hidden=visible.length!==0;
+}
+
+
+function wmApplyAutomationFilters(){
+ const panel=document.querySelector("[data-wm-automation-panel]");if(!panel)return;
+ const value=name=>panel.querySelector(`[data-wm-automation-filter="${name}"]`)?.value||"";
+ const query=value("query").trim().toLowerCase(),enabled=value("enabled"),trigger=value("trigger"),action=value("action"),author=value("author"),project=value("project"),target=value("target"),priority=value("priority"),sort=value("sort")||"newest";
+ const list=panel.querySelector("[data-wm-automation-list]");if(!list)return;
+ const all=[...list.querySelectorAll("[data-wm-automation-item]")];
+ const visible=all.filter(card=>(!query||(card.dataset.search||"").includes(query))&&(!enabled||card.dataset.enabled===enabled)&&(!trigger||card.dataset.trigger===trigger)&&(!action||card.dataset.actionType===action)&&(!author||card.dataset.author===author)&&(!project||card.dataset.project===project)&&(!target||card.dataset.target===target)&&(!priority||card.dataset.priority===priority));
+ visible.sort((a,b)=>sort==="oldest"?String(a.dataset.created||"").localeCompare(String(b.dataset.created||"")):sort==="name-asc"?String(a.dataset.name||"").localeCompare(String(b.dataset.name||"")):sort==="name-desc"?String(b.dataset.name||"").localeCompare(String(a.dataset.name||"")):sort==="last-run"?String(b.dataset.lastRun||"").localeCompare(String(a.dataset.lastRun||"")):String(b.dataset.created||"").localeCompare(String(a.dataset.created||"")));
+ all.forEach(card=>{card.hidden=true;});visible.forEach(card=>{card.hidden=false;list.insertBefore(card,list.querySelector("[data-wm-automation-empty]"));});
+ const count=panel.querySelector("[data-wm-automation-count]");if(count)count.textContent=`${visible.length} of ${all.length} automation(s)`;
+ const empty=panel.querySelector("[data-wm-automation-empty]");if(empty)empty.hidden=visible.length!==0;
+}
+
+function renderAutomationHistory(){
+ const baseRows=(Array.isArray(workMgmtState.executions)?workMgmtState.executions:[])
+  .filter(run=>run&&run._cartmanHistoryType!=="task_completion");
+ const completedTaskRows=(Array.isArray(tasks)?tasks:[])
+  .filter(task=>task&&String(task.status||"")==="Done")
+  .map(task=>{
+   const internalKey=String(task.task_key||task.id||"");
+   const displayKey=String(task.display_key||internalKey);
+   const completedAt=String(task.completed_at||task.updated_at||task.created_at||"");
+   const completedBy=String(task.completed_by_username||"").trim();
+   const note=String(task.completion_description||"").trim();
+   const summary=`${displayKey} completed${completedBy?` by ${completedBy}`:""}${note?`: ${note}`:""}${!note&&!task.completed_at?" · No completion note/timestamp recorded":""}`;
+   return {
+    execution_id:"TASK-COMP-"+(internalKey||displayKey),
+    automation_name:"Task completed: "+String(task.title||displayKey),
+    automation_id:"TASK-COMPLETION",
+    target_name:String(task.target_name||task.owner||"Unassigned"),
+    trigger_source:"Task completion",
+    status:"Completed",
+    summary,
+    task_key:displayKey,
+    error_message:"",
+    started_at:completedAt,
+    finished_at:completedAt,
+    action_created_by_username:completedBy,
+    _cartmanHistoryType:"task_completion"
+   };
+  });
+ workMgmtState.executions=[...baseRows,...completedTaskRows];
+ const rows=workMgmtState.executions;
+ const filters=workMgmtState.historyFilters||(workMgmtState.historyFilters={query:"",status:"",trigger:"",automation:"",sort:"newest"});
+ const statuses=[...new Set(rows.map(run=>String(run.status||"Unknown")))].sort();
+ const triggers=[...new Set(rows.map(run=>String(run.trigger_source||"Unknown")))].sort();
+ const automations=[...new Set(rows.map(run=>String(run.automation_name||"Unknown")))].sort((a,b)=>a.localeCompare(b));
+ const opts=(values,selected)=>values.map(value=>`<option value="${esc(value)}" ${String(value)===String(selected)?"selected":""}>${esc(value)}</option>`).join("");
+ const items=rows.map((run,index)=>{
+  const search=[run.execution_id,run.automation_name,run.automation_id,run.target_name,run.target_type,run.trigger_source,run.status,run.summary,run.task_key,run.error_message,run.started_at,run.finished_at,run.action_created_by_username].map(v=>String(v||"")).join(" ").toLowerCase();
+  return `<button type="button" class="wm-history-item" data-wm-execution-row data-wm-open-execution="${index}" data-index="${index}" data-status="${esc(run.status||"")}" data-trigger="${esc(run.trigger_source||"")}" data-automation="${esc(run.automation_name||"")}" data-started="${esc(run.started_at||"")}" data-search="${esc(search)}"><span class="wm-history-status">${badge(run.status,["Succeeded","Completed"].includes(run.status)?"good":run.status==="Failed"?"critical":"warn")}</span><span class="wm-history-main"><strong>${esc(run.automation_name||"Unknown")}</strong><small>${esc(run.automation_id||"")} · ${esc(run.execution_id||"")}</small><span class="wm-history-summary">${esc(run.summary||run.error_message||"No result summary")}</span></span><span class="wm-history-meta"><strong>${esc(run.trigger_source||"—")}</strong><span>${esc(run.started_at||"—")}</span><span>${esc(run.task_key||"No task")}</span><small>Open details →</small></span></button>`;
+ }).join("");
+ return `<section class="wm-history-panel" data-wm-history-panel><div class="wm-history-toolbar" aria-label="Execution history filters"><label class="wm-history-search-label">Search<input type="search" data-wm-history-search value="${esc(filters.query)}" placeholder="Search result, automation, target, task or ID…" autocomplete="off"></label><label>Status<select data-wm-history-status><option value="">All statuses</option>${opts(statuses,filters.status)}</select></label><label>Trigger<select data-wm-history-trigger><option value="">All triggers</option>${opts(triggers,filters.trigger)}</select></label><label>Automation<select data-wm-history-automation><option value="">All automations</option>${opts(automations,filters.automation)}</select></label><label>Sort<select data-wm-history-sort><option value="newest" ${filters.sort==="newest"?"selected":""}>Newest first</option><option value="oldest" ${filters.sort==="oldest"?"selected":""}>Oldest first</option><option value="name-asc" ${filters.sort==="name-asc"?"selected":""}>Automation A–Z</option><option value="name-desc" ${filters.sort==="name-desc"?"selected":""}>Automation Z–A</option><option value="status-asc" ${filters.sort==="status-asc"?"selected":""}>Status A–Z</option></select></label><button type="button" class="io-btn" data-action="refresh-work-management">↻ Refresh</button><button type="button" class="io-btn" data-action="reset-history-filters">Reset</button></div><div class="io-note"><span data-wm-history-count>${rows.length} execution record(s)</span> · Click any entry to view full output and audit details.</div><div class="wm-history-list" data-wm-history-list>${items||`<div class="io-empty">No execution history yet. Run an automation to create the first record.</div>`}<div class="io-empty" data-wm-history-empty hidden>No executions match these filters.</div></div></section>`;
+}
+
+
+function wmOpenExecutionDetails(index){
+ const run=workMgmtState.executions[Number(index)];
+ if(!run)return;
+ document.getElementById("wm-execution-detail-backdrop")?.remove();
+ const detailRows=[
+  ["Execution ID",run.execution_id],
+  ["Automation",run.automation_name],
+  ["Automation ID",run.automation_id],
+  ["Action created by",run.action_created_by_username||run.script_created_by_username||run.automation_created_by_username||"Unknown / legacy"],
+  ["Last edited by",run.last_edited_by_username||"—"],
+  ["Target",run.target_name||"Not recorded"],
+  ["Target type",run.target_type||"—"],
+  ["Trigger source",run.trigger_source],
+  ["Status",run.status],
+  ["Task key",run.task_key||"—"],
+  ["Started at",run.started_at],
+  ["Finished at",run.finished_at]
+ ];
+ const backdrop=document.createElement("div");
+ backdrop.id="wm-execution-detail-backdrop";
+ backdrop.className="ct-modal-backdrop";
+ backdrop.setAttribute("data-wm-detail-backdrop","");
+ backdrop.innerHTML=`<section class="ct-modal wm-execution-detail" role="dialog" aria-modal="true" aria-labelledby="wm-execution-detail-title"><div class="ct-modal-head"><div><span class="ct-section-kicker">AUTOMATION ENGINE / EXECUTION DETAIL</span><h2 id="wm-execution-detail-title">${esc(run.automation_name||"Execution details")}</h2><p>${esc(run.execution_id||"")} · ${esc(run.started_at||"")}</p></div><button type="button" class="ct-modal-x" data-wm-close-detail aria-label="Close execution details">×</button></div><div class="wm-execution-detail-body"><div class="io-stats wm-execution-detail-meta">${detailRows.map(([label,value])=>`<div class="wm-execution-detail-field"><span>${esc(label)}</span><strong>${esc(value==null||value===""?"—":String(value))}</strong></div>`).join("")}</div><section class="wm-execution-full-result"><h3>Result / full recorded output</h3><pre>${esc(run.summary||"No result summary was recorded.")}</pre></section>${run.error_message?`<section class="wm-execution-full-result wm-execution-error"><h3>Error details</h3><pre>${esc(run.error_message)}</pre></section>`:""}</div><div class="ct-modal-actions"><button type="button" class="io-btn primary" data-wm-close-detail>Close</button></div></section>`;
+ document.body.appendChild(backdrop);
+ const close=()=>backdrop.remove();
+ backdrop.querySelectorAll("[data-wm-close-detail]").forEach(button=>button.addEventListener("click",close));
+ backdrop.addEventListener("click",event=>{if(event.target===backdrop)close();});
+ const onKey=event=>{if(event.key==="Escape"&&document.body.contains(backdrop)){close();document.removeEventListener("keydown",onKey);}};
+ document.addEventListener("keydown",onKey);
+ backdrop.querySelector("[data-wm-close-detail]")?.focus({preventScroll:true});
+}
+
+function wmFilterSortExecutionHistory(){
+ const panel=document.querySelector("[data-wm-history-panel]");if(!panel)return;
+ const value=selector=>panel.querySelector(selector)?.value||"";
+ const query=value("[data-wm-history-search]").trim().toLowerCase();
+ const status=value("[data-wm-history-status]"),trigger=value("[data-wm-history-trigger]"),automation=value("[data-wm-history-automation]"),sort=value("[data-wm-history-sort]")||"newest";
+ const list=panel.querySelector("[data-wm-history-list]");if(!list)return;
+ const all=[...list.querySelectorAll("[data-wm-execution-row]")];
+ const visible=all.filter(row=>(!query||(row.dataset.search||"").includes(query))&&(!status||row.dataset.status===status)&&(!trigger||row.dataset.trigger===trigger)&&(!automation||row.dataset.automation===automation));
+ const record=row=>workMgmtState.executions[Number(row.dataset.index)]||{};
+ visible.sort((a,b)=>{const ar=record(a),br=record(b);if(sort==="oldest")return String(ar.started_at||"").localeCompare(String(br.started_at||""));if(sort==="name-asc")return String(ar.automation_name||"").localeCompare(String(br.automation_name||""));if(sort==="name-desc")return String(br.automation_name||"").localeCompare(String(ar.automation_name||""));if(sort==="status-asc")return String(ar.status||"").localeCompare(String(br.status||""));return String(br.started_at||"").localeCompare(String(ar.started_at||""));});
+ all.forEach(row=>{row.hidden=true;});visible.forEach(row=>{row.hidden=false;list.insertBefore(row,list.querySelector("[data-wm-history-empty]"));});
+ const count=panel.querySelector("[data-wm-history-count]");if(count)count.textContent=`${visible.length} of ${all.length} execution record(s)`;
+ const empty=panel.querySelector("[data-wm-history-empty]");if(empty)empty.hidden=visible.length!==0;
+}
+
+
+function workItemCompletionModalMarkup(){
+ const modal=workMgmtState.completionModal;
+ if(!modal)return "";
+ return `<div class="ct-modal-backdrop wm-completion-backdrop" data-work-item-completion-backdrop>
+ <section class="ct-modal wm-completion-modal" role="dialog" aria-modal="true" aria-labelledby="wm-completion-title">
+  <div class="ct-modal-head"><div><span class="ct-section-kicker">TASK COMPLETION</span><h2 id="wm-completion-title">Complete ${esc(modal.taskKey||"task")}</h2><p>Record what you did and the result before closing this task.</p></div><button type="button" class="ct-modal-x" data-work-item-completion-cancel aria-label="Close">×</button></div>
+  <form data-work-item-completion-form data-task-key="${esc(modal.taskKey||"")}">
+   <div class="wm-completion-task-title">${esc(modal.title||modal.taskKey||"Task")}</div>
+   <label for="wm-completion-description">Describe your actions<textarea id="wm-completion-description" name="completion_description" required minlength="3" maxlength="3000" rows="5" placeholder="Describe the steps you performed, checks you ran, and the outcome…" ${workMgmtState.completionSaving?"disabled":""}>${esc(modal.description||"")}</textarea></label>
+   <small class="wm-completion-hint">3–3000 characters. This note will be saved with the completed task.</small>
+   ${workMgmtState.completionError?`<div class="io-note" role="alert">${esc(workMgmtState.completionError)}</div>`:""}
+   <div class="ct-modal-actions"><button type="button" class="io-btn" data-work-item-completion-cancel ${workMgmtState.completionSaving?"disabled":""}>Cancel</button><button type="submit" class="io-btn primary" ${workMgmtState.completionSaving?"disabled":""}>${workMgmtState.completionSaving?"Saving…":"Save and mark Done"}</button></div>
+  </form>
+ </section>
+ </div>`;
+}
+
+function renderTasks(){
+ if(
+  slug==="tasks" &&
+  workMgmtState.loaded &&
+  !["admin","support_agent"].includes(workMgmtState.currentUser?.role)
+ ){
+  set(shell("WORK MANAGEMENT / ACCESS CONTROL","Restricted","This account cannot access Tasks & Automation.",""));
+  return;
+ }
+ if(
+  slug==="tasks" &&
+  workMgmtState.currentUser?.role==="support_agent" &&
+  workMgmtState.tab!=="tasks"
+ ){
+  workMgmtState.tab="tasks";
+ }
+ if(!workMgmtState.loaded){
+  if(!workMgmtState.loading)void loadWorkManagement();
+  set(shell("WORK MANAGEMENT / TASKS & AUTOMATION","Tasks & Automation","Manage operational work, scheduled rules and their execution history.","")+workManagementTabs()+panel("Connecting to Cartman","Loading database-backed tasks and automation rules",`<div class="io-empty">Loading…</div>`));
+  return;
+ }
+ const body=workMgmtState.tab==="automations"?renderAutomationsPanel():workMgmtState.tab==="history"?renderAutomationHistory():renderTaskBoard();
+ set(shell("WORK MANAGEMENT / TASKS & AUTOMATION","Tasks & Automation","Operational tasks plus a controlled automation engine.","")+workManagementTabs()+(workMgmtState.notice?`<div class="io-note">${esc(workMgmtState.notice)}</div>`:"")+(workMgmtState.error?`<div class="io-note" role="alert">${esc(workMgmtState.error)} <button type="button" class="io-btn" data-action="refresh-work-management">Retry</button></div>`:"")+body+(workMgmtState.taskModal?taskCreateModalMarkup():"")+(workMgmtState.automationModal?automationCreateModalMarkup():"")+(workMgmtState.projectModal?workProjectModalMarkup():"")+(workMgmtState.completionModal?workItemCompletionModalMarkup():""));
+ wmApplyTaskFilters();wmApplyAutomationFilters();wmFilterSortExecutionHistory();
+}
+
+function renderWorkflows(){
+ set(shell("AUTOMATION / WORKFLOWS","Workflow designer","Understand triggers, conditions and actions before automating operations.",btn("+ New workflow","new-workflow","primary"))+
+ `<div class="io-stats">${stat("Workflows",workflows.length,"Defined in demo")}${stat("Enabled",workflows.filter(w=>w.enabled).length,"Ready in preview","io-green")}${stat("Runs this month",255,"Illustrative total")}${stat("Success rate","97.8%","Illustrative aggregate","io-green")}</div>`+
+ panel("Automation library","Select a workflow to inspect its logic",`<div class="io-workflow-list">${workflows.map(w=>`<article class="io-workflow"><div class="io-workflow-title"><div><span class="io-workflow-id">${w.id}</span><h3>${esc(w.name)}</h3></div><label class="io-switch"><input type="checkbox" data-workflow-toggle="${w.id}" ${w.enabled?"checked":""}><span></span><em>${w.enabled?"Enabled":"Disabled"}</em></label></div><div class="io-flow"><div class="io-flow-step"><span>01 · TRIGGER</span><strong>${esc(w.trigger)}</strong></div><div class="io-flow-arrow">→</div><div class="io-flow-step"><span>02 · CONDITION</span><strong>${esc(w.condition)}</strong></div><div class="io-flow-arrow">→</div><div class="io-flow-step"><span>03 · ACTION</span><strong>${esc(w.action)}</strong></div></div><div class="io-workflow-foot"><span class="io-muted">${w.runs} demo runs · ${w.success}% success</span>${btn("Simulate run","simulate","")}<input type="hidden" data-workflow-id value="${w.id}"></div></article>`).join("")}</div>`)+
+ `<div class="io-note">Simulate run displays a local confirmation only. It does not trigger real infrastructure changes, messages or jobs.</div>`);
+}
+function renderNotifications(){
+ const q=($("[data-search]")?.value||"").toLowerCase();
+ const filtered=notices.filter(n=>(activeFilter==="All"||n.type===activeFilter)&&(`${n.title} ${n.body} ${n.source} ${n.type}`).toLowerCase().includes(q));
+ set(shell("ACTIVITY CENTER / NOTIFICATIONS","Notifications","A single feed for incidents, automation and platform events.",btn("Mark all read","read-all"))+
+ `<div class="io-stats">${stat("Total notifications",notices.length,"In this demo feed")}${stat("Unread",notices.filter(n=>!n.read).length,"Awaiting attention",notices.some(n=>!n.read)?"io-amber":"")}${stat("Critical",notices.filter(n=>n.type==="Critical").length,"High-priority signals","io-red")}${stat("Sources",5,"Illustrative integrations")}</div>`+
+ `<div class="io-toolbar">${search("Search notifications...")}${tabs(["All","Critical","Warning","Ticket","Workflow","System"],activeFilter)}</div>`+
+ panel("Recent activity",`${filtered.length} notifications`,`${filtered.map(n=>`<article class="io-notice ${n.read?"is-read":"is-unread"}"><div class="io-notice-icon ${priorityClass(n.type)}">${n.type==="Critical"?"!":n.type==="Ticket"?"#":n.type==="Workflow"?"↻":n.type==="Warning"?"△":"•"}</div><div class="io-notice-content"><div class="io-notice-top">${badge(n.type,priorityClass(n.type))}<span class="io-muted">${esc(n.time)}</span>${n.read?"":badge("UNREAD","unread")}</div><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><small>${esc(n.source)}</small></div><div class="io-notice-actions">${btn(n.read?"Read":"Mark read","toggle-read")}<input type="hidden" data-notice-id value="${n.id}"></div></article>`).join("")||empty}`)+
+ `<div class="io-note">Read/unread changes are stored in the current page session only.</div>`);
+}
+function renderReports(){
+ const days=$("[data-period]")?.value||"7";
+ const bars=days==="30"?[42,55,48,68,58,76,62,85,73,91,78,66]:days==="90"?[36,45,41,58,50,64,55,70,63,81,72,88]:[35,48,40,63,52,72,59];
+ const labels=days==="30"?["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12"]:days==="90"?["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12"]:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+ set(shell("ANALYTICS / REPORTS","Operations overview","Review illustrative service performance and export the displayed summary.",`<select class="io-select" data-period aria-label="Report period"><option value="7" ${days==="7"?"selected":""}>Last 7 days</option><option value="30" ${days==="30"?"selected":""}>Last 30 days</option><option value="90" ${days==="90"?"selected":""}>Last 90 days</option></select>${btn("Export CSV","export-csv","primary")}`)+
+ `<div class="io-stats">${stat("Tickets resolved","184","Illustrative period total","io-green")}${stat("SLA attainment","96.4%","Illustrative performance","io-green")}${stat("Mean resolution","3h 42m","Illustrative average")}${stat("Backlog change","−12.8%","Versus previous period","io-green")}</div>`+
+ `<div class="io-report-grid">${panel("Ticket volume",`Illustrative ticket activity · ${days} days`,`<div class="io-chart">${bars.map((v,i)=>`<div class="io-bar-group"><span>${v}</span><div class="io-bar" style="height:${v}%"></div><small>${labels[i]}</small></div>`).join("")}</div><div class="io-legend"><span><i></i> Tickets created (sample data)</span></div>`)}${panel("SLA performance","Illustrative service-level distribution",`<div class="io-sla-row"><div><span>Within SLA</span><strong>96.4%</strong></div><div class="io-progress"><i style="width:96.4%"></i></div></div><div class="io-sla-row"><div><span>At risk</span><strong>2.1%</strong></div><div class="io-progress warning"><i style="width:2.1%"></i></div></div><div class="io-sla-row"><div><span>Breached</span><strong>1.5%</strong></div><div class="io-progress danger"><i style="width:1.5%"></i></div></div><div class="io-report-foot"><span>Target</span><strong>≥ 95% within SLA</strong></div>`)}${panel("Team workload","Illustrative open-ticket distribution",`<div class="io-team-row"><span>Infrastructure</span><div class="io-progress"><i style="width:78%"></i></div><strong>24</strong></div><div class="io-team-row"><span>Service Desk</span><div class="io-progress"><i style="width:58%"></i></div><strong>18</strong></div><div class="io-team-row"><span>Network</span><div class="io-progress"><i style="width:42%"></i></div><strong>13</strong></div><div class="io-team-row"><span>Systems</span><div class="io-progress"><i style="width:31%"></i></div><strong>9</strong></div>`)}${panel("Report details","Exportable summary",`<div class="io-detail-list"><div><span>Report ID</span><strong>RPT-OPS-001</strong></div><div><span>Reporting window</span><strong>${days} days</strong></div><div><span>Data classification</span><strong>Sample / demo</strong></div><div><span>Generated</span><strong>On demand</strong></div></div>`)}</div>`+
+ `<div class="io-note">All figures and charts on this page are illustrative, not measured from your environment. CSV export contains demo summary figures.</div>`);
+}
+function render() {
+  if (slug === "ticketing") renderTicketing();
+  else if (slug === "knowledge") {
+    if (knowledgeArticleKey) renderKnowledgeArticle();
+    else renderKnowledge();
+  }
+  else if (slug === "tasks") renderTasks();
+  else if (slug === "workflows") renderWorkflows();
+  else if (slug === "notifications") renderNotifications();
+  else renderReports();
+}
+function rerenderKeepSearch(){const q=$("[data-search]")?.value||"";render();const s=$("[data-search]");if(s){s.value=q;s.focus();s.setSelectionRange(q.length,q.length);}}
+root.addEventListener("submit",ticketingSubmitListener);
+
+// CARTMAN_WORK_MANAGEMENT_INTERACTIONS_REPAIR_V1
+root.addEventListener("change",event=>{
+ const input=event.target;
+ if(!input||!input.matches||!input.matches("[data-automation-toggle]"))return;
+ event.stopPropagation();
+ event.stopImmediatePropagation();
+ const automationId=String(input.dataset.automationToggle||"");
+ const enabled=Boolean(input.checked);
+ if(!automationId)return;
+ // The existing function performs the authenticated PUT, rollback on failure, and UI refresh.
+ void toggleOperationAutomation(automationId,enabled);
+},true);
+
+
+// CARTMAN_WORK_MANAGEMENT_UX_PERMISSIONS_V1
+root.addEventListener("input",event=>{
+ const target=event.target;if(!target||!target.matches)return;
+ if(target.matches('[data-wm-task-filter="query"]')){const f=workMgmtState.taskFilters||(workMgmtState.taskFilters={});f.query=target.value;wmApplyTaskFilters();}
+ if(target.matches('[data-wm-automation-filter="query"]')){const f=workMgmtState.automationFilters||(workMgmtState.automationFilters={});f.query=target.value;wmApplyAutomationFilters();}
+ if(target.matches('[data-wm-history-search]')){const f=workMgmtState.historyFilters||(workMgmtState.historyFilters={});f.query=target.value;wmFilterSortExecutionHistory();}
+});
+root.addEventListener("change",event=>{
+ const target=event.target;if(!target||!target.matches)return;
+ if(target.matches("[data-wm-task-filter]")){const f=workMgmtState.taskFilters||(workMgmtState.taskFilters={});f[target.dataset.wmTaskFilter]=target.value;wmApplyTaskFilters();}
+ if(target.matches("[data-wm-automation-filter]")){const f=workMgmtState.automationFilters||(workMgmtState.automationFilters={});f[target.dataset.wmAutomationFilter]=target.value;wmApplyAutomationFilters();}
+ if(target.matches("[data-wm-history-status],[data-wm-history-trigger],[data-wm-history-automation],[data-wm-history-sort]")){const f=workMgmtState.historyFilters||(workMgmtState.historyFilters={});if(target.matches("[data-wm-history-status]"))f.status=target.value;else if(target.matches("[data-wm-history-trigger]"))f.trigger=target.value;else if(target.matches("[data-wm-history-automation]"))f.automation=target.value;else f.sort=target.value;wmFilterSortExecutionHistory();}
+ if(target.matches('[name="task_target_category"]')){const form=target.closest("[data-work-item-form]");const select=form?.querySelector("[data-task-target]");if(select){select.innerHTML=wmAutomationTargetOptions(target.value,"");select.value="";}}
+ if(target.matches('[name="target_category"]')){const form=target.closest("[data-automation-form]");const select=form?.querySelector("[data-automation-target]");if(select){select.innerHTML=wmAutomationTargetOptions(target.value,"");select.value="";}}
+ if(target.matches("[data-automation-action]")){const form=target.closest("[data-automation-form]"),py=target.value==="run_python";const taskFields=form?.querySelector("[data-task-action-fields]"),scriptFields=form?.querySelector("[data-python-action-fields]"),title=form?.querySelector('[name="task_title"]'),script=form?.querySelector('[name="script_file"]');if(taskFields)taskFields.style.display=py?"none":"block";if(scriptFields)scriptFields.style.display=py?"block":"none";if(title)title.required=!py;if(script)script.required=py;}
+ if(target.matches("[data-automation-action-choice]")){const form=target.closest("[data-automation-form]"),py=target.value==="run_python",editingId=String(workMgmtState.automationEditId||""),existing=workMgmtState.automations.find(item=>item.automation_id===editingId),taskFields=form?.querySelector("[data-task-action-fields]"),scriptFields=form?.querySelector("[data-python-action-fields]"),title=form?.querySelector('[name="task_title"]'),script=form?.querySelector('[name="script_file"]');if(taskFields)taskFields.style.display=py?"none":"block";if(scriptFields)scriptFields.style.display=py?"block":"none";if(title)title.required=!py;if(script)script.required=py&&!(editingId&&existing&&existing.action_type==="run_python");}
+});
+root.addEventListener("click",event=>{
+ const target=event.target&&event.target.closest?event.target.closest("[data-action]"):null;if(!target)return;
+ const action=target.dataset.action;
+ if(action==="complete-work-item" && slug==="tasks"){
+ event.preventDefault();
+ const completeButton=event.target?.closest?.('[data-action="complete-work-item"]');
+ const taskKey=String(completeButton?.dataset.taskKey||"");
+ if(!taskKey&&!(workMgmtState.canManage||tasks.find(item=>item.id===taskKey)?.can_complete))return;
+ if(!(workMgmtState.canManage||tasks.find(item=>item.id===taskKey)?.can_complete))return;
+ if(completeButton){completeButton.disabled=true;completeButton.textContent="Closing…";}
+ void (async()=>{
+  try{
+   await ticketApi(`/api/work-items/${encodeURIComponent(taskKey)}/complete`,{method:"POST",body:{}});
+   workMgmtState.notice=`${taskKey} completed and closed.`;
+   workMgmtState.error="";
+   await loadWorkManagement(true);
+  }catch(error){
+   workMgmtState.error=error.message||"Could not complete task.";
+   renderTasks();
+  }
+ })();
+ return;
+}
+if(action==="reset-task-filters"){event.preventDefault();workMgmtState.taskFilters={query:"",status:"",priority:"",project:"",owner:"",sort:"newest"};renderTasks();return;}
+ if(action==="reset-automation-filters"){event.preventDefault();workMgmtState.automationFilters={query:"",enabled:"",trigger:"",action:"",author:"",project:"",target:"",priority:"",sort:"newest"};renderTasks();return;}
+ if(action==="reset-history-filters"){event.preventDefault();workMgmtState.historyFilters={query:"",status:"",trigger:"",automation:"",sort:"newest"};renderTasks();return;}
+ if(action==="manage-work-projects"){
+  event.preventDefault();if(!workMgmtState.canManage)return;
+  const form=document.querySelector("[data-work-item-form]");
+  if(form){const data=new FormData(form),ref=String(data.get("task_target_ref")||""),split=ref.indexOf(":");workMgmtState.taskDraft={title:String(data.get("title")||""),description:String(data.get("description")||""),project:String(data.get("project")||"Operations"),due:String(data.get("due")||""),priority:String(data.get("priority")||"Normal"),target_category:String(data.get("task_target_category")||"user"),target_ref:split>0?ref:""};}
+  workMgmtState.projectModal=true;renderTasks();return;
+ }
+ if(action==="close-work-project-modal"){event.preventDefault();if(event.target.closest(".ct-modal-backdrop")&&event.target!==target&&target.classList.contains("ct-modal-backdrop"))return;workMgmtState.projectModal=false;renderTasks();return;}
+ if(action==="edit-automation"){
+  event.preventDefault();if(!workMgmtState.canManage)return;
+  const id=target.parentElement?.querySelector("[data-automation-id]")?.value;const rule=workMgmtState.automations.find(item=>item.automation_id===id);if(!rule)return;
+  workMgmtState.automationEditId=id;workMgmtState.automationDraft={...rule,target_category:rule.target_type==="user"?"user":"department_group",target_ref:rule.target_type&&rule.target_id?`${rule.target_type}:${rule.target_id}`:"",script_filename:rule.script_filename||""};workMgmtState.automationModal=true;workMgmtState.error="";renderTasks();return;
+ }
+ if(action==="delete-automation"){
+  event.preventDefault();if(!workMgmtState.canManage)return;
+  const id=target.parentElement?.querySelector("[data-automation-id]")?.value;const rule=workMgmtState.automations.find(item=>item.automation_id===id);if(!rule)return;
+  if(window.confirm(`Delete automation “${rule.name}”? Execution history will be preserved.`))void (async()=>{try{await ticketApi(`/api/operations/automations/${encodeURIComponent(id)}`,{method:"DELETE"});workMgmtState.notice=`Deleted ${rule.name}; execution history preserved.`;workMgmtState.error="";await loadWorkManagement(true);}catch(error){workMgmtState.error=error.message||"Could not delete automation.";renderTasks();}})();return;
+ }
+ if(action==="new-automation"){workMgmtState.automationEditId="";}
+ if(action==="cancel-new-automation"){workMgmtState.automationEditId="";}
+});
+root.addEventListener("submit",event=>{
+ const form=event.target&&event.target.closest?event.target.closest("[data-work-project-form]"):null;if(!form)return;
+ event.preventDefault();if(workMgmtState.projectSaving)return;
+ const name=String(new FormData(form).get("name")||"").trim();workMgmtState.projectDraftName=name;if(name.length<2){workMgmtState.error="Project name must be at least 2 characters.";renderTasks();return;}
+ workMgmtState.projectSaving=true;workMgmtState.error="";renderTasks();
+ void (async()=>{try{await ticketApi("/api/operations/projects",{method:"POST",body:{name}});const data=await ticketApi("/api/operations/projects");workMgmtState.projectCatalog=Array.isArray(data.items)?data.items:[];workMgmtState.projectModal=false;workMgmtState.projectSaving=false;workMgmtState.projectDraftName="";workMgmtState.notice=`Project “${name}” created.`;await loadWorkManagement(true);}catch(error){workMgmtState.projectSaving=false;workMgmtState.error=error.message||"Could not create project.";workMgmtState.projectModal=true;renderTasks();}})();
+});
+
+
+// CARTMAN_AUTOMATION_TARGET_SELECTOR_V1
+// CARTMAN_WORK_ITEM_TARGET_ASSIGNMENT_V1
+root.addEventListener("change",event=>{
+ const choice=event.target&&event.target.closest?event.target.closest('[name="target_category"]'):null;
+ if(!choice)return;
+ const form=choice.closest("[data-automation-form]");
+ if(!form)return;
+ const select=form.querySelector("[data-automation-target]");
+ if(!select)return;
+ select.innerHTML=wmAutomationTargetOptions(choice.value,"");
+ select.value="";
+});
+
+// CARTMAN_WORK_ITEM_TARGET_ASSIGNMENT_V1
+root.addEventListener("change",event=>{
+ const choice=event.target&&event.target.closest?event.target.closest('[name="task_target_category"]'):null;
+ if(!choice)return;
+ const form=choice.closest("[data-work-item-form]");
+ if(!form)return;
+ const select=form.querySelector("[data-task-target]");
+ if(!select)return;
+ select.innerHTML=wmAutomationTargetOptions(choice.value,"");
+ select.value="";
+});
+
+
+// CARTMAN_AUTOMATION_HISTORY_DETAIL_V1
+root.addEventListener("input",event=>{
+ const target=event.target;
+ if(target&&target.matches&&target.matches("[data-wm-history-search]"))wmFilterSortExecutionHistory();
+});
+root.addEventListener("change",event=>{
+ const target=event.target;
+ if(target&&target.matches&&target.matches("[data-wm-history-status],[data-wm-history-trigger],[data-wm-history-automation],[data-wm-history-sort]"))wmFilterSortExecutionHistory();
+});
+root.addEventListener("click",event=>{
+ const opener=event.target&&event.target.closest?event.target.closest("[data-wm-open-execution]"):null;
+ if(opener){event.preventDefault();event.stopPropagation();wmOpenExecutionDetails(opener.getAttribute("data-wm-open-execution"));return;}
+ const row=event.target&&event.target.closest?event.target.closest("tr[data-wm-execution-row]"):null;
+ if(row){wmOpenExecutionDetails(row.dataset.index);}
+});
+root.addEventListener("keydown",event=>{
+ const row=event.target&&event.target.closest?event.target.closest("tr[data-wm-execution-row]"):null;
+ if(row&&(event.key==="Enter"||event.key===" ")){event.preventDefault();wmOpenExecutionDetails(row.dataset.index);}
+});
+
+
+// CARTMAN_AUTOMATION_ACTION_CLARITY_V1: keep action help and its fields in sync.
+root.addEventListener("change",event=>{
+ const choice=event.target&&event.target.closest?event.target.closest("[data-automation-action]"):null;
+ if(!choice)return;
+ const form=choice.closest("[data-automation-form]");
+ if(!form)return;
+ const isPython=choice.value==="run_python";
+ const taskFields=form.querySelector("[data-task-action-fields]");
+ const scriptFields=form.querySelector("[data-python-action-fields]");
+ if(taskFields)taskFields.style.display=isPython?"none":"block";
+ if(scriptFields)scriptFields.style.display=isPython?"block":"none";
+ const title=form.querySelector('[name="task_title"]');
+ const script=form.querySelector('[name="script_file"]');
+ if(title)title.required=!isPython;
+ if(script)script.required=isPython;
+ const copy=form.querySelector("[data-automation-action-copy]");
+ if(copy)copy.textContent=isPython
+  ?"Cartman runs your uploaded Python file on the Cartman server. Output, exit code and errors are recorded in Execution History. It does not run on the selected user's computer or group devices."
+  :"Cartman creates a task in the Tasks board. The Owner field below assigns the work to a person; Cartman does not perform the task automatically.";
+});
+
+root.addEventListener("input",e=>{if(e.target.matches("[data-search]"))rerenderKeepSearch();});
+root.addEventListener("change",e=>{
+ const el=e.target;
+ if(el.matches("[data-kb-status]")){knowledgeState.statusFilter=el.value;renderKnowledge();}
+ if(el.matches("[data-kb-category]")){activeFilter=el.value;renderKnowledge();}
+ if(el.matches("[data-task-status]")){
+  if(slug==="tasks")void updateWorkItemStatus(el.dataset.taskStatus,el.value);
+  else{const t=tasks.find(x=>x.id===el.dataset.taskStatus);if(t)t.status=el.value;renderTasks();}
+ }
+ if(el.matches("[data-automation-toggle]"))void toggleOperationAutomation(el.dataset.automationToggle,el.checked);
+ if(el.matches("[data-automation-trigger]")){
+  const interval=root.querySelector('[name="interval_minutes"]');
+  if(interval)interval.disabled=el.value!=="interval";
+ }
+ if(el.matches("[data-workflow-toggle]")){const w=workflows.find(x=>x.id===el.dataset.workflowToggle);if(w)w.enabled=el.checked;renderWorkflows();}
+ if(el.matches("[data-period]"))renderReports();
+});
+
+root.addEventListener("click",e=>{
+ if(slug==="ticketing"){void handleTicketingClick(e);return;}
+ if(slug==="tasks" && e.target.matches("[data-work-item-backdrop]")){workItemState.modal=false;workItemState.draft=null;renderTasks();return;}
+ const f=e.target.closest("[data-filter]");
+ if(f){activeFilter=f.dataset.filter;render();return;}
+ const b=e.target.closest("[data-action]");if(!b)return;
+ const action=b.dataset.action;
+ if(slug==="tasks"){
+  if(action==="work-tab"){
+   const next=b.dataset.tab;
+   if(["tasks","automations","history"].includes(next)){workMgmtState.tab=next;workMgmtState.notice="";renderTasks();}
+  }else if(action==="new-task"){
+   workMgmtState.taskModal=true;workMgmtState.taskDraft=null;workMgmtState.error="";renderTasks();
+  }else if(action==="cancel-new-task"){
+   workMgmtState.taskModal=false;workMgmtState.taskDraft=null;renderTasks();
+  }else if(action==="new-automation"){
+   if(!workMgmtState.canManage){workMgmtState.error="Only an administrator can create automation rules.";renderTasks();return;}
+   workMgmtState.automationModal=true;workMgmtState.automationDraft=null;workMgmtState.error="";renderTasks();
+  }else if(action==="cancel-new-automation"){
+   workMgmtState.automationModal=false;workMgmtState.automationDraft=null;renderTasks();
+  }else if(action==="dismiss-work-modal"&&e.target===b){
+   workMgmtState.taskModal=false;workMgmtState.automationModal=false;workMgmtState.taskDraft=null;workMgmtState.automationDraft=null;renderTasks();
+  }else if(action==="run-automation"){
+   const id=b.parentElement.querySelector("[data-automation-id]")?.value;
+   if(id&&window.confirm("Run this automation now? It may create an operational task."))void runOperationAutomation(id);
+  }else if(action==="refresh-work-management"){
+   workMgmtState.loaded=false;void loadWorkManagement(true);
+  }
+  return;
+ }
+
+  // CARTMAN_KB_NEW_ARTICLE_CLICK_GUARD_V1
+  if (action === "new-article" &&
+      document.querySelector(".io-kb-list-panel")) {
+    e.preventDefault();
+
+    if (!knowledgeState.canManage) {
+      window.alert("Only Cartman administrators can create articles.");
+      return;
+    }
+
+    knowledgeState.error = "";
+    knowledgeState.editor = {
+      mode: "create",
+      article: null,
+      draft: null
+    };
+    renderKnowledge();
+    return;
+  }
+
+    if (slug === "knowledge") {
+    if (action === "close-knowledge-editor") {
+      knowledgeState.editor = null;
+      knowledgeState.error = "";
+      renderKnowledge();
+      return;
+    }
+
+    if (action === "new-article") {
+      if (knowledgeState.canManage) {
+        knowledgeState.error = "";
+        knowledgeState.editor = {mode: "create", article: null, draft: null};
+        renderKnowledge();
+      }
+    } else if (action === "refresh-knowledge") {
+      void loadKnowledgeArticles(true);
+    } else if (action === "close-kb-editor") {
+      knowledgeState.editor = null;
+      knowledgeState.error = "";
+      renderKnowledge();
+    } else if (action === "read-article") {
+      const key = b.dataset.id;
+      if (key) window.location.assign(`/pages/knowledge/article/${encodeURIComponent(key)}/`);
+    } else if (action === "edit-article") {
+      if (knowledgeState.canManage) {
+        const article = knowledgeState.items.find(item => item.article_key === b.dataset.id);
+        if (article) {
+          knowledgeState.error = "";
+          knowledgeState.editor = {mode: "edit", article, draft: null};
+          renderKnowledge();
+        }
+      }
+    } else if (action === "set-knowledge-status") {
+      if (knowledgeState.canManage && ["Published", "Archived"].includes(b.dataset.status)) {
+        void setKnowledgeArticleStatus(b.dataset.id, b.dataset.status);
+      }
+    } else if (action === "delete-article") {
+      void deleteKnowledgeArticle(b.dataset.id);
+    } else if (action === "draft-knowledge-article") {
+      const reason = window.prompt("Why is this article being moved to Draft? A reason is required.");
+      if (reason !== null) {
+        if (!reason.trim()) {
+          window.alert("Please enter a reason before drafting this article.");
+        } else {
+          void changeKnowledgeArticleStatus(b.dataset.id, "Draft", reason.trim());
+        }
+      }
+    } else if (action === "publish-knowledge-article") {
+      void changeKnowledgeArticleStatus(b.dataset.id, "Published");
+    } else if (action === "archive-knowledge-article") {
+      const confirmed = window.confirm("Archive this article? It will no longer appear in the active Knowledge Base.");
+      if (confirmed) void changeKnowledgeArticleStatus(b.dataset.id, "Archived");
+    }
+    return;
+  }
+ if(action==="ticket-detail"){const t=tickets.find(x=>x.id===b.dataset.id);if(t)alert(`${t.id} — ${t.title}\n\n${t.desc}\n\nOwner: ${t.owner}\nStatus: ${t.status}\nSLA remaining: ${t.sla}`);}
+ if(action==="new-ticket"){const title=prompt("Ticket title:");if(title&&title.trim()){tickets.unshift({id:"INC-"+(1049+tickets.length),title:title.trim(),type:"Incident",priority:"Normal",status:"Open",owner:"Unassigned",team:"Service Desk",time:"Just now",desc:"Created in local demo.",sla:"4 hours"});activeFilter="All";renderTicketing();}}
+ if(action==="read-article"){const a=articles.find(x=>x.id===b.dataset.id);if(a)alert(`${a.title}\n\n${a.desc}\n\n${a.steps.map((x,i)=>`${i+1}. ${x}`).join("\n")}`);}
+ if(action==="new-article"){const title=prompt("Article title:");if(title&&title.trim()){articles.unshift({id:"KB-"+String(articles.length+1).padStart(3,"0"),cat:"General",title:title.trim(),desc:"New local demo article. Edit this content in the demo workflow.",time:"2 min read",tag:"New",steps:["Define the symptom.","Collect relevant logs.","Validate the fix.","Document the result."]});activeFilter="All";renderKnowledge();}}
+ if(action==="new-task" && slug==="tasks"){workItemState.modal=true;workItemState.error="";workItemState.draft=null;renderTasks();}
+ if(action==="cancel-new-task" && slug==="tasks"){workItemState.modal=false;workItemState.draft=null;renderTasks();}
+ if(action==="retry-work-items" && slug==="tasks"){workItemState.loaded=false;void loadWorkItems(true);}
+ if(action==="new-workflow"){const name=prompt("Workflow name:");if(name&&name.trim()){workflows.push({id:"WF-"+String(workflows.length+1).padStart(3,"0"),name:name.trim(),trigger:"Manual trigger",condition:"No conditions configured",action:"Review required",runs:0,success:100,enabled:false});renderWorkflows();}}
+ if(action==="simulate"){const card=b.closest(".io-workflow");const id=card?.querySelector("[data-workflow-id]")?.value;const w=workflows.find(x=>x.id===id);if(w)alert(w.enabled?`Demo simulation complete: ${w.name}\n\nNo external actions were executed.`:`${w.name} is disabled. Enable it before simulating a run.`);}
+ if(action==="read-all"){notices.forEach(n=>n.read=true);renderNotifications();}
+ if(action==="toggle-read"){const id=Number(b.parentElement.querySelector("[data-notice-id]")?.value);const n=notices.find(x=>x.id===id);if(n)n.read=!n.read;renderNotifications();}
+ if(action==="export-csv"){const csv=[["Metric","Value","Note"],["Tickets resolved","184","Illustrative demo value"],["SLA attainment","96.4%","Illustrative demo value"],["Mean resolution","3h 42m","Illustrative demo value"],["Backlog change","-12.8%","Illustrative demo value"],["Reporting window",($("[data-period]")?.value||"7")+" days","Selected period"]].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cartman-operations-demo-report.csv";a.click();URL.revokeObjectURL(url);}
+});
+
+// CARTMAN_TASK_PRIMARY_ACTION_CAPTURE_V1
+// Narrow fallback for task tabs and the New Task button only.
+document.addEventListener("click", event => {
+    const button = event.target && event.target.closest
+        ? event.target.closest('[data-action="work-tab"], [data-action="new-task"]')
+        : null;
+
+    if (!button) return;
+
+    const activeRoot = document.querySelector(".workspace-module");
+    if (
+        !activeRoot ||
+        !activeRoot.contains(button) ||
+        !activeRoot.querySelector(".wm-tabs")
+    ) return;
+
+    if (workMgmtState.currentUser?.role !== "admin") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (button.dataset.action === "work-tab") {
+        const next = button.dataset.tab;
+        if (!["tasks", "automations", "history"].includes(next)) return;
+
+        workMgmtState.tab = next;
+        workMgmtState.notice = "";
+        renderTasks();
+        return;
+    }
+
+    if (button.dataset.action === "new-task") {
+        workMgmtState.taskModal = true;
+        workMgmtState.taskDraft = null;
+        workMgmtState.error = "";
+        renderTasks();
+    }
+}, true);
+
+// CARTMAN_TASK_COMPLETION_MODAL_V1
+root.addEventListener("click", event => {
+ const clicked=event.target&&event.target.closest?event.target:null;
+ if(!clicked||slug!=="tasks")return;
+ const completeButton=clicked.closest('[data-action="complete-work-item"]');
+ if(completeButton){
+  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+  const taskKey=String(completeButton.dataset.taskKey||"");
+  const item=Array.isArray(tasks)?tasks.find(t=>String(t.task_key||t.id||"")===taskKey):null;
+  if(!taskKey||(!workMgmtState.canManage&&!item?.can_complete)){
+   workMgmtState.completionError="You are not allowed to complete this task.";
+   renderTasks();
+   return;
+  }
+  workMgmtState.completionModal={taskKey,title:String(item?.title||taskKey),description:""};
+  workMgmtState.completionSaving=false;
+  workMgmtState.completionError="";
+  renderTasks();
+  return;
+ }
+ const cancel=clicked.closest("[data-work-item-completion-cancel]");
+ const backdrop=clicked.matches("[data-work-item-completion-backdrop]");
+ if(cancel||backdrop){
+  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+  if(workMgmtState.completionSaving)return;
+  workMgmtState.completionModal=null;
+  workMgmtState.completionError="";
+  renderTasks();
+ }
+}, true);
+
+root.addEventListener("submit", event => {
+ const form=event.target&&event.target.closest?event.target.closest("[data-work-item-completion-form]"):null;
+ if(!form||slug!=="tasks")return;
+ event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+ if(workMgmtState.completionSaving)return;
+ const formData=new FormData(form);
+ const description=String(formData.get("completion_description")||"").trim();
+ const taskKey=String(form.dataset.taskKey||workMgmtState.completionModal?.taskKey||"");
+ if(description.length<3||description.length>3000){
+  workMgmtState.completionError="Describe your actions in 3–3000 characters.";
+  if(workMgmtState.completionModal)workMgmtState.completionModal.description=description;
+  renderTasks();
+  return;
+ }
+ if(!taskKey){workMgmtState.completionError="The task identifier is missing.";renderTasks();return;}
+ if(workMgmtState.completionModal)workMgmtState.completionModal.description=description;
+ workMgmtState.completionSaving=true;
+ workMgmtState.completionError="";
+ renderTasks();
+ void (async()=>{
+  try{
+   await ticketApi(`/api/work-items/${encodeURIComponent(taskKey)}/complete`,{
+    method:"POST",
+    body:{completion_description:description}
+   });
+   workMgmtState.completionModal=null;
+   workMgmtState.completionSaving=false;
+   workMgmtState.completionError="";
+   workMgmtState.notice=`Completed ${taskKey}; the completion notes were saved.`;
+   workMgmtState.error="";
+   await loadWorkManagement(true);
+  }catch(error){
+   workMgmtState.completionSaving=false;
+   workMgmtState.completionError=error.message||"Could not complete the task.";
+   if(workMgmtState.completionModal)workMgmtState.completionModal.description=description;
+   renderTasks();
+  }
+ })();
+}, true);
+
+render();
+})();
+
+// CARTMAN_WORK_MANAGEMENT_LIST_LAYOUT_V2
+document.querySelector(".workspace-module")?.addEventListener("click",event=>{
+ const taskClose=event.target&&event.target.closest?event.target.closest("[data-wm-task-close]"):null;
+ const automationClose=event.target&&event.target.closest?event.target.closest("[data-wm-automation-close]"):null;
+ const taskButton=event.target&&event.target.closest?event.target.closest("[data-wm-task-open]"):null;
+ const automationButton=event.target&&event.target.closest?event.target.closest("[data-wm-automation-open]"):null;
+ if(taskClose||automationClose||taskButton||automationButton){
+  event.preventDefault();
+  // Do not allow the legacy delegated click router or browser scroll anchoring to move the page.
+  event.stopPropagation();
+  const button=taskButton||automationButton;
+  const card=button?button.closest(taskButton?"[data-wm-task-card]":"[data-wm-automation-item]"):(taskClose?taskClose.closest("[data-wm-task-card]"):automationClose.closest("[data-wm-automation-item]"));
+  const detail=card&&card.querySelector(taskButton?"[data-wm-task-detail]":automationButton?"[data-wm-automation-detail]":taskClose?"[data-wm-task-detail]":"[data-wm-automation-detail]");
+  if(!card||!detail)return;
+  const scrollBox=card.closest(".wm-task-list-scroll,.wm-automation-list-scroll");
+  const savedInner=scrollBox?scrollBox.scrollTop:0;
+  const savedOuter=window.scrollY;
+  if(taskClose||automationClose){detail.hidden=true;const openers=card.querySelectorAll("[data-wm-task-open],[data-wm-automation-open]");openers.forEach(el=>el.setAttribute("aria-expanded","false"));}
+  else {
+   const opening=detail.hidden;
+   const selector=taskButton?"[data-wm-task-card]":"[data-wm-automation-item]";
+   const detailSelector=taskButton?"[data-wm-task-detail]":"[data-wm-automation-detail]";
+   const openerSelector=taskButton?"[data-wm-task-open]":"[data-wm-automation-open]";
+   const section=card.closest(taskButton?"[data-wm-task-panel]":"[data-wm-automation-panel]");
+   if(section)section.querySelectorAll(selector).forEach(other=>{const d=other.querySelector(detailSelector);if(d)d.hidden=true;other.querySelectorAll(openerSelector).forEach(o=>o.setAttribute("aria-expanded","false"));});
+   detail.hidden=!opening;
+   if(opening)card.querySelectorAll(openerSelector).forEach(el=>el.setAttribute("aria-expanded","true"));
+  }
+  const isNowOpen=!detail.hidden;
+  requestAnimationFrame(()=>{
+   window.scrollTo(0,savedOuter);
+   if(scrollBox){
+    if(isNowOpen){
+     const detailRect=detail.getBoundingClientRect(),boxRect=scrollBox.getBoundingClientRect();
+     if(detailRect.bottom>boxRect.bottom)scrollBox.scrollTop+=detailRect.bottom-boxRect.bottom+12;
+     else if(detailRect.top<boxRect.top)scrollBox.scrollTop-=boxRect.top-detailRect.top+12;
+    }else{scrollBox.scrollTop=savedInner;}
+   }
+  });
+ }
+});
+
+// CARTMAN_WORK_MANAGEMENT_LIST_LAYOUT_V2

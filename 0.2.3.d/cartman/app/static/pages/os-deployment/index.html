@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1020">
+<title>Cartman | OS Deployment Images</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/modules/os-deployment.css">
+<script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/core/events.js" defer></script>
+<script src="/static/js/core/i18n.js" defer></script>
+<script src="/static/js/core/theme.js" defer></script>
+<script src="/static/js/modules/standalone-page.js" defer></script>
+<script src="/static/js/core/module-definitions.js" defer></script>
+<script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+<script src="/static/js/modules/os-deployment.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-area">
+    <button id="menu-toggle" class="icon-button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a>
+  </div>
+  <div class="top-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input id="global-search" type="search" placeholder="Search modules..." autocomplete="off">
+      <kbd>Ctrl K</kbd>
+    </label>
+    <div class="language-wrap">
+      <button id="language-toggle" class="toolbar-button flag-toggle" aria-label="Select language" aria-expanded="false"><span id="language-label">EN</span><span>⌄</span></button>
+      <div id="language-menu" class="dropdown language-menu hidden">
+        <button data-language="en" title="English" aria-label="English"></button>
+        <button data-language="tr" title="Türkçe" aria-label="Turkish"></button>
+        <button data-language="de" title="Deutsch" aria-label="German"></button>
+        <button data-language="fr" title="Français" aria-label="French"></button>
+        <button data-language="es" title="Español" aria-label="Spanish"></button>
+        <button data-language="nl" title="Nederlands" aria-label="Dutch"></button>
+        <button data-language="pl" title="Polski" aria-label="Polish"></button>
+        <button data-language="it" title="Italiano" aria-label="Italian"></button>
+        <button data-language="pt-BR" title="Português" aria-label="Portuguese"></button>
+        <button data-language="ja" title="日本語" aria-label="Japanese"></button>
+        <button data-language="ar" title="العربية" aria-label="Arabic"></button>
+        <button data-language="zh-CN" title="简体中文" aria-label="Simplified Chinese"></button>
+        <button data-language="ru" title="Русский" aria-label="Russian"></button>
+      </div>
+    </div>
+    <button id="terminal-toggle" class="toolbar-button terminal-button" type="button"><span>›_</span><span>Terminal</span></button>
+    <button id="theme-toggle" class="toolbar-button" aria-label="Switch theme">☀ <span id="theme-label">Light mode</span></button>
+    <div class="profile-wrap">
+      <button id="profile-toggle" class="profile-button" aria-expanded="false">
+        <span class="avatar">K</span>
+        <span class="profile-info"><strong>Kaan Yaşar</strong><small>Loading session…</small></span>
+        <span>⌄</span>
+      </button>
+      <div id="profile-menu" class="dropdown profile-menu hidden">
+        <div class="dropdown-heading">Current session</div>
+        <strong>Kaan Yaşar</strong><small>Loading account…</small>
+        <a href="/">Dashboard</a>
+                <button type="button" data-auth-logout>Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="oi-main">
+  <div class="oi-heading">
+    <div>
+      <div class="oi-kicker">CARTMAN WORKSPACE / SOFTWARE &amp; DEPLOYMENT</div>
+      <h1>OS Deployment (Images)</h1>
+      <p>Maintain your Windows, macOS and Linux image catalog.</p>
+    </div>
+    <button class="oi-btn oi-primary" id="oi-add" type="button">＋ Add Image</button>
+  </div>
+
+  <section class="oi-card">
+    <div class="oi-tools">
+      <label class="oi-search">
+        <span>⌕</span>
+        <input id="oi-search" type="search" placeholder="Search image name, version, or details…" aria-label="Search images">
+      </label>
+      <select id="oi-os-filter" aria-label="Filter operating system">
+        <option value="">All operating systems</option>
+        <option value="Windows">Windows</option>
+        <option value="macOS">macOS</option>
+        <option value="Linux">Linux</option>
+      </select>
+      <button class="oi-btn" id="oi-refresh" type="button">↻ Refresh</button>
+    </div>
+
+    <div class="oi-table-wrap" id="oi-image-view">
+      <table class="oi-table">
+        <thead>
+          <tr>
+            <th>Image name</th>
+            <th>Operating system</th>
+            <th>Version</th>
+            <th>Size (GB)</th>
+            <th>Stock</th>
+            <th>Added by</th>
+            <th aria-label="Actions"></th>
+          </tr>
+        </thead>
+        <tbody id="oi-rows"></tbody>
+      </table>
+      <div class="oi-empty" id="oi-empty" hidden>
+        <div class="oi-empty-icon">▤</div>
+        <h3>No images in your library</h3>
+        <p>Add image metadata to build your OS image catalog.</p>
+        <button class="oi-btn oi-primary" id="oi-empty-add" type="button">＋ Add Image</button>
+      </div>
+    </div>
+
+    <div class="oi-footer">
+      <span id="oi-row-count">0 images</span>
+      <span>PXE requests require a configured PXE API. macOS images are blocked from PXE deployment.</span>
+    </div>
+  </section>
+</main>
+
+
+<div class="oi-modal-backdrop" id="oi-modal" hidden>
+  <section class="oi-modal" role="dialog" aria-modal="true" aria-labelledby="oi-modal-title">
+    <div class="oi-modal-head"><h2 id="oi-modal-title">Image details</h2><button class="oi-icon-btn" id="oi-modal-close" aria-label="Close">×</button></div>
+    <div id="oi-modal-body"></div>
+    <div class="oi-modal-actions" id="oi-modal-actions"></div>
+  </section>
+</div>
+<div class="oi-toast" id="oi-toast" role="status" aria-live="polite"></div>
+</body>
+</html>

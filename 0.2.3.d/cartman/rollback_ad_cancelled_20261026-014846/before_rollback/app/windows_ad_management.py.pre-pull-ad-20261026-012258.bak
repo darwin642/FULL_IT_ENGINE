@@ -1,0 +1,269 @@
+"""Local, authenticated, read-only Windows Active Directory connector API."""
+
+import ipaddress
+import json
+import sqlite3
+import uuid
+from urllib.parse import urlparse
+
+from fastapi import APIRouter, Body, HTTPException, Request
+
+router = APIRouter()
+
+get_connection = None
+get_live_device_connections = None
+
+CONNECTOR_MARKER = "windows_ad_management_v1"
+
+READ_OPERATIONS = {
+    "read_domain",
+    "read_ous",
+    "read_users",
+    "read_groups",
+    "read_computers",
+}
+
+
+def _local_only(request: Request):
+    peer = request.client.host if request.client else ""
+
+    try:
+        if not ipaddress.ip_address(peer.split("%", 1)[0]).is_loopback:
+            raise HTTPException(
+                403,
+                "Active Directory connector is restricted to local Cartman access.",
+            )
+    except ValueError as exc:
+        raise HTTPException(403, "Cannot verify local Cartman operator.") from exc
+
+    origin = request.headers.get("origin")
+    if origin:
+        hostname = (urlparse(origin).hostname or "").lower()
+        if hostname not in {"localhost", "127.0.0.1", "::1"}:
+            raise HTTPException(403, "Cross-origin Active Directory requests are blocked.")
+
+
+def _audit(request, action, resource_id, details):
+    user = getattr(request.state, "auth_user", None)
+    actor = user.get("username", "Unattributed") if isinstance(user, dict) else "Unattributed"
+
+    with get_connection() as db:
+        db.execute("""
+            INSERT INTO iam_audit_events
+                (id, actor, action, resource_type, resource_id, details_json)
+            VALUES (?, ?, ?, 'active_directory', ?, ?)
+        """, (
+            str(uuid.uuid4()),
+            actor,
+            action,
+            str(resource_id or ""),
+            json.dumps(details or {}, ensure_ascii=False),
+        ))
+
+
+def _target(device_id, require_ready):
+    with get_connection() as db:
+        row = db.execute("""
+            SELECT id, name, os, ip
+            FROM devices
+            WHERE id = ?
+        """, (device_id,)).fetchone()
+
+        registered = db.execute("""
+            SELECT 1
+            FROM device_agent_credentials
+            WHERE device_id = ? AND revoked = 0
+            LIMIT 1
+        """, (device_id,)).fetchone()
+
+    if row is None:
+        raise HTTPException(404, "Windows server device not found.")
+
+    os_name = str(row["os"] or "").lower()
+    if "windows" not in os_name and not os_name.startswith("win"):
+        raise HTTPException(422, "Active Directory target must be a Windows device.")
+
+    live_connections = (
+        get_live_device_connections()
+        if callable(get_live_device_connections) else {}
+    )
+    live = live_connections.get(str(device_id))
+
+    if require_ready:
+        if not registered:
+            raise HTTPException(409, "This device has no registered CartmanClient identity.")
+        if not live or live.get("connected") is not True:
+            raise HTTPException(409, "Windows server is offline; no AD query was queued.")
+        if live.get("approval_status") != "Approved":
+            raise HTTPException(409, "The CartmanClient session is not approved.")
+        if live.get("windows_ad_management_enabled") is not True:
+            raise HTTPException(
+                409,
+                "AD capability is not enabled. Start the approved client with "
+                "--enable-windows-ad-management.",
+            )
+
+    return dict(row), bool(registered), live
+
+
+@router.get("/api/network/ad/targets")
+def list_targets(request: Request):
+    _local_only(request)
+
+    with get_connection() as db:
+        rows = db.execute("""
+            SELECT id, name, os, ip
+            FROM devices
+            WHERE LOWER(os) LIKE '%windows%' OR LOWER(os) LIKE 'win%'
+            ORDER BY name COLLATE NOCASE
+        """).fetchall()
+
+        registered_ids = {
+            str(row["device_id"])
+            for row in db.execute("""
+                SELECT DISTINCT device_id
+                FROM device_agent_credentials
+                WHERE revoked = 0
+            """).fetchall()
+        }
+
+    live_connections = (
+        get_live_device_connections()
+        if callable(get_live_device_connections) else {}
+    )
+
+    result = []
+    for row in rows:
+        device_id = str(row["id"])
+        live = live_connections.get(device_id)
+        connected = bool(live and live.get("connected") is True)
+        approved = bool(live and live.get("approval_status") == "Approved")
+        capability = bool(
+            live and live.get("windows_ad_management_enabled") is True
+        )
+        registered = device_id in registered_ids
+
+        result.append({
+            "id": device_id,
+            "name": row["name"],
+            "os": row["os"],
+            "ip": row["ip"],
+            "agent_registered": registered,
+            "status": "Online" if connected else "Offline",
+            "approved": approved,
+            "ad_management_enabled": capability,
+            "ready": bool(registered and connected and approved and capability),
+            "read_only": True,
+            "operations": sorted(READ_OPERATIONS),
+        })
+
+    return result
+
+
+@router.post("/api/network/ad/connector/read", status_code=202)
+def request_read(request: Request, payload: dict = Body(...)):
+    _local_only(request)
+
+    if not isinstance(payload, dict):
+        raise HTTPException(422, "Expected an AD read request.")
+
+    device_id = payload.get("device_id")
+    operation = payload.get("operation")
+
+    if not isinstance(device_id, str) or not device_id.strip() or len(device_id) > 120:
+        raise HTTPException(422, "A valid device_id is required.")
+
+    if operation not in READ_OPERATIONS:
+        raise HTTPException(422, "Unsupported Active Directory read operation.")
+
+    device, registered, live = _target(device_id.strip(), require_ready=True)
+
+    task_id = "task-" + uuid.uuid4().hex
+    task_payload = {
+        "connector_action": CONNECTOR_MARKER,
+        "operation": operation,
+        "confirmed": True,
+        "target_os": "Windows",
+    }
+
+    try:
+        with get_connection() as db:
+            db.execute("""
+                INSERT INTO device_tasks
+                    (id, device_id, action, payload, scheduled_at)
+                VALUES (?, ?, 'remote_command', ?, NULL)
+            """, (
+                task_id,
+                device["id"],
+                json.dumps(task_payload, ensure_ascii=False),
+            ))
+    except sqlite3.Error as exc:
+        raise HTTPException(500, "Could not queue the Active Directory read.") from exc
+
+    _audit(request, "active_directory.read.queued", task_id, {
+        "device_id": device["id"],
+        "device_name": device["name"],
+        "operation": operation,
+        "read_only": True,
+    })
+
+    return {
+        "task_id": task_id,
+        "device_id": device["id"],
+        "device_name": device["name"],
+        "operation": operation,
+        "status": "Queued",
+        "read_only": True,
+        "message": "Allowlisted Active Directory read queued.",
+    }
+
+
+@router.get("/api/network/ad/connector/tasks/{task_id}")
+def task_status(task_id: str, request: Request):
+    _local_only(request)
+
+    with get_connection() as db:
+        row = db.execute("""
+            SELECT
+                t.id, t.device_id, d.name AS device_name, t.action,
+                t.payload, t.status, t.result, t.created_at,
+                t.started_at, t.finished_at
+            FROM device_tasks t
+            JOIN devices d ON d.id = t.device_id
+            WHERE t.id = ?
+        """, (task_id,)).fetchone()
+
+    if row is None:
+        raise HTTPException(404, "Active Directory task not found.")
+
+    try:
+        payload = json.loads(row["payload"] or "{}")
+    except (TypeError, json.JSONDecodeError):
+        payload = {}
+
+    if (
+        row["action"] != "remote_command"
+        or payload.get("connector_action") != CONNECTOR_MARKER
+        or payload.get("operation") not in READ_OPERATIONS
+    ):
+        raise HTTPException(404, "Active Directory task not found.")
+
+    raw = row["result"] or ""
+    try:
+        parsed = json.loads(raw) if raw else None
+    except (TypeError, json.JSONDecodeError):
+        parsed = None
+
+    return {
+        "task_id": row["id"],
+        "device_id": row["device_id"],
+        "device_name": row["device_name"],
+        "operation": payload.get("operation"),
+        "status": row["status"],
+        "result": parsed,
+        "result_text": raw if parsed is None else "",
+        "created_at": row["created_at"],
+        "started_at": row["started_at"],
+        "finished_at": row["finished_at"],
+        "read_only": True,
+    }

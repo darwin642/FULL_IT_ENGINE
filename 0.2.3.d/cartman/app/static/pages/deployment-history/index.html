@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>Cartman | Deployment History</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/modules/deployment-workflows.css">
+<script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+<script src="/static/js/core/module-definitions.js" defer></script>
+<script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+<script src="/static/js/modules/deployment-live.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body data-deployment-page="history">
+<header class="topbar">
+  <div class="brand-area">
+    <a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a>
+  </div>
+  <div class="top-actions">
+    <span id="dw-api-status" class="dw-count">Connecting to Cartman API…</span>
+    <a class="secondary-button" href="/">&#8592; Dashboard</a>
+  </div>
+</header>
+<main class="dw-page">
+
+<div class="dw-header">
+  <div>
+    <div class="dw-eyebrow">CARTMAN WORKSPACE / SOFTWARE &amp; DEPLOYMENT</div>
+    <h1>Deployment History</h1>
+    <p>Review final deployment outcomes reported to Cartman by the task execution flow.</p>
+  </div>
+  <div class="dw-actions">
+    <button class="dw-btn" id="dw-refresh" type="button">Refresh ↻</button>
+    <button class="dw-btn" id="dw-export" type="button">Export CSV ↗</button>
+    <a class="dw-btn dw-btn-primary" href="/pages/software-deployment/">＋ New deployment</a>
+  </div>
+</div>
+
+<div class="dw-notice" id="dw-notice" role="status" aria-live="polite">
+  <span class="dw-notice-icon">i</span>
+  <div><strong id="dw-notice-title">Connecting to Cartman</strong>
+       <p id="dw-notice-message">Loading data from the API…</p></div>
+</div>
+
+
+<section class="dw-stats">
+  <article class="dw-stat"><span class="dw-stat-label">Total jobs</span><strong id="dw-total">—</strong><small>Persisted package tasks</small></article>
+  <article class="dw-stat"><span class="dw-stat-label">Running</span><strong id="dw-running">—</strong><small>Reported by CartmanClient</small></article>
+  <article class="dw-stat"><span class="dw-stat-label">Queued</span><strong id="dw-queued">—</strong><small>Queued or dispatched</small></article>
+  <article class="dw-stat"><span class="dw-stat-label">Failed</span><strong id="dw-failed">—</strong><small>Reported failures</small></article>
+</section>
+
+<section class="dw-panel">
+  <div class="dw-panel-head">
+    <div><div class="dw-eyebrow">LIVE TASK RECORDS</div><h2>Recorded deployment outcomes</h2><p>Only terminal task states are shown here; outcomes come from the persisted task records.</p></div>
+    <span class="dw-count" id="dw-count">Loading records…</span>
+  </div>
+  <div class="dw-filters">
+    <input class="dw-input dw-search" id="dw-search" type="search"
+      placeholder="Search task ID, package, device or status…" aria-label="Search deployment tasks">
+    <select class="dw-select" id="dw-status" aria-label="Filter by status">
+        <option value="all">All outcomes</option>
+        <option value="Succeeded">Succeeded</option>
+        <option value="Failed">Failed</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    <button class="dw-btn" id="dw-reset" type="button">Reset filters</button>
+  </div>
+  <div class="dw-table-wrap" id="dw-table-wrap">
+    <table class="dw-table">
+      <thead><tr><th>Software package</th><th>Target device</th><th>Version</th><th>Started</th><th>Finished</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="dw-rows"></tbody>
+    </table>
+  </div>
+  <div class="dw-empty" id="dw-empty" hidden>
+    <strong>No matching deployment tasks</strong>
+    <p>Change your filters or create a deployment task. This view does not contain seeded demo records.</p>
+  </div>
+  <div class="dw-table-foot"><span>Completed, failed or cancelled tasks</span><span>Read from Cartman API</span></div>
+</section>
+
+<footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+</main>
+<div class="dw-modal-backdrop" id="dw-detail-modal" hidden>
+  <section class="dw-modal" role="dialog" aria-modal="true" aria-labelledby="dw-detail-title">
+    <div class="dw-modal-head">
+      <div><div class="dw-eyebrow">TASK RECORD</div><h2 id="dw-detail-title">Deployment task details</h2></div>
+      <button class="dw-close" data-dw-close="dw-detail-modal" aria-label="Close">×</button>
+    </div>
+    <div class="dw-modal-body" id="dw-detail-body"></div>
+    <div class="dw-modal-foot">
+      <span style="font-size:11px;color:var(--muted,#8b95a7)">Source: Cartman task queue</span>
+      <button class="dw-btn dw-btn-primary" data-dw-close="dw-detail-modal">Done</button>
+    </div>
+  </section>
+</div>
+</body>
+</html>

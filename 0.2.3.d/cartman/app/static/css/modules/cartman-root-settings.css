@@ -1,0 +1,8 @@
+/* CARTMAN_ROOT_SETTINGS_UI_V1 */
+#admin-page-root .cartman-root-zone{margin-top:24px;border:1px solid rgba(190,55,55,.42);border-radius:14px;background:var(--card-background,var(--background-color,transparent));color:var(--text-color,inherit);padding:19px}
+#admin-page-root .cartman-root-zone-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+#admin-page-root .cartman-root-zone-kicker{font-size:10px;font-weight:900;letter-spacing:.13em;color:#c04444}
+#admin-page-root .cartman-root-zone h3{margin:7px 0;color:var(--text-color,inherit);font-size:18px}
+#admin-page-root .cartman-root-zone p{margin:0;color:var(--text-secondary,var(--text-color,inherit));font-size:12px;line-height:1.7;max-width:760px}
+#admin-page-root .cartman-root-kill-btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:9px;background:#a92e36;border:1px solid #a92e36;color:#fff;text-decoration:none;font-size:12px;font-weight:850;white-space:nowrap}
+#admin-page-root .cartman-root-kill-btn:hover{filter:brightness(1.08)}

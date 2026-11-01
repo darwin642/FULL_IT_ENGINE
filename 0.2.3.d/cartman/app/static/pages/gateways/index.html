@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
+  <title>Cartman | Gateways</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/css/modules/vpn-remote-access.css">
+  <script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+  <script src="/static/js/core/module-definitions.js" defer></script>
+  <script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+  <script src="/static/js/modules/vpn-control-plane.js" defer></script>
+<script src="/static/js/modules/vpn-remote-access.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-area"><a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a></div>
+    <div class="top-actions"><a class="secondary-button" href="/">&#8592; Dashboard</a></div>
+  </header>
+  <main class="vpn-workspace" data-vpn-page="gateways" data-vpn-title="Gateways" data-vpn-action="Add gateway" data-vpn-columns="id|endpoint|protocol|peers|latency|status">
+    <section class="vpn-hero">
+      <div class="vpn-hero-copy">
+        <div class="vpn-kicker">VPN & REMOTE ACCESS / INFRASTRUCTURE</div>
+        <h1>⇄ &nbsp;Gateways</h1>
+        <p>Manage gateway configurations and network pools. Live availability, capacity and connection health require the Cartman VPN engine.</p>
+      </div>
+      <div class="vpn-hero-actions">
+        <button class="vpn-btn" type="button" data-vpn-refresh>Refresh view ↻</button>
+        <button class="vpn-btn vpn-btn-primary" type="button" data-vpn-action>Add gateway</button>
+          <button class="vpn-btn" type="button" data-vpn-action="network">Add network</button>
+      </div>
+    </section>
+
+    <div class="vpn-preview-banner"><span class="vpn-preview-dot"></span><span><strong>CONTROL PLANE CONNECTED</strong> &nbsp; Gateway and network configurations are loaded from the Cartman API. Live VPN telemetry and firewall enforcement are not implemented yet.</span></div>
+
+    <section class="vpn-metrics" data-vpn-stats aria-label="Gateways metrics">
+      <article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">REGISTERED</span><span class="vpn-metric-icon">◉</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Saved configuration records</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">LIVE ONLINE</span><span class="vpn-metric-icon">↗</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Requires live engine telemetry</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">UNVERIFIED</span><span class="vpn-metric-icon">◇</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Not confirmed by the engine</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">AVG. LATENCY</span><span class="vpn-metric-icon">⌁</span></div><div class="vpn-metric-value" data-vpn-metric>—</div><div class="vpn-metric-note">Not measured yet</div></article>
+    </section>
+
+    <section class="vpn-layout">
+      <div class="vpn-panel">
+        <div class="vpn-panel-head">
+          <div><h2>Registered gateways</h2><p>Search and inspect saved gateway configurations. Live health and latency are not yet available.</p></div>
+          <div class="vpn-panel-tools">
+            <input class="vpn-search" type="search" data-vpn-search placeholder="Search records..." aria-label="Search Gateways">
+            <select class="vpn-select" data-vpn-filter aria-label="Filter records">
+              <option value="all">All statuses</option>
+              <option value="active">Healthy / active</option>
+              <option value="attention">Needs attention</option>
+              <option value="offline">Offline / denied</option>
+            </select>
+          </div>
+        </div>
+        <div class="vpn-table-wrap">
+          <table class="vpn-table">
+            <thead><tr><th>Gateway</th><th>Endpoint / region</th><th>Protocol</th><th>Assigned peers</th><th>Latency</th><th>Status</th><th>DETAILS</th></tr></thead>
+            <tbody data-vpn-tbody></tbody>
+          </table>
+          <div class="vpn-empty" data-vpn-empty hidden><strong>No matching records</strong>Try a different search term or status filter.</div>
+        </div>
+        <div class="vpn-table-foot"><span data-vpn-count>Loading records…</span><span>Saved configuration records · live tunnel telemetry unavailable</span></div>
+      </div>
+    </section>
+
+    <section class="vpn-shortcuts" aria-label="VPN workspace navigation"><a class="vpn-shortcut" href="/pages/remote/"><span class="vpn-shortcut-icon">↗</span><span><strong>VPN Sessions</strong><small>Connected users and devices</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/vpn-overview/"><span class="vpn-shortcut-icon">⌁</span><span><strong>VPN Overview</strong><small>VPN health and activity</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/peers-clients/"><span class="vpn-shortcut-icon">♙</span><span><strong>Peers & Clients</strong><small>Devices and peer addresses</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/access-policies/"><span class="vpn-shortcut-icon">◈</span><span><strong>Access Policies</strong><small>Rules and authorization</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/vpn-audit-logs/"><span class="vpn-shortcut-icon">≡</span><span><strong>VPN Audit Logs</strong><small>Security event history</small></span><span class="vpn-shortcut-arrow">↗</span></a></section>
+    <p class="vpn-footer-note">Cartman Infrastructure Management · Gateway and network configurations are stored through the Cartman API. VPN engine health, tunnel latency and firewall enforcement are not implemented.</p>
+    <div data-vpn-modal-host></div>
+  
+    <section aria-labelledby="vpn-network-pools-title"
+      style="margin-top:24px;padding:20px;border:1px solid var(--border,#293449);
+      border-radius:12px;background:var(--surface,#111827);">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        flex-wrap:wrap;gap:12px;margin-bottom:8px;">
+        <div>
+          <h2 id="vpn-network-pools-title"
+            style="font-size:16px;font-weight:650;margin:0 0 6px;color:var(--text-primary,#eef2ff);">
+            Network Pools
+          </h2>
+          <p style="margin:0;font-size:12px;line-height:1.6;color:var(--text-muted,#9aa7bb);">
+            Departman ve karantina ağları. Bunlar kayıtlı ağ tanımlarıdır; kendiliğinden trafik yönlendirmezler.
+          </p>
+        </div>
+        <span data-vpn-networks-count
+          style="font-size:12px;color:var(--text-muted,#9aa7bb);">Loading networks…</span>
+      </div>
+      <div style="width:100%;overflow-x:auto;margin-top:16px;">
+        <table style="width:100%;min-width:620px;border-collapse:collapse;text-align:left;">
+          <thead>
+            <tr>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">NETWORK</th>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">CIDR</th>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">GATEWAY IP</th>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">TYPE</th>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">DEPARTMENT</th>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">STATUS</th>
+              <th style="padding:12px 10px;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border,#293449);">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody data-vpn-networks-tbody>
+            <tr><td colspan="7" style="padding:18px 10px;font-size:12px;">Loading networks…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+</main>
+  <footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+</body>
+</html>

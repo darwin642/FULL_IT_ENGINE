@@ -1,0 +1,672 @@
+
+/* Cartman VPN & Remote Access — isolated module styles */
+.vpn-workspace{--vpn-line:rgba(148,163,184,.16);--vpn-muted:var(--text-muted,#8b98ad);max-width:1600px;margin:0 auto;padding:24px 24px 34px}
+.vpn-workspace *{box-sizing:border-box}
+.vpn-workspace .vpn-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin:2px 0 24px}
+.vpn-workspace .vpn-hero-copy{min-width:0}
+.vpn-workspace .vpn-kicker{display:flex;align-items:center;gap:8px;color:#9a8cff;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;margin-bottom:10px}
+.vpn-workspace .vpn-kicker:before{content:"";width:20px;height:2px;background:#8b7cff;border-radius:4px}
+.vpn-workspace .vpn-hero h1{font-size:clamp(26px,3vw,35px);line-height:1.15;letter-spacing:-.04em;margin:0 0 9px;color:var(--text-primary,#eef2ff)}
+.vpn-workspace .vpn-hero p{max-width:720px;color:var(--vpn-muted);font-size:14px;line-height:1.7;margin:0}
+.vpn-workspace .vpn-hero-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.vpn-workspace .vpn-btn{appearance:none;border:1px solid var(--vpn-line);background:rgba(148,163,184,.07);color:var(--text-primary,#eef2ff);border-radius:10px;padding:10px 14px;font-size:12px;font-weight:750;cursor:pointer;transition:background .18s,border-color .18s,transform .18s;white-space:nowrap}
+.vpn-workspace .vpn-btn:hover{background:rgba(139,124,255,.14);border-color:rgba(139,124,255,.45)}
+.vpn-workspace .vpn-btn:active{transform:translateY(1px)}
+.vpn-workspace .vpn-btn-primary{background:linear-gradient(135deg,#7868ed,#6251ce);border-color:transparent;color:#fff;box-shadow:0 7px 20px rgba(98,81,206,.18)}
+.vpn-workspace .vpn-btn-primary:hover{background:linear-gradient(135deg,#8879fa,#6e5ce0)}
+.vpn-workspace .vpn-preview-banner{display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:20px;border:1px solid rgba(139,124,255,.19);border-radius:12px;background:linear-gradient(100deg,rgba(139,124,255,.09),rgba(34,211,238,.025));color:var(--vpn-muted);font-size:11px;line-height:1.6}
+.vpn-workspace .vpn-preview-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#a78bfa;box-shadow:0 0 0 4px rgba(167,139,250,.12)}
+.vpn-workspace .vpn-preview-banner strong{color:var(--text-primary,#eef2ff);font-weight:800}
+.vpn-workspace .vpn-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:23px}
+.vpn-workspace .vpn-metric{position:relative;min-width:0;overflow:hidden;padding:18px 18px 16px;border:1px solid var(--vpn-line);border-radius:15px;background:var(--card-bg,rgba(15,23,42,.42))}
+.vpn-workspace .vpn-metric:after{content:"";position:absolute;width:85px;height:85px;right:-35px;top:-38px;border-radius:50%;background:rgba(139,124,255,.07);pointer-events:none}
+.vpn-workspace .vpn-metric-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:15px}
+.vpn-workspace .vpn-metric-label{font-size:10px;letter-spacing:.085em;font-weight:800;color:var(--vpn-muted);line-height:1.5}
+.vpn-workspace .vpn-metric-icon{display:grid;place-items:center;width:31px;height:31px;border:1px solid var(--vpn-line);border-radius:9px;background:rgba(139,124,255,.08);color:#a99cff;font-size:15px}
+.vpn-workspace .vpn-metric-value{font-size:28px;letter-spacing:-.05em;line-height:1.1;font-weight:800;color:var(--text-primary,#eef2ff);overflow-wrap:anywhere}
+.vpn-workspace .vpn-metric-note{font-size:11px;color:var(--vpn-muted);margin-top:8px;line-height:1.5}
+.vpn-workspace .vpn-metric-note .vpn-note-accent{color:#6ee7b7}
+.vpn-workspace .vpn-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.vpn-workspace .vpn-panel{min-width:0;border:1px solid var(--vpn-line);border-radius:15px;overflow:hidden;background:var(--card-bg,rgba(15,23,42,.36))}
+.vpn-workspace .vpn-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:19px 20px;border-bottom:1px solid var(--vpn-line)}
+.vpn-workspace .vpn-panel-head h2{font-size:15px;letter-spacing:-.02em;margin:0 0 5px;color:var(--text-primary,#eef2ff)}
+.vpn-workspace .vpn-panel-head p{font-size:11px;line-height:1.6;margin:0;color:var(--vpn-muted)}
+.vpn-workspace .vpn-panel-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vpn-workspace .vpn-search{width:min(270px,100%);min-height:38px;border:1px solid var(--vpn-line);border-radius:9px;padding:9px 12px;background:var(--input-bg,rgba(2,6,23,.26));color:var(--text-primary,#eef2ff);font:inherit;font-size:12px;outline:none}
+.vpn-workspace .vpn-search:focus,.vpn-workspace .vpn-select:focus{border-color:rgba(139,124,255,.75);box-shadow:0 0 0 3px rgba(139,124,255,.1)}
+.vpn-workspace .vpn-select{min-height:38px;max-width:180px;border:1px solid var(--vpn-line);border-radius:9px;padding:8px 10px;background:var(--input-bg,rgba(2,6,23,.26));color:var(--text-primary,#eef2ff);font:inherit;font-size:12px;outline:none}
+.vpn-workspace .vpn-select option{background:#111827;color:#f1f5f9}
+.vpn-workspace .vpn-table-wrap{width:100%;overflow:auto}
+.vpn-workspace .vpn-table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap}
+.vpn-workspace .vpn-table th{padding:12px 17px;background:rgba(148,163,184,.035);border-bottom:1px solid var(--vpn-line);color:var(--vpn-muted);font-size:9px;letter-spacing:.09em;font-weight:850;text-transform:uppercase}
+.vpn-workspace .vpn-table td{padding:15px 17px;border-bottom:1px solid var(--vpn-line);font-size:12px;color:var(--text-secondary,var(--text-primary,#e2e8f0));vertical-align:middle}
+.vpn-workspace .vpn-table tbody tr:last-child td{border-bottom:0}
+.vpn-workspace .vpn-table tbody tr{transition:background .15s}
+.vpn-workspace .vpn-table tbody tr:hover{background:rgba(139,124,255,.045)}
+.vpn-workspace .vpn-primary-cell{display:block;color:var(--text-primary,#eef2ff);font-weight:750;font-size:12px}
+.vpn-workspace .vpn-secondary-cell{display:block;color:var(--vpn-muted);font-size:10px;margin-top:4px}
+.vpn-workspace .vpn-status{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--vpn-line);border-radius:999px;font-size:10px;font-weight:800}
+.vpn-workspace .vpn-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.vpn-workspace .vpn-status.is-online,.vpn-workspace .vpn-status.is-active,.vpn-workspace .vpn-status.is-allowed,.vpn-workspace .vpn-status.is-success,.vpn-workspace .vpn-status.is-enabled{color:#6ee7b7;background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.18)}
+.vpn-workspace .vpn-status.is-pending,.vpn-workspace .vpn-status.is-warning,.vpn-workspace .vpn-status.is-review,.vpn-workspace .vpn-status.is-degraded{color:#fbbf24;background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2)}
+.vpn-workspace .vpn-status.is-offline,.vpn-workspace .vpn-status.is-denied,.vpn-workspace .vpn-status.is-blocked,.vpn-workspace .vpn-status.is-failed{color:#fda4af;background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.2)}
+.vpn-workspace .vpn-status.is-neutral{color:#a5b4fc;background:rgba(129,140,248,.08)}
+.vpn-workspace .vpn-row-action{border:0;background:transparent;color:#a99cff;font-size:11px;font-weight:800;cursor:pointer;padding:5px}
+.vpn-workspace .vpn-row-action:hover{color:#c4b5fd;text-decoration:underline}
+.vpn-workspace .vpn-table-foot{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 18px;border-top:1px solid var(--vpn-line);color:var(--vpn-muted);font-size:10px}
+.vpn-workspace .vpn-empty{padding:35px 18px;text-align:center;color:var(--vpn-muted);font-size:12px}
+.vpn-workspace .vpn-empty strong{display:block;margin-bottom:6px;color:var(--text-primary,#eef2ff);font-size:13px}
+.vpn-workspace .vpn-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.vpn-workspace .vpn-shortcut{display:flex;align-items:center;gap:12px;padding:15px;border:1px solid var(--vpn-line);border-radius:12px;background:var(--card-bg,rgba(15,23,42,.26));text-decoration:none;color:var(--text-primary,#eef2ff);transition:border-color .15s,transform .15s}
+.vpn-workspace .vpn-shortcut:hover{border-color:rgba(139,124,255,.45);transform:translateY(-1px)}
+.vpn-workspace .vpn-shortcut-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:rgba(139,124,255,.1);color:#b4a8ff;font-size:16px}
+.vpn-workspace .vpn-shortcut strong{display:block;font-size:12px;margin-bottom:4px}
+.vpn-workspace .vpn-shortcut small{display:block;color:var(--vpn-muted);font-size:10px;line-height:1.5}
+.vpn-workspace .vpn-shortcut-arrow{margin-left:auto;color:var(--vpn-muted)}
+.vpn-workspace .vpn-modal-backdrop{position:fixed;z-index:9999;inset:0;display:grid;place-items:center;padding:18px;background:rgba(2,6,23,.72);backdrop-filter:blur(7px)}
+.vpn-workspace .vpn-modal{width:min(520px,100%);max-height:min(85vh,760px);overflow:auto;border:1px solid rgba(148,163,184,.24);border-radius:17px;background:var(--modal-bg,#101827);box-shadow:0 24px 80px rgba(0,0,0,.38)}
+.vpn-workspace .vpn-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px;border-bottom:1px solid var(--vpn-line)}
+.vpn-workspace .vpn-modal-head h3{margin:0 0 5px;font-size:17px;color:var(--text-primary,#eef2ff)}
+.vpn-workspace .vpn-modal-head p{margin:0;color:var(--vpn-muted);font-size:11px;line-height:1.6}
+.vpn-workspace .vpn-modal-close{border:0;background:transparent;color:var(--vpn-muted);font-size:22px;cursor:pointer}
+.vpn-workspace .vpn-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px}
+.vpn-workspace .vpn-field{display:grid;gap:7px;min-width:0}
+.vpn-workspace .vpn-field-full{grid-column:1/-1}
+.vpn-workspace .vpn-field label{font-size:11px;color:var(--vpn-muted);font-weight:750}
+.vpn-workspace .vpn-field input,.vpn-workspace .vpn-field select,.vpn-workspace .vpn-field textarea{width:100%;min-width:0;border:1px solid var(--vpn-line);border-radius:9px;background:var(--input-bg,rgba(2,6,23,.3));color:var(--text-primary,#eef2ff);padding:10px 11px;font:inherit;font-size:12px;outline:none}
+.vpn-workspace .vpn-field input:focus,.vpn-workspace .vpn-field select:focus,.vpn-workspace .vpn-field textarea:focus{border-color:#8b7cff}
+.vpn-workspace .vpn-field select option{background:#111827;color:#f1f5f9}
+.vpn-workspace .vpn-modal-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:9px;padding-top:5px}
+.vpn-workspace .vpn-toast{position:fixed;z-index:10000;right:24px;bottom:24px;max-width:min(400px,calc(100vw - 32px));padding:13px 16px;border:1px solid rgba(110,231,183,.25);border-radius:11px;background:#10251f;color:#d1fae5;font-size:12px;box-shadow:0 10px 35px rgba(0,0,0,.25)}
+.vpn-workspace [hidden]{display:none!important}
+.vpn-workspace .vpn-footer-note{margin-top:20px;color:var(--vpn-muted);font-size:10px;line-height:1.7}
+body.light-theme .vpn-workspace .vpn-metric,body.light-theme .vpn-workspace .vpn-panel,body.light-theme .vpn-workspace .vpn-shortcut{background:rgba(255,255,255,.76);border-color:rgba(100,116,139,.2)}
+body.light-theme .vpn-workspace .vpn-hero h1,body.light-theme .vpn-workspace .vpn-metric-value,body.light-theme .vpn-workspace .vpn-panel-head h2,body.light-theme .vpn-workspace .vpn-primary-cell,body.light-theme .vpn-workspace .vpn-preview-banner strong,body.light-theme .vpn-workspace .vpn-shortcut{color:#172033}
+body.light-theme .vpn-workspace .vpn-table th{background:rgba(100,116,139,.055)}
+body.light-theme .vpn-workspace .vpn-table td{color:#334155}
+body.light-theme .vpn-workspace .vpn-search,body.light-theme .vpn-workspace .vpn-select,body.light-theme .vpn-workspace .vpn-field input,body.light-theme .vpn-workspace .vpn-field select,body.light-theme .vpn-workspace .vpn-field textarea{background:#fff;color:#172033}
+body.light-theme .vpn-workspace .vpn-modal{background:#fff}
+body.light-theme .vpn-workspace .vpn-modal-head h3{color:#172033}
+@media(max-width:1000px){.vpn-workspace .vpn-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.vpn-workspace .vpn-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}.vpn-workspace .vpn-hero{flex-direction:column}.vpn-workspace .vpn-hero-actions{justify-content:flex-start}}
+@media(max-width:620px){.vpn-workspace{padding:18px 14px 26px}.vpn-workspace .vpn-metrics{gap:9px}.vpn-workspace .vpn-metric{padding:14px}.vpn-workspace .vpn-metric-value{font-size:24px}.vpn-workspace .vpn-panel-head{padding:15px;flex-direction:column}.vpn-workspace .vpn-panel-tools{width:100%}.vpn-workspace .vpn-search{width:100%;flex:1}.vpn-workspace .vpn-shortcuts{grid-template-columns:1fr}.vpn-workspace .vpn-form{grid-template-columns:1fr}.vpn-workspace .vpn-field-full,.vpn-workspace .vpn-modal-actions{grid-column:1}.vpn-workspace .vpn-table th,.vpn-workspace .vpn-table td{padding:12px}.vpn-workspace .vpn-hero-actions{width:100%}}
+
+/* CARTMAN_SITE_TO_SITE_COHESIVE_UI_V1 */
+
+/* Toolbar: doğru workspace sınıfları */
+[data-site-to-site] .workspace-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 22px;
+}
+
+[data-site-to-site] .workspace-toolbar .workspace-search {
+    box-sizing: border-box;
+    flex: 1 1 240px;
+    min-width: 180px;
+    min-height: 42px;
+    padding: 10px 13px;
+    border-radius: 9px;
+}
+
+[data-site-to-site] .workspace-toolbar [data-site-refresh],
+[data-site-to-site] .workspace-toolbar [data-site-create] {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 10px 15px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.25;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+[data-site-to-site] .workspace-toolbar [data-site-refresh] {
+    border: 1px solid var(--border-color, rgba(148,163,184,.3));
+    background: var(--panel-bg, rgba(127,127,127,.08));
+    color: var(--text-primary, inherit);
+}
+
+[data-site-to-site] .workspace-toolbar [data-site-create] {
+    border: 1px solid var(--accent-color, #4f46e5);
+    background: var(--accent-color, #4f46e5);
+    color: #fff;
+}
+
+[data-site-to-site] .workspace-toolbar [data-site-refresh]:hover:not(:disabled),
+[data-site-to-site] .workspace-toolbar [data-site-create]:hover:not(:disabled) {
+    filter: brightness(1.07);
+    box-shadow: 0 3px 10px rgba(0,0,0,.1);
+}
+
+[data-site-to-site] .workspace-toolbar [data-site-refresh]:focus-visible,
+[data-site-to-site] .workspace-toolbar [data-site-create]:focus-visible {
+    outline: 3px solid rgba(59,130,246,.4);
+    outline-offset: 2px;
+}
+
+[data-site-to-site] .workspace-toolbar [data-site-refresh]:disabled,
+[data-site-to-site] .workspace-toolbar [data-site-create]:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+[data-site-to-site] [data-site-api-state] {
+    flex: 1 1 100%;
+    min-width: 0;
+    margin-top: 2px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+/* Table: doğru workspace-table sınıfları */
+[data-site-to-site] .workspace-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border-radius: 10px;
+}
+
+[data-site-to-site] .workspace-table {
+    width: 100%;
+    min-width: 1080px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    white-space: normal;
+    text-align: left;
+}
+
+[data-site-to-site] .workspace-table th,
+[data-site-to-site] .workspace-table td {
+    box-sizing: border-box;
+    padding: 13px 12px;
+    vertical-align: middle;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+
+[data-site-to-site] .workspace-table th:nth-child(1),
+[data-site-to-site] .workspace-table td:nth-child(1) { width: 205px; }
+
+[data-site-to-site] .workspace-table th:nth-child(2),
+[data-site-to-site] .workspace-table td:nth-child(2) { width: 145px; }
+
+[data-site-to-site] .workspace-table th:nth-child(3),
+[data-site-to-site] .workspace-table td:nth-child(3) { width: 145px; }
+
+[data-site-to-site] .workspace-table th:nth-child(4),
+[data-site-to-site] .workspace-table td:nth-child(4) { width: 125px; }
+
+[data-site-to-site] .workspace-table th:nth-child(5),
+[data-site-to-site] .workspace-table td:nth-child(5) { width: 125px; }
+
+[data-site-to-site] .workspace-table th:nth-child(6),
+[data-site-to-site] .workspace-table td:nth-child(6) { width: 155px; }
+
+[data-site-to-site] .workspace-table th:nth-child(7),
+[data-site-to-site] .workspace-table td:nth-child(7) { width: 180px; }
+
+[data-site-to-site] .site-s2s-connection-name {
+    display: block;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+[data-site-to-site] .site-s2s-connection-id {
+    display: block;
+    margin-top: 5px;
+    color: var(--text-muted, #9aa7bb);
+    font-size: 10px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+[data-site-to-site] .site-s2s-status-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+}
+
+[data-site-to-site] .site-s2s-status-stack .vpn-status {
+    display: inline-flex;
+    max-width: 100%;
+    white-space: normal;
+}
+
+[data-site-to-site] .site-s2s-status-note {
+    color: var(--text-muted, #9aa7bb);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* Actions: gerçek boşluklu flex container */
+[data-site-to-site] .site-s2s-row-actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    flex-flow: row wrap !important;
+    gap: 8px !important;
+}
+
+[data-site-to-site] .site-s2s-row-actions button[data-site-edit],
+[data-site-to-site] .site-s2s-row-actions button[data-site-delete] {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    min-height: 36px;
+    margin: 0 !important;
+    padding: 8px 11px;
+    border: 1px solid var(--border-color, rgba(148,163,184,.3));
+    border-radius: 8px;
+    background: var(--panel-bg, rgba(127,127,127,.08));
+    color: var(--text-primary, inherit);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+[data-site-to-site] .site-s2s-row-actions button[data-site-edit]:hover {
+    border-color: var(--accent-color, #4f46e5);
+}
+
+[data-site-to-site] .site-s2s-row-actions button[data-site-delete] {
+    color: var(--red, #dc2626);
+}
+
+[data-site-to-site] .site-s2s-row-actions button[data-site-delete]:hover {
+    border-color: var(--red, #dc2626);
+    background: rgba(220,38,38,.07);
+}
+
+[data-site-to-site] .site-s2s-row-actions button:focus-visible {
+    outline: 3px solid rgba(59,130,246,.38);
+    outline-offset: 2px;
+}
+
+/* Create/edit modal */
+[data-site-to-site] .vpn-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: clamp(12px, 3vw, 28px);
+    background: rgba(8,12,24,.72);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+}
+
+[data-site-to-site] .vpn-modal {
+    box-sizing: border-box;
+    width: min(720px, 100%);
+    max-height: min(88vh, 820px);
+    max-height: min(88dvh, 820px);
+    margin: auto;
+    padding: clamp(18px, 3vw, 28px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--border-color, rgba(148,163,184,.28));
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.3);
+}
+
+[data-site-to-site] .vpn-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+[data-site-to-site] .vpn-modal-head h3 {
+    margin: 0;
+    font-size: clamp(19px, 2.4vw, 23px);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -.02em;
+}
+
+[data-site-to-site] .vpn-modal-head p {
+    margin: 8px 0 0;
+    color: var(--text-muted, #9aa7bb);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+[data-site-to-site] .vpn-modal-close {
+    display: inline-flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--border-color, rgba(148,163,184,.28));
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-primary, inherit);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+[data-site-to-site] .vpn-modal .vpn-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    align-items: start;
+    gap: 16px;
+    margin: 0;
+}
+
+[data-site-to-site] .vpn-modal .vpn-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    margin: 0;
+}
+
+[data-site-to-site] .vpn-modal .vpn-field label {
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+[data-site-to-site] .vpn-modal .vpn-field input,
+[data-site-to-site] .vpn-modal .vpn-field select {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, rgba(148,163,184,.35));
+    border-radius: 9px;
+    background: var(--input-bg, rgba(127,127,127,.08));
+    color: var(--text-primary, inherit);
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+[data-site-to-site] .vpn-modal .vpn-field input:focus,
+[data-site-to-site] .vpn-modal .vpn-field select:focus {
+    outline: none;
+    border-color: var(--accent-color, #4f46e5);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.16);
+}
+
+[data-site-to-site] .vpn-modal .vpn-form > .vpn-field:nth-child(1),
+[data-site-to-site] .vpn-modal .vpn-form > .vpn-field:nth-child(6),
+[data-site-to-site] .vpn-modal .vpn-form > .vpn-field-full,
+[data-site-to-site] .vpn-modal .vpn-form > .vpn-modal-actions {
+    grid-column: 1 / -1;
+}
+
+[data-site-to-site] .vpn-modal .vpn-form > .vpn-field-full {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color, rgba(148,163,184,.22));
+    border-radius: 9px;
+    background: rgba(127,127,127,.06);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+[data-site-to-site] .vpn-modal .vpn-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    grid-column: 1 / -1;
+    margin: 2px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color, rgba(148,163,184,.22));
+}
+
+[data-site-to-site] .vpn-modal .vpn-modal-actions .vpn-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 110px;
+    min-height: 42px;
+    margin: 0;
+    padding: 10px 16px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+[data-site-to-site] .vpn-modal .vpn-modal-actions .vpn-btn-primary {
+    border: 1px solid var(--accent-color, #4f46e5);
+    background: var(--accent-color, #4f46e5);
+    color: #fff;
+}
+
+@media (max-width: 640px) {
+    [data-site-to-site] .workspace-toolbar { gap: 8px; }
+
+    [data-site-to-site] .workspace-toolbar .workspace-search {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    [data-site-to-site] .workspace-toolbar [data-site-refresh],
+    [data-site-to-site] .workspace-toolbar [data-site-create] {
+        flex: 1 1 auto;
+    }
+
+    [data-site-to-site] .workspace-table { min-width: 1050px; }
+
+    [data-site-to-site] .site-s2s-row-actions { gap: 7px !important; }
+
+    [data-site-to-site] .site-s2s-row-actions button[data-site-edit],
+    [data-site-to-site] .site-s2s-row-actions button[data-site-delete] {
+        min-width: 72px;
+        min-height: 38px;
+    }
+
+    [data-site-to-site] .vpn-modal-backdrop { padding: 10px; }
+
+    [data-site-to-site] .vpn-modal {
+        width: 100%;
+        max-height: 92vh;
+        max-height: 92dvh;
+        padding: 18px;
+        border-radius: 13px;
+    }
+
+    [data-site-to-site] .vpn-modal .vpn-form {
+        grid-template-columns: minmax(0,1fr);
+        gap: 14px;
+    }
+
+    [data-site-to-site] .vpn-modal .vpn-form > .vpn-field,
+    [data-site-to-site] .vpn-modal .vpn-form > .vpn-field-full,
+    [data-site-to-site] .vpn-modal .vpn-form > .vpn-modal-actions {
+        grid-column: 1 / -1;
+    }
+
+    [data-site-to-site] .vpn-modal .vpn-modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    [data-site-to-site] .vpn-modal .vpn-modal-actions .vpn-btn {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+/* CARTMAN_SITE_TO_SITE_MOBILE_CARDS_V1 */
+
+/* Mobile toolbar: search on top, two equal buttons below. */
+@media (max-width: 640px) {
+    [data-site-to-site] .workspace-toolbar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 9px;
+    }
+
+    [data-site-to-site] .workspace-toolbar .workspace-search,
+    [data-site-to-site] .workspace-toolbar [data-site-api-state] {
+        grid-column: 1 / -1;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+    }
+
+    [data-site-to-site] .workspace-toolbar [data-site-refresh],
+    [data-site-to-site] .workspace-toolbar [data-site-create] {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        padding-inline: 8px;
+    }
+
+    /* Replace the horizontally scrolling desktop table with cards. */
+    [data-site-to-site] .workspace-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow: visible;
+    }
+
+    [data-site-to-site] .workspace-table {
+        display: block;
+        width: 100%;
+        min-width: 0 !important;
+        table-layout: auto;
+        border-collapse: separate;
+        border-spacing: 0;
+        white-space: normal;
+    }
+
+    [data-site-to-site] .workspace-table thead {
+        display: none !important;
+    }
+
+    [data-site-to-site] .workspace-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    [data-site-to-site] .workspace-table tbody tr {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0 0 12px;
+        overflow: hidden;
+        border: 1px solid var(--border-color, rgba(148,163,184,.25));
+        border-radius: 12px;
+        background: var(--panel-bg, rgba(127,127,127,.045));
+    }
+
+    [data-site-to-site] .workspace-table tbody td {
+        display: grid;
+        grid-template-columns: minmax(90px, 32%) minmax(0, 1fr);
+        align-items: start;
+        gap: 10px;
+        box-sizing: border-box;
+        width: 100% !important;
+        padding: 11px 12px !important;
+        border-bottom: 1px solid var(--border-color, rgba(148,163,184,.16));
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    [data-site-to-site] .workspace-table tbody td::before {
+        display: block;
+        padding-top: 2px;
+        color: var(--text-muted, #9aa7bb);
+        font-size: 10px;
+        font-weight: 750;
+        line-height: 1.45;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(1)::before {
+        content: "Connection";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(2)::before {
+        content: "Gateway A";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(3)::before {
+        content: "Gateway B";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(4)::before {
+        content: "Local subnet";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(5)::before {
+        content: "Remote subnet";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(6)::before {
+        content: "Status";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:nth-child(7)::before {
+        content: "Actions";
+    }
+
+    [data-site-to-site] .workspace-table tbody td:last-child {
+        border-bottom: 0;
+    }
+
+    [data-site-to-site] .site-s2s-connection-cell,
+    [data-site-to-site] .site-s2s-status-cell {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    [data-site-to-site] .site-s2s-connection-id {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    [data-site-to-site] .site-s2s-row-actions {
+        display: flex !important;
+        flex-flow: row wrap !important;
+        align-items: center;
+        gap: 8px !important;
+        min-width: 0;
+    }
+
+    [data-site-to-site] .site-s2s-row-actions button[data-site-edit],
+    [data-site-to-site] .site-s2s-row-actions button[data-site-delete] {
+        flex: 0 1 auto;
+        min-width: 72px;
+        min-height: 38px;
+        padding: 8px 10px;
+    }
+}
+

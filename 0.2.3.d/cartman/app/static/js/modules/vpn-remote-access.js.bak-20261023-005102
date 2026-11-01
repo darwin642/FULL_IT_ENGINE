@@ -1,0 +1,206 @@
+
+(() => {
+  "use strict";
+  const root = document.querySelector("[data-vpn-page]");
+  if (!root) return;
+  const page = root.dataset.vpnPage;
+  const $ = (s, r = root) => r.querySelector(s);
+  const $$ = (s, r = root) => [...r.querySelectorAll(s)];
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[ch]);
+  const now = () => new Date().toLocaleString(undefined, {dateStyle:"medium",timeStyle:"short"});
+  const statusClass = value => {
+    const v = String(value || "").toLowerCase();
+    if (/online|active|connected|allowed|success|enabled|healthy|approved/.test(v)) return "is-online";
+    if (/pending|review|warning|degraded/.test(v)) return "is-pending";
+    if (/offline|denied|blocked|failed|error/.test(v)) return "is-offline";
+    return "is-neutral";
+  };
+  const pill = value => `<span class="vpn-status ${statusClass(value)}">${esc(value)}</span>`;
+  const demo = {
+    remote: [
+      {id:"SES-2048",name:"j.smith",sub:"MacBook Pro · managed",source:"10.20.4.18",gateway:"eu-west-gw01",activity:"2 min ago",status:"Connected",detail:"Remote user session",extra:"MFA verified · Demo record"},
+      {id:"SES-2047",name:"a.demir",sub:"Windows 11 · managed",source:"10.20.8.42",gateway:"tr-izmir-gw01",activity:"8 min ago",status:"Connected",detail:"Remote user session",extra:"Device compliant · Demo record"},
+      {id:"SES-2046",name:"svc.support",sub:"Support workstation",source:"10.20.3.90",gateway:"eu-west-gw01",activity:"24 min ago",status:"Pending review",detail:"Session awaiting approval",extra:"Approval not connected to a real workflow"},
+      {id:"SES-2045",name:"m.kaya",sub:"Linux workstation",source:"10.20.9.12",gateway:"tr-izmir-gw01",activity:"1 hour ago",status:"Disconnected",detail:"Previous session",extra:"No live session telemetry"}
+    ],
+    "vpn-overview": [
+      {id:"TUN-1001",name:"eu-west-tunnel",sub:"WireGuard · site edge",source:"WireGuard",gateway:"eu-west-gw01",activity:"2 min ago",status:"Healthy",detail:"Demo tunnel summary",extra:"Metrics are illustrative only"},
+      {id:"TUN-1002",name:"tr-izmir-tunnel",sub:"IPsec · regional edge",source:"IPsec / IKEv2",gateway:"tr-izmir-gw01",activity:"5 min ago",status:"Healthy",detail:"Demo tunnel summary",extra:"No real tunnel health checks"},
+      {id:"TUN-1003",name:"backup-tunnel",sub:"IPsec · backup path",source:"IPsec / IKEv2",gateway:"tr-ankara-gw01",activity:"18 min ago",status:"Degraded",detail:"Demo tunnel summary",extra:"Example warning, not a detected incident"},
+      {id:"TUN-1004",name:"lab-tunnel",sub:"WireGuard · test lab",source:"WireGuard",gateway:"lab-gw01",activity:"1 hour ago",status:"Offline",detail:"Demo tunnel summary",extra:"Example offline state"}
+    ],
+    gateways: [
+      {id:"GW-001",name:"eu-west-gw01",sub:"Primary gateway",endpoint:"vpn-eu.example.test",region:"EU West",protocol:"WireGuard",peers:"42 / 100",latency:"18 ms",status:"Online",detail:"Illustrative gateway inventory",extra:"No live endpoint or monitoring"},
+      {id:"GW-002",name:"tr-izmir-gw01",sub:"Regional gateway",endpoint:"vpn-iz.example.test",region:"Türkiye · İzmir",protocol:"IPsec / IKEv2",peers:"27 / 80",latency:"24 ms",status:"Online",detail:"Illustrative gateway inventory",extra:"No live endpoint or monitoring"},
+      {id:"GW-003",name:"tr-ankara-gw01",sub:"Backup gateway",endpoint:"vpn-ank.example.test",region:"Türkiye · Ankara",protocol:"IPsec / IKEv2",peers:"8 / 80",latency:"68 ms",status:"Degraded",detail:"Illustrative gateway inventory",extra:"Example degraded state"},
+      {id:"GW-004",name:"lab-gw01",sub:"Test environment",endpoint:"vpn-lab.example.test",region:"Development lab",protocol:"WireGuard",peers:"0 / 20",latency:"—",status:"Offline",detail:"Illustrative gateway inventory",extra:"Example offline state"}
+    ],
+    "peers-clients": [
+      {id:"PEER-041",name:"MAC-ENG-014",sub:"Engineering laptop",user:"j.smith",platform:"macOS",ip:"10.90.0.14",gateway:"eu-west-gw01",status:"Connected",detail:"Demo client inventory",extra:"Device posture not actually checked"},
+      {id:"PEER-042",name:"WIN-FIN-008",sub:"Finance workstation",user:"a.demir",platform:"Windows 11",ip:"10.90.0.28",gateway:"tr-izmir-gw01",status:"Connected",detail:"Demo client inventory",extra:"Device posture not actually checked"},
+      {id:"PEER-043",name:"LIN-OPS-003",sub:"Operations workstation",user:"m.kaya",platform:"Linux",ip:"10.90.0.33",gateway:"eu-west-gw01",status:"Offline",detail:"Demo client inventory",extra:"Last seen time is illustrative"},
+      {id:"PEER-044",name:"SUPPORT-VM-02",sub:"Support virtual machine",user:"svc.support",platform:"Linux",ip:"10.90.0.44",gateway:"tr-ankara-gw01",status:"Pending",detail:"Demo client inventory",extra:"Enrollment is not connected"}
+    ],
+    "access-policies": [
+      {id:"POL-001",name:"Engineering → Git",sub:"Engineering network access",path:"Engineering → Git service",services:"HTTPS · TCP/443",priority:"100",assigned:"Engineering group",status:"Enabled",detail:"Allow approved engineering users to reach Git services",extra:"Example rule only"},
+      {id:"POL-002",name:"IT → Management",sub:"Privileged administration",path:"IT admins → Management subnet",services:"SSH · RDP",priority:"200",assigned:"IT administrators",status:"Enabled",detail:"Privileged access rule for management systems",extra:"Example rule only"},
+      {id:"POL-003",name:"Contractors → Internal",sub:"Restricted third-party access",path:"Contractors → Internal services",services:"HTTPS only",priority:"300",assigned:"Contractor group",status:"Pending review",detail:"Restricted third-party access awaiting review",extra:"No real approval workflow"},
+      {id:"POL-004",name:"Default deny",sub:"Baseline access posture",path:"Any → Any",services:"All services",priority:"9999",assigned:"All identities",status:"Enabled",detail:"Default-deny baseline policy",extra:"Does not enforce network traffic"}
+    ],
+    "vpn-audit-logs": [
+      {id:"EVT-8104",time:"2026-10-21 14:42:08",actor:"j.smith",event:"Session established",target:"eu-west-gw01",ip:"192.0.2.18",outcome:"Success",detail:"Illustrative connection event",extra:"Synthetic audit event"},
+      {id:"EVT-8103",time:"2026-10-21 14:39:52",actor:"a.demir",event:"MFA verified",target:"tr-izmir-gw01",ip:"192.0.2.42",outcome:"Success",detail:"Illustrative authentication event",extra:"Synthetic audit event"},
+      {id:"EVT-8102",time:"2026-10-21 14:35:11",actor:"svc.support",event:"Policy review requested",target:"POL-003",ip:"198.51.100.24",outcome:"Warning",detail:"Illustrative policy event",extra:"Synthetic audit event"},
+      {id:"EVT-8101",time:"2026-10-21 14:29:03",actor:"unknown",event:"Access attempt blocked",target:"management-subnet",ip:"203.0.113.71",outcome:"Denied",detail:"Illustrative denied event",extra:"Synthetic audit event"},
+      {id:"EVT-8100",time:"2026-10-21 14:18:37",actor:"m.kaya",event:"Session disconnected",target:"eu-west-gw01",ip:"192.0.2.63",outcome:"Success",detail:"Illustrative disconnect event",extra:"Synthetic audit event"}
+    ]
+  };
+  let rows = (demo[page] || []).map(item => ({...item}));
+  const custom = [];
+  const search = $("[data-vpn-search]");
+  const filter = $("[data-vpn-filter]");
+  const tbody = $("[data-vpn-tbody]");
+  const count = $("[data-vpn-count]");
+  const empty = $("[data-vpn-empty]");
+  const modalHost = $("[data-vpn-modal-host]");
+  const statsHost = $("[data-vpn-stats]");
+  const tableHead = $("[data-vpn-thead]");
+  const title = root.dataset.vpnTitle || page;
+  const columns = (root.dataset.vpnColumns || "").split("|");
+  const links = [
+    ["Remote Access","remote","↗","Sessions and access readiness"],
+    ["VPN Overview","vpn-overview","⌁","VPN health and activity"],
+    ["Gateways","gateways","⇄","Gateway inventory"],
+    ["Peers & Clients","peers-clients","♙","Devices and peer addresses"],
+    ["Access Policies","access-policies","◈","Rules and authorization"],
+    ["VPN Audit Logs","vpn-audit-logs","≡","Security event history"]
+  ];
+  const val = (row, key) => row[key] ?? "—";
+  const metricValues = () => {
+    const all = rows.concat(custom);
+    const total = all.length;
+    const active = all.filter(r => /connected|online|healthy|enabled|success|allowed/i.test(r.status || r.outcome || "")).length;
+    const pending = all.filter(r => /pending|review|warning|degraded/i.test(r.status || r.outcome || "")).length;
+    const offline = all.filter(r => /offline|disconnected/i.test(r.status || "")).length;
+    const denied = all.filter(r => /denied|blocked|failed/i.test(r.outcome || r.status || "")).length;
+    if (page === "remote") return [active,all.filter(r => r.user || r.name).length,pending,new Set(all.map(r => r.gateway).filter(Boolean)).size];
+    if (page === "vpn-overview") return [active,all.filter(r => /gw/i.test(r.gateway || "")).length,`${Math.round(100 * active / Math.max(total,1))}%`,pending];
+    if (page === "gateways") return [total,active,pending,"24 ms*"];
+    if (page === "peers-clients") return [total,active,offline,pending];
+    if (page === "access-policies") return [total,active,pending,all.some(r => /default deny/i.test(r.name || "")) ? "Present" : "—"];
+    return [total,all.filter(r => /success/i.test(r.outcome || "")).length,all.filter(r => /warning/i.test(r.outcome || "")).length,denied];
+  };
+  function renderStats() {
+    const vals = metricValues();
+    $$(".vpn-metric-value", statsHost).forEach((node, i) => node.textContent = vals[i] ?? "—");
+  }
+  function getVisibleRows() {
+    const q = (search?.value || "").trim().toLocaleLowerCase();
+    const f = filter?.value || "all";
+    return rows.concat(custom).filter(row => {
+      const text = Object.values(row).join(" ").toLocaleLowerCase();
+      const state = String(row.status || row.outcome || "").toLowerCase();
+      const matchesQuery = !q || text.includes(q);
+      const matchesFilter = f === "all" || (f === "active" ? /connected|online|healthy|enabled|success|allowed/i.test(state) : f === "attention" ? /pending|review|warning|degraded/i.test(state) : f === "offline" ? /offline|disconnected|denied|blocked|failed/i.test(state) : state.includes(f));
+      return matchesQuery && matchesFilter;
+    });
+  }
+  function cellFor(row, key) {
+    const value = val(row,key);
+    if (key === "status" || key === "outcome") return pill(value);
+    if (["id","name","time","event"].includes(key)) {
+      const sub = key === "id" ? (row.sub || row.name || "") : (key === "name" ? (row.sub || row.id || "") : (key === "time" ? row.id : ""));
+      return `<span class="vpn-primary-cell">${esc(value)}</span>${sub ? `<span class="vpn-secondary-cell">${esc(sub)}</span>` : ""}`;
+    }
+    if (key === "endpoint") return `<span class="vpn-primary-cell">${esc(value)}</span><span class="vpn-secondary-cell">${esc(row.region || "")}</span>`;
+    if (key === "path") return `<span class="vpn-primary-cell">${esc(value)}</span><span class="vpn-secondary-cell">${esc(row.sub || "")}</span>`;
+    if (key === "gateway" && page === "gateways") return `<span class="vpn-primary-cell">${esc(value)}</span><span class="vpn-secondary-cell">${esc(row.endpoint || "")}</span>`;
+    if (key === "source" && page === "remote") return `<span class="vpn-primary-cell">${esc(value)}</span><span class="vpn-secondary-cell">Source network · demo</span>`;
+    if (key === "user" || key === "actor") return `<span class="vpn-primary-cell">${esc(value)}</span>`;
+    return esc(value);
+  }
+  function render() {
+    const visible = getVisibleRows();
+    tbody.innerHTML = visible.map(row => `<tr>${columns.map(key => `<td>${cellFor(row,key)}</td>`).join("")}<td><button class="vpn-row-action" type="button" data-vpn-detail="${esc(row.id || row.name || "")}">Details ↗</button></td></tr>`).join("");
+    count.textContent = `${visible.length} of ${rows.length + custom.length} records`;
+    empty.hidden = visible.length > 0;
+    renderStats();
+  }
+  function toast(message) {
+    const old = $(".vpn-toast", root);
+    old?.remove();
+    const node = document.createElement("div");
+    node.className = "vpn-toast";
+    node.setAttribute("role","status");
+    node.textContent = message;
+    root.appendChild(node);
+    setTimeout(() => node.remove(), 3200);
+  }
+  function closeModal() { modalHost.replaceChildren(); }
+  function openDetail(id) {
+    const row = rows.concat(custom).find(item => String(item.id || item.name) === id);
+    if (!row) return;
+    modalHost.innerHTML = `<div class="vpn-modal-backdrop" data-vpn-dismiss><section class="vpn-modal" role="dialog" aria-modal="true" aria-labelledby="vpn-modal-title"><div class="vpn-modal-head"><div><h3 id="vpn-modal-title">${esc(row.name || row.id || "Record details")}</h3><p>${esc(row.detail || "Demo record details")}</p></div><button class="vpn-modal-close" type="button" data-vpn-close aria-label="Close dialog">×</button></div><div class="vpn-form">${Object.entries(row).map(([key,value]) => `<div class="vpn-field ${String(value).length > 38 ? "vpn-field-full" : ""}"><label>${esc(key.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase()))}</label><div style="font-size:12px;line-height:1.65;overflow-wrap:anywhere;color:var(--text-primary,#eef2ff)">${esc(value)}</div></div>`).join("")}<div class="vpn-field-full" style="font-size:10px;line-height:1.6;color:var(--text-muted,#8b98ad)">Demo data only. This record is not connected to a live VPN service.</div><div class="vpn-modal-actions"><button class="vpn-btn" type="button" data-vpn-close>Close</button></div></div></section></div>`;
+  }
+  function openCreate() {
+    if (page === "vpn-overview") {
+      toast("Overview refreshed. Live telemetry is not connected.");
+      return;
+    }
+    if (page === "vpn-audit-logs") { exportCsv(); return; }
+    const fieldSets = {
+      remote: [["name","User / session","text"],["gateway","Gateway","text"],["source","Source network","text"]],
+      gateways: [["name","Gateway name","text"],["endpoint","Endpoint / hostname","text"],["region","Region","text"],["protocol","Protocol","select:WireGuard,IPsec / IKEv2,OpenVPN"]],
+      "peers-clients": [["name","Device / peer name","text"],["user","Assigned user","text"],["platform","Platform","select:Windows,macOS,Linux,iOS,Android,Other"],["ip","Peer IP address","text"],["gateway","Gateway","text"]],
+      "access-policies": [["name","Policy name","text"],["path","Source → destination","text"],["services","Allowed services","text"],["priority","Priority","number"],["assigned","Assigned group","text"]]
+    };
+    const fields = fieldSets[page] || [];
+    modalHost.innerHTML = `<div class="vpn-modal-backdrop" data-vpn-dismiss><section class="vpn-modal" role="dialog" aria-modal="true" aria-labelledby="vpn-modal-title"><div class="vpn-modal-head"><div><h3 id="vpn-modal-title">${esc(root.dataset.vpnAction || "Add record")}</h3><p>Add a temporary record to this local demo view.</p></div><button class="vpn-modal-close" type="button" data-vpn-close aria-label="Close dialog">×</button></div><form class="vpn-form" data-vpn-create>${fields.map(([key,label,type])=>`<div class="vpn-field ${fields.length < 4 ? "vpn-field-full" : ""}"><label for="vpn-field-${esc(key)}">${esc(label)}</label>${type.startsWith("select:") ? `<select id="vpn-field-${esc(key)}" name="${esc(key)}" required>${type.slice(7).split(",").map(opt=>`<option>${esc(opt)}</option>`).join("")}</select>` : `<input id="vpn-field-${esc(key)}" name="${esc(key)}" type="${esc(type)}" ${key==="priority"?"min=\"1\"":""} required>`}</div>`).join("")}<div class="vpn-field-full" style="font-size:10px;line-height:1.6;color:var(--text-muted,#8b98ad)">This only changes the current browser view. It does not configure a gateway, enroll a client or enforce an access policy.</div><div class="vpn-modal-actions"><button class="vpn-btn" type="button" data-vpn-close>Cancel</button><button class="vpn-btn vpn-btn-primary" type="submit">Add demo record</button></div></form></section></div>`;
+    const first = $("input,select", modalHost);
+    first?.focus();
+  }
+  function exportCsv() {
+    const visible = getVisibleRows();
+    if (!visible.length) { toast("No matching records to export."); return; }
+    const keys = [...new Set(visible.flatMap(row => Object.keys(row)))];
+    const quote = value => `"${String(value ?? "").replace(/"/g,'""')}"`;
+    const csv = [keys.map(quote).join(","), ...visible.map(row=>keys.map(k=>quote(row[k] ?? "")).join(","))].join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = `cartman-${page}-demo.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("CSV exported from the currently visible demo records.");
+  }
+  root.addEventListener("click", event => {
+    const detail = event.target.closest("[data-vpn-detail]");
+    if (detail) { openDetail(detail.dataset.vpnDetail); return; }
+    if (event.target.closest("[data-vpn-close]")) { closeModal(); return; }
+    if (event.target.matches("[data-vpn-dismiss]")) { closeModal(); return; }
+    if (event.target.closest("[data-vpn-action]")) { openCreate(); return; }
+    if (event.target.closest("[data-vpn-export]")) { exportCsv(); return; }
+    if (event.target.closest("[data-vpn-refresh]")) { render(); toast("View refreshed. No live data source is connected."); return; }
+  });
+  root.addEventListener("submit", event => {
+    const form = event.target.closest("[data-vpn-create]");
+    if (!form) return;
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    const record = {id:`DEMO-${String(Date.now()).slice(-6)}`,...data};
+    if (page === "gateways") Object.assign(record,{peers:"0 / —",latency:"—",status:"Pending",detail:"Gateway created in local preview",extra:"No connection or endpoint verification performed"});
+    else if (page === "peers-clients") Object.assign(record,{status:"Pending",detail:"Client added in local preview",extra:"No device enrollment performed"});
+    else if (page === "access-policies") Object.assign(record,{status:"Pending review",detail:"Policy drafted in local preview",extra:"No network enforcement or approval performed"});
+    else Object.assign(record,{status:"Pending",detail:"Record created in local preview",extra:"No remote session started"});
+    custom.push(record);
+    closeModal();
+    render();
+    toast("Demo record added to this page view.");
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && modalHost.childElementCount) closeModal();
+  });
+  search?.addEventListener("input",render);
+  filter?.addEventListener("change",render);
+  render();
+})();

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<!-- CARTMAN_REPORTS_LIVE_V1 -->
+<!-- CARTMAN_REPORTS_DEMO_LAYOUT_LIVE_V1 -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Reports</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/it-operations-demo.css">
+    <link rel="stylesheet" href="/static/css/modules/reports-live.css?v=cartman-reports-history-scope-v1">
+    <script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+    <script src="/static/js/modules/reports-live.js?v=cartman-reports-history-scope-v1" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main class="reports-main">
+        <div class="module-header">
+            <span class="category-icon purple">&#9672;</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE / REPORTS</div>
+                <h1>Reports</h1>
+                <p>Live operational performance, service delivery and workload reporting.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module itops-redesigned reports-workspace" aria-label="Live Reports workspace">
+            <div class="rp-headline">
+                <div>
+                    <div class="workspace-eyebrow">OPERATIONAL INTELLIGENCE</div>
+                    <h2>Reporting overview</h2>
+                    <p>Reports are calculated from records stored in Cartman's database. Department and team filters use live directory and ticket records.</p>
+                </div>
+                <div class="rp-live-state"><i></i><span data-rp-source-state>Connecting to live data…</span></div>
+            </div>
+
+            <section class="rp-filter-panel" aria-label="Report filters">
+                <div class="rp-filter-heading">
+                    <div><h3>Report period</h3><p>Select a preset or define an exact date and time range.</p></div>
+                    <div class="rp-period-presets" role="group" aria-label="Quick date ranges">
+                        <button type="button" class="rp-preset" data-rp-preset="day">Daily</button>
+                        <button type="button" class="rp-preset is-active" data-rp-preset="week">Weekly</button>
+                        <button type="button" class="rp-preset" data-rp-preset="month">Monthly</button>
+                        <button type="button" class="rp-preset" data-rp-preset="year">Yearly</button>
+                        <button type="button" class="rp-preset" data-rp-preset="custom">Custom</button>
+                    </div>
+                </div>
+                <div class="rp-filter-grid">
+                    <label class="rp-field"><span>Start date &amp; time</span><input type="datetime-local" data-rp-start></label>
+                    <label class="rp-field"><span>End date &amp; time</span><input type="datetime-local" data-rp-end></label>
+                    <label class="rp-field"><span>Department</span><select data-rp-department><option value="">All departments</option></select></label>
+                    <label class="rp-field"><span>Support team</span><select data-rp-team><option value="">All support teams</option></select></label>
+                    <div class="rp-filter-action"><button type="button" class="io-btn primary" data-rp-apply>Apply filters</button></div>
+                </div>
+                <p class="rp-filter-note" data-rp-filter-note>All departments · All support teams</p>
+                <p class="rp-filter-note">The support-team filter applies to Tickets and SLA; other sections are grouped by their available stored department, owner or resource relationships.</p>
+            </section>
+
+            <div class="rp-alert hidden" data-rp-alert role="status"></div>
+            <section class="io-stats" data-rp-kpis aria-label="Report key metrics">
+                <div class="rp-loading">Loading live reporting data…</div>
+            </section>
+
+            <section class="rp-section" data-rp-section="tickets">
+                <div class="rp-section-heading"><div><span class="rp-overline">SERVICE DESK</span><h2>Tickets &amp; SLA</h2><p>Ticket throughput, team distribution, priority, response and resolution timings.</p></div><span class="rp-source-chip" data-rp-source="tickets">Source check…</span></div>
+                <div class="io-report-grid">
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Tickets by support team</h3><p>Created during the selected period</p></div></div><div class="io-chart" data-rp-chart="ticket-teams"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Tickets by status</h3><p>New tickets in the selected period</p></div></div><div class="io-chart" data-rp-chart="ticket-status"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Tickets by priority</h3><p>Priority distribution</p></div></div><div class="io-chart" data-rp-chart="ticket-priority"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Tickets by type</h3><p>Incident, request and recorded ticket types</p></div></div><div class="io-chart" data-rp-chart="ticket-type"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Tickets by escalation</h3><p>Escalation levels recorded during the period</p></div></div><div class="io-chart" data-rp-chart="ticket-escalation"></div></article>
+                    <article class="io-panel rp-metric-panel"><div class="io-panel-head"><div><h3>Response &amp; resolution timing</h3><p>Calculated from ticket and conversation timestamps</p></div></div><div class="rp-mini-metrics" data-rp-ticket-timing></div></article>
+                </div>
+                <div class="rp-disclaimer" data-rp-sla-note>Cartman’s current 24-hour requester-reply timer is reported separately from formal first-response or resolution SLA targets.</div>
+                <div class="rp-note-line" data-rp-ticket-scope-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="workload">
+                <div class="rp-section-heading"><div><span class="rp-overline">IT OPERATIONS</span><h2>Workload &amp; delivery</h2><p>Work item flow, completion, current ownership, department and project distribution.</p></div><span class="rp-source-chip" data-rp-source="workload">Source check…</span></div>
+                <div class="io-stats" data-rp-work-kpis></div>
+                <div class="io-report-grid">
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Work items by status</h3><p>Current queue snapshot</p></div></div><div class="io-chart" data-rp-chart="work-status"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Current workload by owner</h3><p>Assigned or queued work items</p></div></div><div class="io-chart" data-rp-chart="work-owner"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Workload by department</h3><p>Based on linked IAM user departments</p></div></div><div class="io-chart" data-rp-chart="work-department"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Workload by project</h3><p>Current work item projects</p></div></div><div class="io-chart" data-rp-chart="work-project"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Workload by priority</h3><p>Current active and completed work items</p></div></div><div class="io-chart" data-rp-chart="work-priority"></div></article>
+                </div>
+                <div class="rp-disclaimer" data-rp-work-note>Overdue compliance is only calculated when due dates are stored as normalized timestamps.</div>
+                <div class="rp-note-line" data-rp-work-scope-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="devices">
+                <div class="rp-section-heading"><div><span class="rp-overline">ENDPOINT MANAGEMENT</span><h2>Devices &amp; inventory</h2><p>Registered endpoint totals, status, operating systems, types and managed assets.</p></div><span class="rp-source-chip" data-rp-source="devices">Source check…</span></div>
+                <div class="io-report-grid">
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Devices by status</h3><p>Current registered device state</p></div></div><div class="io-chart" data-rp-chart="device-status"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Devices by operating system</h3><p>Current device inventory</p></div></div><div class="io-chart" data-rp-chart="device-os"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Devices by type</h3><p>Current device inventory</p></div></div><div class="io-chart" data-rp-chart="device-type"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Inventory assets by type</h3><p>Current inventory records</p></div></div><div class="io-chart" data-rp-chart="inventory-type"></div></article>
+                </div>
+                <div class="rp-note-line" data-rp-device-note></div>
+                <div class="rp-note-line" data-rp-inventory-scope-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="monitoring">
+                <div class="rp-section-heading"><div><span class="rp-overline">MONITORING &amp; OBSERVABILITY</span><h2>Monitoring, alerts &amp; availability</h2><p>Alert lifecycle, event severity, metric samples and observed service-check performance.</p></div><span class="rp-source-chip" data-rp-source="monitoring">Source check…</span></div>
+                <div class="io-report-grid">
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Alerts by severity</h3><p>Created during selected period</p></div></div><div class="io-chart" data-rp-chart="alert-severity"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Events by severity</h3><p>Observed during selected period</p></div></div><div class="io-chart" data-rp-chart="event-severity"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Average collected metrics</h3><p>Only stored samples are included</p></div></div><div class="io-chart" data-rp-chart="metric-averages"></div></article>
+                    <article class="io-panel"><div class="io-panel-head"><div><h3>Availability checks</h3><p>Measured checks, not estimated uptime</p></div></div><div class="rp-mini-metrics" data-rp-check-metrics></div></article>
+                </div>
+                <div class="rp-note-line" data-rp-monitoring-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="network_vpn">
+                <div class="rp-section-heading"><div><span class="rp-overline">NETWORK &amp; INFRASTRUCTURE</span><h2>Network &amp; VPN</h2><p>Current network inventory and VPN configuration, with VPN audit activity for the selected period.</p></div><span class="rp-source-chip" data-rp-source="network_vpn">Source check…</span></div>
+                <div class="io-panel"><div class="io-panel-head"><div><h3>Network and VPN records</h3><p>Current configuration counts and period activity</p></div></div><div class="rp-record-grid" data-rp-network-records></div><div class="io-chart" data-rp-chart="vpn-events"></div><div class="rp-disclaimer" data-rp-network-note></div></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="deployment">
+                <div class="rp-section-heading"><div><span class="rp-overline">SOFTWARE &amp; DEPLOYMENT</span><h2>Endpoint tasks &amp; deployment</h2><p>Queued endpoint actions by operation and execution outcome.</p></div><span class="rp-source-chip" data-rp-source="deployment">Source check…</span></div>
+                <div class="io-report-grid"><article class="io-panel"><div class="io-panel-head"><div><h3>Tasks by action</h3><p>Queued in the selected period</p></div></div><div class="io-chart" data-rp-chart="task-actions"></div></article><article class="io-panel"><div class="io-panel-head"><div><h3>Tasks by status</h3><p>Task queue outcomes</p></div></div><div class="io-chart" data-rp-chart="task-status"></div></article></div>
+                <div class="rp-note-line" data-rp-deployment-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="automation">
+                <div class="rp-section-heading"><div><span class="rp-overline">AUTOMATION</span><h2>Automation &amp; workflows</h2><p>Persisted automation executions and workflow runs.</p></div><span class="rp-source-chip" data-rp-source="automation">Source check…</span></div>
+                <div class="io-report-grid"><article class="io-panel"><div class="io-panel-head"><div><h3>Automation executions</h3><p>By outcome in selected period</p></div></div><div class="io-chart" data-rp-chart="automation-status"></div><strong class="rp-number" data-rp-automation-total>—</strong></article><article class="io-panel"><div class="io-panel-head"><div><h3>Workflow runs</h3><p>By outcome in selected period</p></div></div><div class="io-chart" data-rp-chart="workflow-status"></div><strong class="rp-number" data-rp-workflow-total>—</strong></article></div>
+                <div class="rp-note-line" data-rp-automation-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="software">
+                <div class="rp-section-heading"><div><span class="rp-overline">SOFTWARE MANAGEMENT</span><h2>Software catalogue &amp; change activity</h2><p>Current catalogue composition and persisted software record changes.</p></div><span class="rp-source-chip" data-rp-source="software">Source check…</span></div>
+                <div class="io-report-grid"><article class="io-panel"><div class="io-panel-head"><div><h3>Software changes by action</h3><p>Recorded in selected period</p></div></div><div class="io-chart" data-rp-chart="software-actions"></div><strong class="rp-number" data-rp-software-total>—</strong></article><article class="io-panel"><div class="io-panel-head"><div><h3>Catalogue by status</h3><p>Current catalogue snapshot</p></div></div><div class="io-chart" data-rp-chart="software-status"></div></article><article class="io-panel"><div class="io-panel-head"><div><h3>Catalogue by operating system</h3><p>Current catalogue snapshot</p></div></div><div class="io-chart" data-rp-chart="software-os"></div></article></div>
+                <div class="rp-note-line" data-rp-software-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="platform_activity">
+                <div class="rp-section-heading"><div><span class="rp-overline">PLATFORM OPERATIONS</span><h2>Audit &amp; platform activity</h2><p>Persisted audit, API key, connector, knowledge and endpoint onboarding events.</p></div><span class="rp-source-chip" data-rp-source="platform_activity">Source check…</span></div>
+                <div class="io-panel"><div class="io-panel-head"><div><h3>Activity records by source</h3><p>Stored operational events during selected period</p></div></div><div class="io-chart" data-rp-chart="platform-sources"></div><div class="io-chart" data-rp-chart="platform-device-requests"></div></div>
+                <div class="rp-note-line" data-rp-platform-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="system_metrics">
+                <div class="rp-section-heading"><div><span class="rp-overline">SYSTEM TELEMETRY</span><h2>Process-level system metrics</h2><p>CPU, memory, disk and network measurements only when CartmanClient has stored samples.</p></div><span class="rp-source-chip" data-rp-source="system_metrics">Source check…</span></div>
+                <div class="io-panel"><div class="io-panel-head"><div><h3>Average process metrics</h3><p>Calculated from collected CartmanClient samples</p></div></div><div class="io-chart" data-rp-chart="system-averages"></div><div class="rp-note-line" data-rp-system-note></div></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="activity">
+                <div class="rp-section-heading"><div><span class="rp-overline">IDENTITY &amp; USAGE</span><h2>User activity &amp; authentication</h2><p>Cartman in-app activity telemetry and recorded sign-in attempts.</p></div><span class="rp-source-chip" data-rp-source="activity">Source check…</span></div>
+                <div class="rp-mini-metrics rp-activity-metrics" data-rp-activity-metrics></div><div class="rp-note-line" data-rp-activity-note></div>
+            </section>
+
+            <section class="rp-section" data-rp-section="remote_access">
+                <div class="rp-section-heading"><div><span class="rp-overline">REMOTE ACCESS</span><h2>Remote access sessions</h2><p>Persisted session records and completed session durations.</p></div><span class="rp-source-chip" data-rp-source="remote_access">Source check…</span></div>
+                <div class="io-panel"><div class="io-panel-head"><div><h3>Sessions by status</h3><p>Created during selected period</p></div></div><div class="io-chart" data-rp-chart="remote-status"></div><div class="rp-mini-metrics" data-rp-remote-metrics></div><div class="rp-note-line" data-rp-remote-note></div></div>
+            </section>
+
+            <section class="rp-pdf-panel" aria-label="PDF reports">
+                <div class="rp-report-tabs" role="tablist" aria-label="PDF reports">
+                    <button type="button" class="rp-report-tab is-active" data-rp-tab="create" role="tab" aria-selected="true">Create</button>
+                    <button type="button" class="rp-report-tab" data-rp-tab="history" role="tab" aria-selected="false">History</button>
+                </div>
+                <div class="rp-report-pane" data-rp-pane="create">
+                    <div class="rp-pdf-heading"><div><span class="rp-overline">EXPORT</span><h2>PDF reports</h2><p>Choose the report target and sections. Existing date, department and support-team filters are preserved.</p></div><span class="rp-pdf-icon">PDF</span></div>
+                    <div class="rp-scope-grid" aria-label="Report target">
+                        <label class="rp-field"><span>Report for</span><select data-rp-scope-type><option value="">Choose target type</option><option value="user">User</option><option value="group">Group</option><option value="department">Department</option></select></label>
+                        <label class="rp-field"><span>Target</span><select data-rp-scope-target disabled><option value="">Choose target type first</option></select></label>
+                    </div>
+                    <p class="rp-scope-note" data-rp-scope-note>Select whether this PDF is for one IAM user, an existing IAM group, or a department.</p>
+                    <div class="rp-pdf-sections">
+                        <label><input type="checkbox" data-rp-pdf-section="tickets" checked> Tickets</label>
+                        <label><input type="checkbox" data-rp-pdf-section="sla" checked> SLA &amp; response timing</label>
+                        <label><input type="checkbox" data-rp-pdf-section="workload" checked> Workload</label>
+                        <label><input type="checkbox" data-rp-pdf-section="devices" checked> Devices &amp; inventory</label>
+                        <label><input type="checkbox" data-rp-pdf-section="monitoring" checked> Monitoring</label>
+                        <label><input type="checkbox" data-rp-pdf-section="network_vpn" checked> Network &amp; VPN</label>
+                        <label><input type="checkbox" data-rp-pdf-section="deployment" checked> Deployment</label>
+                        <label><input type="checkbox" data-rp-pdf-section="automation" checked> Automation</label>
+                        <label><input type="checkbox" data-rp-pdf-section="activity" checked> User activity</label>
+                        <label><input type="checkbox" data-rp-pdf-section="remote_access" checked> Remote access</label>
+                        <label><input type="checkbox" data-rp-pdf-section="software" checked> Software catalogue</label>
+                        <label><input type="checkbox" data-rp-pdf-section="platform_activity" checked> Platform audit</label>
+                        <label><input type="checkbox" data-rp-pdf-section="system_metrics" checked> System metrics</label>
+                    </div>
+                    <div class="rp-pdf-actions"><button type="button" class="io-btn primary" data-rp-create-pdf>Create PDF</button><span class="rp-pdf-status" data-rp-pdf-status aria-live="polite">PDF has not been generated yet.</span><button type="button" class="io-btn rp-view-pdf hidden" data-rp-view-pdf>View PDF</button></div>
+                </div>
+                <div class="rp-report-pane hidden" data-rp-pane="history" role="tabpanel">
+                    <div class="rp-history-heading"><div><span class="rp-overline">GENERATED FILES</span><h2>PDF history</h2><p>Previously generated reports are stored in Cartman's database and can be opened or downloaded again.</p></div><button type="button" class="io-btn" data-rp-refresh-history>Refresh history</button></div>
+                    <div class="rp-history-list" data-rp-history-list><div class="rp-history-empty">Loading report history…</div></div>
+                </div>
+            </section>
+        </section>
+
+        <footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+    </main>
+</body>
+</html>

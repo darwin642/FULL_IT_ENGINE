@@ -1,0 +1,53 @@
+<section class="devices-page">
+  <div class="devices-toolbar">
+    <div>
+      <h2>Devices</h2>
+      <p>Manage and monitor your connected endpoints.</p>
+    </div>
+    <button type="button" id="add-device-btn">+ Add device</button>
+  </div>
+
+  <div class="devices-stats">
+    <article class="device-stat">
+      <span>Total devices</span>
+      <strong id="total-devices">0</strong>
+    </article>
+    <article class="device-stat">
+      <span>Online</span>
+      <strong id="online-devices">0</strong>
+    </article>
+    <article class="device-stat">
+      <span>Offline</span>
+      <strong id="offline-devices">0</strong>
+    </article>
+  </div>
+
+  <div class="devices-panel">
+    <div class="devices-filters">
+      <input id="device-search" type="search" placeholder="Search devices..." />
+      <select id="device-status-filter">
+        <option value="all">All statuses</option>
+        <option value="Online">Online</option>
+        <option value="Offline">Offline</option>
+      </select>
+    </div>
+
+    <div class="devices-table-wrap">
+      <table class="devices-table">
+        <thead>
+          <tr>
+            <th>Device</th>
+            <th>Operating system</th>
+            <th>Status</th>
+            <th>Last seen</th>
+          </tr>
+        </thead>
+        <tbody id="devices-table-body">
+          <tr>
+            <td colspan="4">No devices registered yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

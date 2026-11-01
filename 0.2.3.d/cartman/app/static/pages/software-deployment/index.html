@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>Cartman | Software Deployment</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/modules/deployment-workflows.css">
+<script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+<script src="/static/js/core/module-definitions.js" defer></script>
+<script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+<script src="/static/js/modules/deployment-live.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body data-deployment-page="software-deployment">
+<header class="topbar">
+  <div class="brand-area">
+    <a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a>
+  </div>
+  <div class="top-actions">
+    <span id="dw-api-status" class="dw-count">Connecting to Cartman API…</span>
+    <a class="secondary-button" href="/">&#8592; Dashboard</a>
+  </div>
+</header>
+<main class="dw-page">
+
+<div class="dw-header">
+  <div>
+    <div class="dw-eyebrow">CARTMAN WORKSPACE / SOFTWARE &amp; DEPLOYMENT</div>
+    <h1>Software Deployment</h1>
+    <p>Select a real Software Catalog package and an existing Cartman device, review the request, then explicitly queue the task.</p>
+  </div>
+  <div class="dw-actions">
+    <a class="dw-btn" href="/pages/deployment-jobs/">View jobs →</a>
+    <a class="dw-btn" href="/pages/software-catalog/">Software Catalog ↗</a>
+  </div>
+</div>
+
+<div class="dw-notice" id="dw-notice" role="status" aria-live="polite">
+  <span class="dw-notice-icon">i</span>
+  <div><strong id="dw-notice-title">Connecting to Cartman</strong>
+       <p id="dw-notice-message">Loading data from the API…</p></div>
+</div>
+
+<section class="dw-panel">
+  <div class="dw-panel-head">
+    <div><div class="dw-eyebrow">PACKAGE DEPLOYMENT</div><h2>Configure deployment</h2>
+    <p>The catalog package and target endpoint are validated by the server before the task is queued.</p></div>
+  </div>
+  <form id="dw-deploy-form">
+    <div class="dw-form-grid">
+      <label class="dw-field dw-field-wide">Software Catalog package
+        <select class="dw-select" id="dw-package" required>
+          <option value="">Loading packages…</option>
+        </select>
+      </label>
+      <label class="dw-field dw-field-wide">Target device
+        <select class="dw-select" id="dw-device" required>
+          <option value="">Önce bir yazılım paketi seçin</option>
+        </select>
+        <small id="dw-device-hint" class="dw-field-hint">Önce paket seçin; yalnızca uyumlu işletim sistemleri listelenecek.</small>
+      </label>
+    </div>
+    <p id="dw-package-info" style="font-size:12px;line-height:1.6;color:var(--muted,#8b95a7)">
+      Package details will appear here.
+    </p>
+    <div id="dw-form-feedback" class="dw-form-feedback" role="status" hidden></div>
+    <div class="dw-form-note" style="margin-top:12px">
+      Queuing a task is not the same as completing an installation. A registered CartmanClient must be available to execute it. The agent reports the actual result back to Cartman.
+    </div>
+    <div class="dw-modal-foot">
+      <a class="dw-btn" href="/pages/deployment/">Cancel</a>
+      <button class="dw-btn dw-btn-primary" type="submit">Review deployment →</button>
+    </div>
+  </form>
+</section>
+<section class="dw-panel" id="dw-review-panel" hidden style="margin-top:16px">
+  <div class="dw-panel-head">
+    <div><div class="dw-eyebrow">FINAL CONFIRMATION</div><h2>Review deployment request</h2>
+    <p>Confirm that the selected package should be queued for the selected endpoint.</p></div>
+  </div>
+  <div class="dw-review-content" id="dw-review"></div>
+  <div id="dw-confirm-feedback" class="dw-form-feedback" role="status" hidden></div>
+  <label class="dw-confirm-label">
+    <input type="checkbox" id="dw-confirm-check">
+    <span>I confirm that this package should be queued for installation on the selected device.</span>
+  </label>
+  <div class="dw-modal-foot">
+    <button class="dw-btn" id="dw-cancel-review" type="button">Back</button>
+    <button class="dw-btn dw-btn-primary" id="dw-confirm" type="button">Confirm and queue task</button>
+  </div>
+</section>
+<div style="margin-top:16px"><a href="/pages/deployment-jobs/">Open Deployment Jobs →</a></div>
+
+<footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+</main>
+<div class="dw-modal-backdrop" id="dw-detail-modal" hidden>
+  <section class="dw-modal" role="dialog" aria-modal="true" aria-labelledby="dw-detail-title">
+    <div class="dw-modal-head">
+      <div><div class="dw-eyebrow">TASK RECORD</div><h2 id="dw-detail-title">Deployment task details</h2></div>
+      <button class="dw-close" data-dw-close="dw-detail-modal" aria-label="Close">×</button>
+    </div>
+    <div class="dw-modal-body" id="dw-detail-body"></div>
+    <div class="dw-modal-foot">
+      <span style="font-size:11px;color:var(--muted,#8b95a7)">Source: Cartman task queue</span>
+      <button class="dw-btn dw-btn-primary" data-dw-close="dw-detail-modal">Done</button>
+    </div>
+  </section>
+</div>
+</body>
+</html>

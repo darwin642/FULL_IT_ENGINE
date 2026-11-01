@@ -1,0 +1,1048 @@
+
+(() => {
+"use strict";
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const path = location.pathname.toLowerCase();
+// CARTMAN_KNOWLEDGE_LIST_AND_DETAIL_PAGE_V1
+const knowledgeArticleMatch = path.match(/\/pages\/knowledge\/article\/(kb-\d+)\/?$/i);
+const knowledgeArticleKey = knowledgeArticleMatch ? knowledgeArticleMatch[1].toUpperCase() : null;
+const slug = ["ticketing","knowledge","tasks","workflows","notifications","reports"].find(x => path.includes("/pages/"+x+"/")) || "ticketing";
+const root = $(".workspace-module");
+if (!root) return;
+let knowledgeArticleLoadStarted = false;
+
+const tickets = [
+ {id:"INC-1048",title:"Production API latency spike",type:"Incident",priority:"Critical",status:"In progress",owner:"Alex Morgan",team:"Infrastructure",time:"4 min ago",desc:"API response times are above the agreed threshold. Review recent deployment and upstream dependencies.",sla:"12 min"},
+ {id:"INC-1047",title:"File server disk usage at 92%",type:"Incident",priority:"High",status:"Open",owner:"Sam Rivera",team:"Systems",time:"18 min ago",desc:"Volume D: is nearing capacity. Identify large files and check retention policies.",sla:"38 min"},
+ {id:"REQ-0832",title:"New starter workstation setup",type:"Request",priority:"Normal",status:"Pending",owner:"Jordan Lee",team:"Service Desk",time:"42 min ago",desc:"Prepare endpoint, install approved software and validate access.",sla:"6 hours"},
+ {id:"INC-1046",title:"VPN authentication failures",type:"Incident",priority:"High",status:"In progress",owner:"Taylor Kim",team:"Network",time:"1 hour ago",desc:"Several users report intermittent VPN sign-in failures.",sla:"55 min"},
+ {id:"REQ-0831",title:"Shared folder access request",type:"Request",priority:"Low",status:"Resolved",owner:"Sam Rivera",team:"Service Desk",time:"Yesterday",desc:"Access request completed and verified with requester.",sla:"Met"}
+];
+const articles = [
+ {id:"KB-001",cat:"Networking",title:"Troubleshoot VPN authentication failures",desc:"A practical checklist for client, gateway, DNS and identity-provider issues.",time:"6 min read",tag:"VPN",steps:["Confirm the user account is active and not locked.","Check device time and certificate validity.","Resolve the VPN gateway hostname and verify connectivity.","Review authentication logs and MFA challenges.","Capture timestamps and escalate with relevant logs if unresolved."]},
+ {id:"KB-002",cat:"Windows",title:"Investigate high disk usage on Windows servers",desc:"Find large directories, inspect event logs and reduce disk pressure safely.",time:"8 min read",tag:"Storage",steps:["Confirm the affected volume and current free space.","Use approved tools to identify large directories and files.","Check application logs, temporary files and retention settings.","Do not delete system or application data without owner approval.","Document the cleanup and monitor free space."]},
+ {id:"KB-003",cat:"Networking",title:"DNS resolution troubleshooting",desc:"Check resolver configuration, records, cache and network reachability.",time:"5 min read",tag:"DNS",steps:["Verify the configured DNS servers.","Query the hostname against the configured resolver.","Compare with an authoritative or known-good resolver.","Check record TTL, suffix search list and client cache.","Record the failing hostname, resolver and timestamps."]},
+ {id:"KB-004",cat:"Identity",title:"Account lockout investigation",desc:"Trace repeated lockouts across endpoints, services and saved credentials.",time:"7 min read",tag:"Identity",steps:["Confirm the account and lockout timestamp.","Review identity-provider or domain controller security logs.","Check scheduled tasks, services and stored credentials.","Validate the user's active sessions and enrolled devices.","Document the source before resetting credentials."]},
+ {id:"KB-005",cat:"Linux",title:"Diagnose a Linux service that will not start",desc:"A systemd-focused checklist for failed units and dependency issues.",time:"6 min read",tag:"systemd",steps:["Inspect the unit state and recent journal entries.","Check configuration syntax and file permissions.","Verify required ports, paths and dependent services.","Apply the smallest safe correction and restart the unit.","Confirm service health and capture the root cause."]}
+];
+let tasks = [
+ {id:"TSK-021",title:"Review server patch compliance",project:"Infrastructure",owner:"Alex Morgan",due:"Today",status:"In progress",priority:"High"},
+ {id:"TSK-022",title:"Validate backup restore procedure",project:"Resilience",owner:"Sam Rivera",due:"Tomorrow",status:"To do",priority:"High"},
+ {id:"TSK-023",title:"Update VPN troubleshooting runbook",project:"Knowledge",owner:"Jordan Lee",due:"Oct 26",status:"To do",priority:"Normal"},
+ {id:"TSK-024",title:"Audit inactive endpoint agents",project:"Endpoints",owner:"Taylor Kim",due:"Oct 27",status:"Review",priority:"Normal"},
+ {id:"TSK-025",title:"Document DNS change window",project:"Network",owner:"Alex Morgan",due:"Oct 24",status:"Done",priority:"Low"},
+ {id:"TSK-026",title:"Check disk alerts on file servers",project:"Infrastructure",owner:"Sam Rivera",due:"Today",status:"In progress",priority:"High"}
+];
+let workflows = [
+ {id:"WF-001",name:"Critical alert triage",trigger:"Critical monitoring alert",condition:"Severity = Critical",action:"Create incident + notify on-call",runs:128,success:98,enabled:true},
+ {id:"WF-002",name:"New starter onboarding",trigger:"Approved access request",condition:"Request category = Onboarding",action:"Create setup tasks",runs:42,success:100,enabled:true},
+ {id:"WF-003",name:"Disk capacity escalation",trigger:"Volume usage threshold",condition:"Usage > 90%",action:"Open ticket + notify Systems",runs:67,success:94,enabled:true},
+ {id:"WF-004",name:"Weekly compliance summary",trigger:"Schedule · Monday 09:00",condition:"All managed endpoints",action:"Generate report",runs:18,success:100,enabled:false}
+];
+let notices = [
+ {id:1,type:"Critical",title:"Critical alert: API latency",body:"Production API latency exceeded the configured threshold.",time:"2 min ago",read:false,source:"Monitoring"},
+ {id:2,type:"Ticket",title:"Ticket INC-1048 assigned to you",body:"Production API latency spike · Infrastructure queue.",time:"8 min ago",read:false,source:"Ticketing"},
+ {id:3,type:"Workflow",title:"Critical alert triage completed",body:"Workflow WF-001 completed successfully.",time:"24 min ago",read:false,source:"Automation"},
+ {id:4,type:"Warning",title:"File server storage nearing limit",body:"Volume D: is reporting 92% utilization.",time:"41 min ago",read:true,source:"Monitoring"},
+ {id:5,type:"System",title:"Nightly inventory sync completed",body:"Demo summary: 248 endpoints checked.",time:"Yesterday",read:true,source:"Inventory"}
+];
+let activeFilter = "All";
+
+// CARTMAN_KNOWLEDGE_BASE_UI_V1
+const knowledgeState = {
+  items: [],
+  categories: [],
+  summary: {total: 0, published: 0, draft: 0, archived: 0},
+  canManage: false,
+  loaded: false,
+  loading: false,
+  saving: false,
+  statusFilter: "All",
+  editor: null,
+  error: ""
+};
+const badge = (text, cls="") => `<span class="io-badge ${cls}">${esc(text)}</span>`;
+const btn = (text, action, extra="") => `<button type="button" class="io-btn ${extra}" data-action="${action}">${text}</button>`;
+const stat = (label,value,note,cls="") => `<article class="io-stat"><span>${esc(label)}</span><strong class="${cls}">${esc(value)}</strong><small>${esc(note)}</small></article>`;
+const shell = (eyebrow,title,desc,actions="") => `<div class="io-head"><div><div class="io-eyebrow">${eyebrow}</div><h2>${title}</h2><p>${desc}</p></div><div class="io-head-actions">${actions}</div></div>`;
+const search = (placeholder="Search...") => `<input class="io-search" type="search" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}" data-search>`;
+const tabs = (values, selected) => `<div class="io-tabs">${values.map(v=>`<button type="button" class="io-tab ${v===selected?"active":""}" data-filter="${esc(v)}">${esc(v)}</button>`).join("")}</div>`;
+const panel = (title,sub,content,actions="") => `<section class="io-panel"><div class="io-panel-head"><div><h3>${title}</h3>${sub?`<p>${sub}</p>`:""}</div>${actions}</div>${content}</section>`;
+const empty = `<div class="io-empty">No matching items. Try another search or filter.</div>`;
+const priorityClass = p => p==="Critical"?"critical":p==="High"?"high":p==="Normal"?"normal":"low";
+const statusClass = s => s==="Resolved"||s==="Done"||s==="Enabled"?"good":s==="In progress"||s==="Review"?"info":s==="Pending"?"warn":"";
+const set = html => { root.classList.add("itops-redesigned"); root.innerHTML = html; };
+const ticketState = {
+  items: [], summary: {open: 0, critical: 0, pending: 0, resolved: 0}, total: 0,
+  query: "", filter: "All", selectedKey: null, detail: null,
+  loading: false, detailLoading: false, loaded: false, error: "",
+  modal: false, composerMode: "reply", saving: false, scope: "all",
+  currentUser: null, currentUserLoaded: false, currentUserLoading: false
+};
+const ticketFilters = ["All", "Critical", "High", "Normal", "Open", "In progress", "Pending", "Waiting for requester", "Resolved", "Closed"];
+const ticketTime = value => value ? String(value).replace("T", " ").replace(/\.\d+Z?$/, "") : "—";
+const ticketClosed = t => ["Resolved", "Closed"].includes(t?.status);
+const ticketStatusClass = status => status === "Waiting for requester" ? "warn" : statusClass(status);
+const ticketScopeMarkup = () => `<div class="ct-scope-toggle" role="group" aria-label="Ticket queue scope"><button type="button" data-ticket-scope="all" class="${ticketState.scope === "all" ? "is-active" : ""}">All tickets</button><button type="button" data-ticket-scope="mine" class="${ticketState.scope === "mine" ? "is-active" : ""}">My active</button></div>`;
+const ticketFilterMarkup = () => `<div class="ct-filters">${ticketFilters.map(value => `<button type="button" class="ct-filter ${ticketState.filter===value?"is-active":""}" data-ticket-filter="${esc(value)}">${esc(value)}</button>`).join("")}</div>`;
+
+async function ticketApi(path, options={}) {
+  const init = {method: options.method || "GET", headers: {Accept: "application/json"}};
+  if (options.body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(options.body);
+  }
+  const response = await fetch(path, init);
+  let payload = null;
+  if (response.status !== 204) {
+    const text = await response.text();
+    if (text) { try { payload = JSON.parse(text); } catch { payload = {detail: text}; } }
+  }
+  if (!response.ok) throw new Error(payload?.detail || `${response.status} ${response.statusText}`);
+  return payload;
+}
+
+function ticketQueryUrl() {
+  const params = new URLSearchParams();
+  if (ticketState.query.trim()) params.set("q", ticketState.query.trim());
+  if (["Critical", "High", "Normal", "Low"].includes(ticketState.filter)) params.set("priority", ticketState.filter);
+  else if (ticketState.filter !== "All") params.set("status", ticketState.filter);
+  params.set("limit", "200");
+  params.set("scope", ticketState.scope);
+  return `/api/tickets?${params.toString()}`;
+}
+
+function ticketRender() { set(ticketMarkup()); }
+
+function renderTicketing() {
+  ticketRender();
+  if (!ticketState.currentUserLoaded && !ticketState.currentUserLoading) void loadTicketCurrentUser();
+  if (!ticketState.loaded && !ticketState.loading) void loadTicketList();
+}
+
+async function loadTicketCurrentUser() {
+  ticketState.currentUserLoading = true;
+  try {
+    const data = await ticketApi("/api/auth/me");
+    ticketState.currentUser = data?.user || null;
+  } catch (error) {
+    ticketState.error = `Could not read active Cartman user: ${error.message}`;
+  } finally {
+    ticketState.currentUserLoading = false;
+    ticketState.currentUserLoaded = true;
+    ticketRender();
+  }
+}
+
+async function loadTicketList() {
+  ticketState.loading = true;
+  ticketRender();
+  try {
+    const data = await ticketApi(ticketQueryUrl());
+    ticketState.items = Array.isArray(data?.items) ? data.items : [];
+    ticketState.total = Number(data?.total || 0);
+    ticketState.summary = data?.summary || {open: 0, critical: 0, pending: 0, resolved: 0};
+    ticketState.error = "";
+    ticketState.loaded = true;
+    if (ticketState.selectedKey && !ticketState.items.some(item => item.ticket_key === ticketState.selectedKey)) {
+      // A selected ticket can disappear from a filtered queue without being deleted.
+      ticketState.detail = ticketState.detail?.ticket_key === ticketState.selectedKey ? ticketState.detail : null;
+    }
+  } catch (error) {
+    ticketState.error = `Could not load tickets from Cartman API: ${error.message}`;
+    ticketState.loaded = true;
+  } finally {
+    ticketState.loading = false;
+    ticketRender();
+  }
+}
+
+async function openTicket(key) {
+  ticketState.selectedKey = key;
+  ticketState.detail = null;
+  ticketState.detailLoading = true;
+  ticketState.error = "";
+  ticketRender();
+  try {
+    ticketState.detail = await ticketApi(`/api/tickets/${encodeURIComponent(key)}`);
+  } catch (error) {
+    ticketState.error = `Could not open ${key}: ${error.message}`;
+  } finally {
+    ticketState.detailLoading = false;
+    ticketRender();
+  }
+}
+
+async function refreshCurrentTicket() {
+  const key = ticketState.selectedKey;
+  ticketState.loaded = false;
+  await loadTicketList();
+  if (key) await openTicket(key);
+}
+
+function ticketMarkup() {
+  const summary = ticketState.summary || {};
+  const rows = ticketState.items.map(t => `<tr class="ct-ticket-row ${ticketState.selectedKey===t.ticket_key?"is-selected":""}" data-action="select-ticket" data-ticket-key="${esc(t.ticket_key)}" tabindex="0" role="button" aria-label="Open ${esc(t.ticket_key)}">
+    <td><span class="ct-ticket-id">${esc(t.ticket_key)}</span><div class="ct-ticket-title">${esc(t.title)}</div><small>${esc(t.type || "Incident")} · ${esc(t.requester || "Unspecified")}</small></td>
+    <td>${badge(t.priority, priorityClass(t.priority))}</td>
+    <td><strong class="ct-assignee">${esc(t.assigned_to || "Unassigned")}</strong><small>${esc(t.team || "Service Desk")} · ${esc(t.escalation_level || "L1")}</small></td>
+    <td>${badge(t.status, ticketStatusClass(t.status))}</td><td class="ct-updated">${esc(ticketTime(t.updated_at || t.created_at))}</td>
+    <td><button type="button" class="io-link" data-action="select-ticket" data-ticket-key="${esc(t.ticket_key)}">Open →</button></td>
+  </tr>`).join("");
+  const detail = ticketState.detail && ticketState.detail.ticket_key === ticketState.selectedKey ? ticketDetailMarkup(ticketState.detail) : ticketState.detailLoading ? `<section class="ct-detail ct-detail-placeholder"><div class="ct-spinner"></div><strong>Loading conversation…</strong></section>` : `<section class="ct-detail ct-detail-placeholder"><div class="ct-placeholder-icon">↳</div><h3>Select a ticket to view the conversation</h3><p>Ticket messages, internal notes, assignment and escalation history will appear here.</p></section>`;
+  return shell("SERVICE OPERATIONS / TICKETING", "Ticket queue", "Incidents and service requests · select any ticket to open its conversation.", btn("+ New ticket", "new-ticket", "primary")) +
+    `<div class="io-stats">${stat("Open tickets", Number(summary.open || 0), "Not resolved or closed")}${stat("Critical", Number(summary.critical || 0), "Open critical tickets", "io-red")}${stat("Pending", Number(summary.pending || 0), "Waiting for action", "io-amber")}${stat("Resolved / closed", Number(summary.resolved || 0), "Completed tickets", "io-green")}</div>` +
+    `<div class="ct-queue-toolbar"><form class="ct-search-form" data-ticket-search-form><input class="io-search" type="search" name="q" value="${esc(ticketState.query)}" placeholder="Search ID, subject, requester, assignee…" aria-label="Search tickets"><button class="io-btn" type="submit">Search</button></form><button type="button" class="io-btn" data-action="refresh-tickets">↻ Refresh</button></div>` +
+    `<div class="ct-scope-row">${ticketScopeMarkup()}<span class="ct-scope-hint">My active hides tickets awaiting requester response.</span></div>` +
+    `<div class="ct-filter-wrap">${ticketFilterMarkup()}</div>` +
+    `<section class="io-panel ct-queue-panel"><div class="io-panel-head"><div><h3>Incident & request queue</h3><p>${ticketState.loading ? "Loading tickets…" : `${ticketState.total} ticket(s) matching the current view`}</p></div><span class="ct-live-label"><i></i> DATABASE</span></div><div class="io-table-wrap"><table class="io-table ct-ticket-table"><thead><tr><th>Ticket</th><th>Priority</th><th>Assignee / team</th><th>Status</th><th>Last updated</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6"><div class="ct-empty-queue"><div>${ticketState.loading ? "Loading tickets…" : "No tickets in this view"}</div><small>${ticketState.loading ? "Connecting to Cartman API" : "Create a ticket or change the search and filters."}</small></div></td></tr>`}</tbody></table></div></section>` +
+    (ticketState.error ? `<div class="ct-error" role="alert"><strong>Ticketing notice</strong><span>${esc(ticketState.error)}</span><button type="button" data-action="refresh-tickets">Retry</button></div>` : "") +
+    detail +
+    (ticketState.modal ? ticketCreateModalMarkup() : "");
+}
+
+function ticketDetailMarkup(t) {
+  const comments = Array.isArray(t.comments) ? t.comments : [];
+  const history = Array.isArray(t.history) ? t.history : [];
+  const level = t.escalation_level || (String(t.team || "").startsWith("L3") ? "L3" : String(t.team || "").startsWith("L2") ? "L2" : "L1");
+  const commentList = comments.length ? comments.map(c => `<article class="ct-message ${c.is_internal ? "ct-message-internal " : ""}${String(c.author_username || "").trim().toLowerCase() === String(ticketState.currentUser?.username || "").trim().toLowerCase() ? "ct-message-agent" : "ct-message-requester"}"><div class="ct-message-meta"><strong>${esc(c.author || "Unknown user")}</strong><time>${esc(ticketTime(c.created_at))}</time>${c.is_internal ? `<span class="ct-internal-chip">INTERNAL NOTE · TEAM ONLY</span>` : `<span class="ct-role-chip">${esc(c.author_role === "requester" ? "REQUESTER" : c.author_role === "agent" ? "ASSIGNED SUPPORT" : "SUPPORT")}</span>`}</div><div class="ct-message-body">${esc(c.body).replace(/\n/g, "<br>")}</div></article>`).join("") : `<div class="ct-conversation-empty"><div class="ct-empty-chat-icon">☷</div><strong>No replies yet</strong><span>Send the first reply or add an internal note for the support team.</span></div>`;
+  const historyList = history.length ? history.slice(0, 12).map(h => `<div class="ct-history-item"><i></i><div><strong>${esc(h.action)}</strong><span>${esc(h.field_name ? `${h.field_name}: ${h.old_value || "—"} → ${h.new_value || "—"}` : (h.new_value || "Ticket activity"))}</span><small>${esc(h.actor || "Cartman Administrator")} · ${esc(ticketTime(h.created_at))}</small></div></div>`).join("") : `<p class="ct-muted">No history recorded.</p>`;
+  const composerLabel = ticketState.composerMode === "note" ? "Add internal note" : "Send reply";
+  const isClosed = ticketClosed(t);
+  return `<section class="ct-detail" aria-label="Ticket conversation">
+    <div class="ct-detail-head"><div class="ct-detail-heading"><div class="ct-detail-overline"><span>${esc(t.ticket_key)}</span><span>·</span><span>${esc(t.type || "Incident")}</span></div><h2>${esc(t.title)}</h2><div class="ct-detail-badges">${badge(t.status, ticketStatusClass(t.status))}${badge(t.priority, priorityClass(t.priority))}<span class="ct-level-chip">${esc(level)} support</span></div></div>
+      <div class="ct-detail-actions"><details class="ct-escalate"><summary class="io-btn">Escalate <span aria-hidden="true">⌄</span></summary><div class="ct-escalate-menu"><p>Route to a higher support tier</p><button type="button" data-action="escalate-ticket" data-level="L2"><span class="ct-menu-level">L2</span><span><strong>Support engineering</strong><small>Advanced troubleshooting</small></span></button><button type="button" data-action="escalate-ticket" data-level="L3"><span class="ct-menu-level">L3</span><span><strong>Engineering specialist</strong><small>Complex or product-level issue</small></span></button>${level !== "L1" ? `<button type="button" class="ct-return-l1" data-action="escalate-ticket" data-level="L1">Return to L1 support</button>` : ""}</div></details><button type="button" class="io-btn ${isClosed ? "" : "ct-close-btn"}" data-action="toggle-ticket-status">${isClosed ? "↻ Reopen" : "✓ Close ticket"}</button></div>
+    </div>
+    <div class="ct-ticket-summary"><div><span>Requester</span><strong>${esc(t.requester || "Unspecified")}</strong></div><div><span>Assigned to</span><strong>${esc(t.assigned_to || "Unassigned")}</strong></div><div><span>Team / queue</span><strong>${esc(t.team || "Service Desk")}</strong></div><div><span>Created</span><strong>${esc(ticketTime(t.created_at))}</strong></div></div>
+    ${t.description ? `<div class="ct-original-request"><span class="ct-section-kicker">ORIGINAL REQUEST</span><p>${esc(t.description).replace(/\n/g, "<br>")}</p></div>` : ""}
+    <div class="ct-conversation-head"><div><h3>Conversation</h3><p>${comments.length} message(s) · replies and internal notes</p></div><button type="button" class="io-link" data-action="refresh-current-ticket">↻ Refresh</button></div>
+    <div class="ct-conversation">${commentList}</div>
+    ${isClosed ? `<div class="ct-closed-banner">This ticket is ${esc(t.status.toLowerCase())}. Reopen it to add a new reply or internal note.</div>` : `<form class="ct-composer ${ticketState.composerMode === "note" ? "ct-composer-note" : ""}" data-ticket-comment-form><div class="ct-composer-top"><div class="ct-composer-modes"><button type="button" data-action="composer-mode" data-mode="reply" class="${ticketState.composerMode === "reply" ? "is-active" : ""}">↗ Reply</button><button type="button" data-action="composer-mode" data-mode="note" class="${ticketState.composerMode === "note" ? "is-active" : ""}">▤ Internal note</button></div><span>${ticketState.composerMode === "note" ? "Visible to Cartman support staff only" : "Response saved to ticket history"}</span></div><textarea name="body" maxlength="10000" required placeholder="${ticketState.composerMode === "note" ? "Write an internal note for the support team…" : "Write a reply…"}" aria-label="${ticketState.composerMode === "note" ? "Internal note" : "Ticket reply"}"></textarea><div class="ct-composer-bottom"><span>Be clear, concise, and include relevant troubleshooting steps.</span><button type="submit" class="io-btn primary" ${ticketState.saving ? "disabled" : ""}>${ticketState.saving ? "Saving…" : composerLabel} <span aria-hidden="true">→</span></button></div></form>`}
+    <details class="ct-history"><summary>Activity history <span>${history.length} events</span></summary><div class="ct-history-list">${historyList}</div></details>
+  </section>`;
+}
+
+function ticketCreateModalMarkup() {
+  const currentName = ticketState.currentUser?.display_name || ticketState.currentUser?.username || "Signed-in Cartman user";
+  return `<div class="ct-modal-backdrop" data-action="modal-backdrop"><section class="ct-modal" role="dialog" aria-modal="true" aria-labelledby="ct-new-ticket-title"><div class="ct-modal-head"><div><span class="ct-section-kicker">SERVICE OPERATIONS</span><h2 id="ct-new-ticket-title">Create ticket</h2><p>Record an incident or service request.</p></div><button type="button" class="ct-modal-x" data-action="cancel-new-ticket" aria-label="Close">×</button></div><form data-ticket-create-form><label>Subject<input name="title" required minlength="3" maxlength="200" placeholder="Summarize the issue"></label><label>Description<textarea name="description" maxlength="10000" rows="4" placeholder="Symptoms, impact, and troubleshooting already attempted"></textarea></label><div class="ct-form-grid"><label>Type<select name="type"><option>Incident</option><option>Request</option><option>Problem</option><option>Change</option></select></label><label>Priority<select name="priority"><option>Normal</option><option>Low</option><option>High</option><option>Critical</option></select></label></div><div class="ct-routing-preview"><div><span>Requester</span><strong>${esc(currentName)}</strong><small>From your authenticated Cartman session</small></div><div><span>Assignment</span><strong>Automatic L1 routing</strong><small>Online L1 agent, or L1 Queue if none is available</small></div></div><div class="ct-modal-actions"><button type="button" class="io-btn" data-action="cancel-new-ticket">Cancel</button><button type="submit" class="io-btn primary" ${ticketState.saving ? "disabled" : ""}>${ticketState.saving ? "Creating…" : "Create ticket"}</button></div></form></section></div>`;
+}
+
+
+
+async function handleTicketingClick(event) {
+  const scopeButton = event.target.closest("[data-ticket-scope]");
+  if (scopeButton) {
+    ticketState.scope = scopeButton.dataset.ticketScope === "mine" ? "mine" : "all";
+    ticketState.loaded = false;
+    ticketState.loading = false;
+    ticketState.selectedKey = null;
+    ticketState.detail = null;
+    await loadTicketList();
+    return;
+  }
+  const filter = event.target.closest("[data-ticket-filter]");
+  if (filter) {
+    ticketState.filter = filter.dataset.ticketFilter || "All";
+    ticketState.loaded = false;
+    ticketState.loading = false;
+    await loadTicketList();
+    return;
+  }
+  const actionButton = event.target.closest("[data-action]");
+  if (!actionButton) return;
+  const action = actionButton.dataset.action;
+  try {
+    if (action === "select-ticket") {
+      await openTicket(actionButton.dataset.ticketKey);
+    } else if (action === "new-ticket") {
+      ticketState.error = ""; ticketState.modal = true; ticketRender();
+    } else if (action === "cancel-new-ticket") {
+      ticketState.modal = false; ticketRender();
+    } else if (action === "modal-backdrop" && event.target === actionButton) {
+      ticketState.modal = false; ticketRender();
+    } else if (action === "refresh-tickets") {
+      ticketState.loaded = false; ticketState.loading = false; await loadTicketList();
+    } else if (action === "refresh-current-ticket" && ticketState.selectedKey) {
+      await openTicket(ticketState.selectedKey);
+    } else if (action === "composer-mode") {
+      ticketState.composerMode = actionButton.dataset.mode === "note" ? "note" : "reply"; ticketRender();
+    } else if (action === "toggle-ticket-status" && ticketState.detail) {
+      const nextStatus = ticketClosed(ticketState.detail) ? "Open" : "Closed";
+      ticketState.saving = true; ticketRender();
+      await ticketApi(`/api/tickets/${encodeURIComponent(ticketState.selectedKey)}`, {method: "PUT", body: {status: nextStatus}});
+      ticketState.saving = false; await refreshCurrentTicket();
+    } else if (action === "escalate-ticket" && ticketState.detail) {
+      const level = actionButton.dataset.level;
+      const teams = {L1: "Service Desk", L2: "L2 Support", L3: "L3 Engineering"};
+      if (!teams[level]) return;
+      ticketState.saving = true; ticketRender();
+      await ticketApi(`/api/tickets/${encodeURIComponent(ticketState.selectedKey)}`, {method: "PUT", body: {escalation_level: level}});
+      ticketState.saving = false; ticketState.error = `Ticket routed to ${level} · ${teams[level]}.`;
+      await refreshCurrentTicket();
+    }
+  } catch (error) {
+    ticketState.saving = false;
+    ticketState.error = `Action failed: ${error.message}`;
+    ticketRender();
+  }
+}
+
+async function handleTicketingSubmit(event) {
+  const form = event.target;
+  if (form.matches("[data-ticket-search-form]")) {
+    event.preventDefault();
+    ticketState.query = String(new FormData(form).get("q") || "");
+    ticketState.loaded = false; ticketState.loading = false;
+    await loadTicketList();
+    return;
+  }
+  if (form.matches("[data-ticket-create-form]")) {
+    event.preventDefault();
+    if (ticketState.saving) return;
+    const data = new FormData(form);
+    const body = Object.fromEntries(["title", "description", "type", "priority"].map(key => [key, String(data.get(key) || "").trim()]));
+    ticketState.saving = true; ticketState.error = ""; ticketRender();
+    try {
+      const ticket = await ticketApi("/api/tickets", {method: "POST", body});
+      ticketState.modal = false; ticketState.saving = false; ticketState.filter = "All"; ticketState.query = ""; ticketState.selectedKey = ticket.ticket_key;
+      await loadTicketList();
+      await openTicket(ticket.ticket_key);
+    } catch (error) {
+      ticketState.saving = false; ticketState.error = `Could not create ticket: ${error.message}`; ticketState.modal = true; ticketRender();
+    }
+    return;
+  }
+  if (form.matches("[data-ticket-comment-form]")) {
+    event.preventDefault();
+    if (ticketState.saving || !ticketState.selectedKey) return;
+    const data = new FormData(form);
+    const body = String(data.get("body") || "").trim();
+    if (!body) return;
+    ticketState.saving = true; ticketState.error = ""; ticketRender();
+    try {
+      await ticketApi(`/api/tickets/${encodeURIComponent(ticketState.selectedKey)}/comments`, {method: "POST", body: {body, is_internal: ticketState.composerMode === "note"}});
+      ticketState.saving = false;
+      if (ticketState.scope === "mine" && ticketState.composerMode === "reply" && ticketState.detail && ticketState.detail.assigned_to_username === ticketState.currentUser?.username && ticketState.detail.requester_username !== ticketState.currentUser?.username) {
+        ticketState.selectedKey = null;
+        ticketState.detail = null;
+        ticketState.loaded = false;
+        await loadTicketList();
+      } else {
+        await refreshCurrentTicket();
+      }
+    } catch (error) {
+      ticketState.saving = false; ticketState.error = `Could not save message: ${error.message}`; ticketRender();
+    }
+  }
+}
+
+function ticketingSubmitListener(event) {
+  if (slug === "ticketing") {
+    void handleTicketingSubmit(event);
+    return;
+  }
+  if (slug === "knowledge" && event.target.matches("[data-kb-form]")) {
+    event.preventDefault();
+    void submitKnowledgeForm(event.target);
+  }
+}
+
+async function knowledgeApi(url, options = {}) {
+  const init = {
+    method: options.method || "GET",
+    credentials: "same-origin",
+    headers: {Accept: "application/json"}
+  };
+  if (options.body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(url, init);
+  let payload = null;
+
+  if (response.status !== 204) {
+    const text = await response.text();
+    if (text) {
+      try { payload = JSON.parse(text); }
+      catch { payload = {detail: text}; }
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(payload?.detail || `${response.status} ${response.statusText}`);
+  }
+  return payload;
+}
+
+async function loadKnowledgeArticles(force = false) {
+  if (knowledgeState.loading || (knowledgeState.loaded && !force)) return;
+
+  knowledgeState.loading = true;
+  knowledgeState.error = "";
+
+  try {
+    const data = await knowledgeApi("/api/knowledge/articles?limit=500");
+    knowledgeState.items = Array.isArray(data?.items) ? data.items : [];
+    knowledgeState.categories = Array.isArray(data?.categories) ? data.categories : [];
+    knowledgeState.summary = data?.summary || {total: 0, published: 0, draft: 0, archived: 0};
+    knowledgeState.canManage = Boolean(data?.can_manage);
+    knowledgeState.loaded = true;
+
+    const requestedEditKey = new URLSearchParams(location.search).get("edit");
+    if (knowledgeState.canManage && requestedEditKey && !knowledgeState.editor) {
+      const requestedArticle = knowledgeState.items.find(
+        item => item.article_key === requestedEditKey
+      );
+      if (requestedArticle) {
+        knowledgeState.editor = {
+          mode: "edit",
+          article: requestedArticle,
+          draft: null
+        };
+        window.history.replaceState({}, "", location.pathname);
+      }
+    }
+  } catch (error) {
+    knowledgeState.loaded = true;
+    knowledgeState.error = error.message || "Could not load Knowledge Base.";
+  } finally {
+    knowledgeState.loading = false;
+    renderKnowledge();
+  }
+}
+
+function knowledgeEditorMarkup() {
+  const editor = knowledgeState.editor;
+  if (!editor) return "";
+
+  const article = editor.article || {};
+  const key = article.article_key || "";
+
+  if (editor.mode === "read") {
+    const actions = [
+      knowledgeState.canManage
+        ? `<button type="button" class="io-btn" data-action="edit-article" data-id="${esc(key)}">Edit article</button>`
+        : "",
+      btn("Close", "close-kb-editor")
+    ].join("");
+
+    return panel(
+      esc(article.title || "Knowledge article"),
+      `${esc(key)} · ${esc(article.category || "General")} · ${esc(article.status || "Published")}`,
+      `<div class="io-kb-reader">
+        <p class="io-kb-summary">${esc(article.summary || "")}</p>
+        <div class="io-kb-content">${esc(article.content || "").replace(/\n/g, "<br>")}</div>
+        <div class="io-kb-tags">${(article.tags || []).map(tag => badge(tag, "info")).join(" ")}</div>
+        <div class="io-kb-meta">Author: ${esc(article.author_username || "Unknown")} · Updated: ${esc(article.updated_at || "—")}</div>
+      </div>`,
+      actions
+    );
+  }
+
+  const values = editor.draft || article;
+  const tags = Array.isArray(values.tags) ? values.tags.join(", ") : (values.tags || "");
+
+  return panel(
+    editor.mode === "edit" ? "Edit knowledge article" : "Create knowledge article",
+    editor.mode === "edit"
+      ? `${esc(key)} · Changes are saved to Cartman`
+      : "Add a reusable troubleshooting guide or operational runbook.",
+    `<form class="io-kb-form" data-kb-form data-kb-key="${esc(key)}">
+      <div class="io-kb-form-grid">
+        <label class="io-kb-field">Title
+          <input name="title" required minlength="3" maxlength="180" value="${esc(values.title || "")}" placeholder="e.g. Investigate DNS failures">
+        </label>
+        <label class="io-kb-field">Category
+          <input name="category" required maxlength="80" value="${esc(values.category || "General")}" placeholder="Networking, Windows, Identity…">
+        </label>
+      </div>
+      <label class="io-kb-field">Summary
+        <input name="summary" maxlength="600" value="${esc(values.summary || "")}" placeholder="What this guide helps diagnose or resolve">
+      </label>
+      <label class="io-kb-field">Article content
+        <textarea name="content" required maxlength="50000" rows="12" placeholder="Document symptoms, checks, remediation and validation steps…">${esc(values.content || "")}</textarea>
+      </label>
+      <label class="io-kb-field">Tags
+          <input name="tags" value="${esc(tags)}" placeholder="DNS, Networking, Windows (comma-separated)">
+        </label>
+      <div class="io-kb-form-actions">
+        <button type="button" class="io-btn" data-action="close-kb-editor">Cancel</button>
+        <button type="submit" class="io-btn primary" ${knowledgeState.saving ? "disabled" : ""}>${knowledgeState.saving ? "Saving…" : "Save article"}</button>
+      </div>
+    </form>`,
+    ""
+  );
+}
+
+async function submitKnowledgeForm(form) {
+  if (knowledgeState.saving) return;
+
+  const field = name => String(form.elements.namedItem(name)?.value || "").trim();
+  const payload = {
+    title: field("title"),
+    category: field("category"),
+    summary: field("summary"),
+    content: field("content"),
+    tags: field("tags").split(",").map(tag => tag.trim()).filter(Boolean)
+  };
+  const key = form.dataset.kbKey || "";
+
+  knowledgeState.saving = true;
+  knowledgeState.error = "";
+
+  try {
+    if (key) {
+      await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        body: payload
+      });
+    } else {
+      await knowledgeApi("/api/knowledge/articles", {
+        method: "POST",
+        body: payload
+      });
+    }
+
+    knowledgeState.editor = null;
+    activeFilter = "All";
+    knowledgeState.statusFilter = "All";
+    await loadKnowledgeArticles(true);
+  } catch (error) {
+    knowledgeState.error = error.message || "Could not save article.";
+    if (knowledgeState.editor) {
+      knowledgeState.editor.draft = payload;
+    }
+  } finally {
+    knowledgeState.saving = false;
+    renderKnowledge();
+  }
+}
+
+async function setKnowledgeArticleStatus(key, status) {
+  const article = knowledgeState.items.find(item => item.article_key === key);
+  if (!article) return;
+
+  try {
+    await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(key)}`, {
+      method: "PUT",
+      body: {
+        title: article.title,
+        category: article.category,
+        summary: article.summary || "",
+        content: article.content,
+        tags: article.tags || [],
+        status
+      }
+    });
+    await loadKnowledgeArticles(true);
+  } catch (error) {
+    knowledgeState.error = error.message || "Could not update article status.";
+    renderKnowledge();
+  }
+}
+
+async function deleteKnowledgeArticle(key) {
+  if (!knowledgeState.canManage) return;
+  if (!window.confirm(`Remove this article from the active Knowledge Base? Its record is retained as a soft delete. (${key})`)) return;
+
+  try {
+    await knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(key)}`, {
+      method: "DELETE"
+    });
+    if (knowledgeArticleKey) {
+      window.location.assign("/pages/knowledge/");
+      return;
+    }
+    if (knowledgeState.editor?.article?.article_key === key) {
+      knowledgeState.editor = null;
+    }
+    await loadKnowledgeArticles(true);
+  } catch (error) {
+    knowledgeState.error = error.message || "Could not remove article.";
+    renderKnowledge();
+  }
+}
+
+
+// CARTMAN_KNOWLEDGE_LIST_AND_DETAIL_PAGE_V1
+function knowledgeContentMarkup(raw) {
+  const lines = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const blocks = [];
+  let listType = null;
+  let listItems = [];
+  let paragraph = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      blocks.push(`<p>${paragraph.map(esc).join("<br>")}</p>`);
+      paragraph = [];
+    }
+  };
+
+  const flushList = () => {
+    if (!listType || !listItems.length) {
+      listType = null;
+      listItems = [];
+      return;
+    }
+    blocks.push(
+      `<${listType} class="io-kb-content-list">` +
+      listItems.map(item => `<li>${esc(item)}</li>`).join("") +
+      `</${listType}>`
+    );
+    listType = null;
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+    const unordered = line.match(/^[-*•]\s+(.+)$/);
+
+    if (ordered || unordered) {
+      flushParagraph();
+      const nextType = ordered ? "ol" : "ul";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      listItems.push((ordered || unordered)[1]);
+      continue;
+    }
+
+    flushList();
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      blocks.push(`<h3 class="io-kb-content-heading">${esc(heading[1])}</h3>`);
+    } else {
+      paragraph.push(line);
+    }
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks.join("");
+}
+
+// CARTMAN_KB_DRAFT_DETAIL_CONTROLS_V1
+async function changeKnowledgeArticleStatus(key, status, reason = "") {
+  try {
+    const article = await knowledgeApi(
+      `/api/knowledge/articles/${encodeURIComponent(key)}`
+    );
+
+    const payload = {
+      title: article.title,
+      category: article.category,
+      summary: article.summary || "",
+      content: article.content,
+      tags: article.tags || [],
+      status
+    };
+
+    if (status === "Draft") {
+      const cleanReason = String(reason || "").trim();
+      if (!cleanReason) {
+        throw new Error("A reason is required to move an article to Draft.");
+      }
+      payload.draft_reason = cleanReason;
+    }
+
+    await knowledgeApi(
+      `/api/knowledge/articles/${encodeURIComponent(key)}`,
+      {method: "PUT", body: payload}
+    );
+
+    await loadKnowledgeArticlePage();
+  } catch (error) {
+    window.alert(error.message || "Could not update article status.");
+  }
+}
+
+async function loadKnowledgeArticlePage() {
+  try {
+    // CARTMAN_KB_DETAIL_ADMIN_FLAG_FALLBACK_V1
+    const [article, library, session] = await Promise.all([
+      knowledgeApi(`/api/knowledge/articles/${encodeURIComponent(knowledgeArticleKey)}`),
+      knowledgeApi("/api/knowledge/articles?limit=1"),
+      knowledgeApi("/api/auth/me")
+    ]);
+
+    const canManageArticle = Boolean(
+      library?.can_manage || session?.user?.role === "admin"
+    );
+    knowledgeState.canManage = canManageArticle;
+    document.title = `Cartman | ${article.article_key} · ${article.title}`;
+
+    const topActions =
+      `<a class="io-btn" href="/pages/knowledge/">← All articles</a>`;
+
+    const draftNotice = article.status === "Draft"
+      ? `<aside class="io-kb-draft-notice">
+          <strong>This article is drafted by ${esc(article.drafted_by_username || article.author_username || "Unknown")} due to:</strong>
+          <p>${esc(article.draft_reason || "No reason recorded.")}</p>
+        </aside>`
+      : "";
+
+    let management = "";
+    if (canManageArticle) {
+      const editLink =
+        `<a class="io-btn" href="/pages/knowledge/?edit=${encodeURIComponent(article.article_key)}">Edit article</a>`;
+
+      const statusAction = article.status === "Draft"
+        ? `<button type="button" class="io-btn primary" data-action="publish-knowledge-article" data-id="${esc(article.article_key)}">Publish article</button>`
+        : article.status === "Archived"
+          ? `<button type="button" class="io-btn primary" data-action="publish-knowledge-article" data-id="${esc(article.article_key)}">Restore to Published</button>`
+          : `<button type="button" class="io-btn" data-action="draft-knowledge-article" data-id="${esc(article.article_key)}">Move to Draft</button>`;
+
+      const archiveButton = article.status !== "Archived"
+        ? `<button type="button" class="io-btn" data-action="archive-knowledge-article" data-id="${esc(article.article_key)}">Archive</button>`
+        : "";
+
+      management = `<section class="io-kb-management-footer">
+        <div class="io-kb-management-heading">
+          <h3>Article management</h3>
+          <p>These actions are restricted to Cartman administrators.</p>
+        </div>
+        <div class="io-kb-management-actions">
+          ${editLink}
+          ${statusAction}
+          ${archiveButton}
+          <button type="button" class="io-btn io-kb-delete-btn" data-action="delete-article" data-id="${esc(article.article_key)}">Delete article</button>
+        </div>
+      </section>`;
+    }
+
+    set(
+      shell(
+        "DOCUMENTATION / KNOWLEDGE BASE",
+        article.title,
+        `${article.article_key} · ${article.category || "General"}`,
+        topActions
+      ) +
+      `<article class="io-kb-standalone">
+        <div class="io-kb-detail-top">
+          ${badge(article.status || "Published", article.status === "Published" ? "good" : "warn")}
+          ${badge(article.category || "General", "info")}
+          <span class="io-muted">${esc(article.article_key)}</span>
+        </div>
+        <p class="io-kb-detail-summary">${esc(article.summary || "")}</p>
+        ${draftNotice}
+        <div class="io-kb-detail-content">${knowledgeContentMarkup(article.content || "")}</div>
+        <div class="io-kb-tags">
+          ${(article.tags || []).map(tag => badge(tag, "info")).join("") || `<span class="io-muted">No tags</span>`}
+        </div>
+        <div class="io-kb-detail-meta">
+          <div><span>Created by</span><strong>${esc(article.author_username || "Unknown")}</strong></div>
+          <div><span>Last updated</span><strong>${esc(article.updated_at || "—")}</strong></div>
+          <div><span>Published at</span><strong>${esc(article.published_at || "—")}</strong></div>
+        </div>
+      </article>
+      ${management}`
+    );
+  } catch (error) {
+    set(
+      shell(
+        "DOCUMENTATION / KNOWLEDGE BASE",
+        "Article unavailable",
+        "The requested article could not be loaded.",
+        `<a class="io-btn" href="/pages/knowledge/">← Back to Knowledge Base</a>`
+      ) +
+      panel("Unable to open article", "Cartman API", esc(error.message || "Unknown error"))
+    );
+  }
+}
+
+function renderKnowledgeArticle() {
+  set(
+    shell(
+      "DOCUMENTATION / KNOWLEDGE BASE",
+      "Loading article…",
+      "Retrieving the saved article from Cartman.",
+      `<a class="io-btn" href="/pages/knowledge/">← All articles</a>`
+    ) +
+    panel("Loading Knowledge Base article", "", "Connecting to Cartman API…")
+  );
+
+  if (!knowledgeArticleLoadStarted) {
+    knowledgeArticleLoadStarted = true;
+    void loadKnowledgeArticlePage();
+  }
+}
+
+function renderKnowledge() {
+  if (!knowledgeState.loaded && !knowledgeState.loading) {
+    void loadKnowledgeArticles();
+  }
+
+  const query = ($("[data-search]")?.value || "").trim().toLowerCase();
+  // CARTMAN_KB_SORT_DROPDOWN_V1
+  const preferredCategories = ["All", "Identity", "Linux", "Networking", "Windows", "Mac"];
+  const categories = [
+    ...preferredCategories,
+    ...knowledgeState.categories.filter(category =>
+      category && !preferredCategories.some(
+        preferred => preferred.toLowerCase() === category.toLowerCase()
+      )
+    )
+  ];
+  const categoryOptions = categories.map(category =>
+    `<option value="${esc(category)}" ${activeFilter === category ? "selected" : ""}>${esc(category)}</option>`
+  ).join("");
+  const categorySelect = `<label class="io-kb-sort"><span>Sort by:</span><select class="io-select" data-kb-category aria-label="Sort by category">${categoryOptions}</select></label>`;
+
+  const items = knowledgeState.items.filter(article => {
+    const categoryMatch = activeFilter === "All" || article.category === activeFilter;
+    const statusMatch =
+      knowledgeState.statusFilter === "All" ||
+      article.status === knowledgeState.statusFilter;
+
+    const searchable = [
+      article.article_key,
+      article.title,
+      article.summary,
+      article.category,
+      article.content,
+      ...(article.tags || [])
+    ].join(" ").toLowerCase();
+
+    return categoryMatch && statusMatch && searchable.includes(query);
+  });
+
+  const summary = knowledgeState.summary || {};
+  // CARTMAN_KB_CLEAN_HEADER_V2
+  const headerActions = knowledgeState.canManage
+    ? btn("+ New article", "new-article", "primary") : "";
+
+  const statusFilter = knowledgeState.canManage
+    ? `<label class="io-kb-status-filter">Status
+        <select class="io-select" data-kb-status>
+          ${["All", "Draft", "Published", "Archived"].map(value =>
+            `<option value="${value}" ${knowledgeState.statusFilter === value ? "selected" : ""}>${value}</option>`
+          ).join("")}
+        </select>
+      </label>`
+    : "";
+
+  const rows = items.map(article => {
+    const status = article.status || "Published";
+    const nextStatus = status === "Published" ? "Archived" : "Published";
+    return `<tr>
+      <td class="io-kb-id">${esc(article.article_key)}</td>
+      <td class="io-kb-title-cell">
+        <strong>${esc(article.title)}</strong>
+        <small>${esc(article.summary || "")}</small>
+      </td>
+      <td>${badge(article.category || "General", "info")}</td>
+      <td><div class="io-kb-tags">${(article.tags || []).map(tag => badge(tag)).join("") || "—"}</div></td>
+      <td>${badge(status, status === "Published" ? "good" : "warn")}</td>
+      <td>${esc(article.author_name || article.author_username || "Unknown")}</td>
+      <td class="io-kb-updated">${esc(article.updated_at || "—")}</td>
+      <td>
+        <div class="io-kb-table-actions">
+          <button type="button" class="io-btn primary" data-action="read-article" data-id="${esc(article.article_key)}">View</button>
+          
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  const errorMarkup = knowledgeState.error
+    ? `<div class="io-note io-kb-error">${esc(knowledgeState.error)}</div>`
+    : "";
+
+  set(
+    shell(
+      "DOCUMENTATION / KNOWLEDGE BASE",
+      "Knowledge Base",
+      "Search and manage operational guides, runbooks and troubleshooting articles.",
+      headerActions
+    ) +
+    `<div class="io-toolbar">
+      ${search("Search ID, title, content, category or tags…")}
+      ${categorySelect}
+      ${statusFilter}
+    </div>` +
+    errorMarkup +
+    (knowledgeState.editor
+      ? `<div class="io-kb-modal-backdrop">
+          <section class="io-kb-modal" role="dialog" aria-modal="true" aria-label="Knowledge article editor">
+            <button type="button" class="io-kb-modal-close" data-action="close-knowledge-editor" aria-label="Close editor" title="Close">×</button>
+            ${knowledgeEditorMarkup()}
+          </section>
+        </div>`
+      : "") +
+    `<section class="io-panel io-kb-list-panel">
+      <div class="io-kb-table-wrap">
+        <table class="io-kb-table">
+          <thead><tr>
+            <th>ID</th><th>Article</th><th>Category</th><th>Tags</th>
+            <th>Status</th><th>Created by</th><th>Last updated</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" class="io-kb-empty">${knowledgeState.loading ? "Loading articles…" : "No articles match this search."}</td></tr>`}</tbody>
+        </table>
+      </div>
+    </section>` +
+    `<div class="io-note">Article records are stored in Cartman's database. Only real administrators can create, edit, publish, archive or delete articles. Other roles can read Published articles only.</div>`
+  );
+}
+
+function renderTasks(){
+ const q=($("[data-search]")?.value||"").toLowerCase();
+ const statuses=["To do","In progress","Review","Done"];
+ const filtered=tasks.filter(t=>`${t.id} ${t.title} ${t.owner} ${t.project} ${t.priority}`.toLowerCase().includes(q));
+ set(shell("WORK MANAGEMENT / TASKS & AUTOMATION","Task board","Make operational work visible from backlog to completion.",btn("+ New task","new-task","primary"))+
+ `<div class="io-stats">${stat("Total tasks",tasks.length,"Across all workstreams")}${stat("In progress",tasks.filter(t=>t.status==="In progress").length,"Currently being worked")}${stat("Awaiting review",tasks.filter(t=>t.status==="Review").length,"Needs validation","io-amber")}${stat("Completed",tasks.filter(t=>t.status==="Done").length,"Marked done","io-green")}</div>`+
+ `<div class="io-toolbar">${search("Search tasks, owner, project...")}<span class="io-muted">Move tasks using the controls on each card</span></div>`+
+ `<div class="io-kanban">${statuses.map(s=>{const rows=filtered.filter(t=>t.status===s);return `<section class="io-column"><div class="io-column-head"><h3>${s}</h3>${badge(rows.length,"info")}</div>${rows.map(t=>`<article class="io-task"><div class="io-task-meta"><span>${esc(t.id)}</span>${badge(t.priority,priorityClass(t.priority))}</div><h4>${esc(t.title)}</h4><p>${esc(t.project)}</p><div class="io-task-owner"><span class="io-avatar">${esc(t.owner.split(" ").map(x=>x[0]).join(""))}</span><span>${esc(t.owner)}</span><span class="io-muted">· ${esc(t.due)}</span></div><label class="io-small-label">Move to<select data-task-status="${t.id}">${statuses.map(x=>`<option ${x===t.status?"selected":""}>${x}</option>`).join("")}</select></label></article>`).join("")||`<div class="io-column-empty">No tasks here</div>`}</section>`}).join("")}</div>`+
+ `<div class="io-note">Board actions update only the local demo state; no jobs or automation are executed.</div>`);
+}
+function renderWorkflows(){
+ set(shell("AUTOMATION / WORKFLOWS","Workflow designer","Understand triggers, conditions and actions before automating operations.",btn("+ New workflow","new-workflow","primary"))+
+ `<div class="io-stats">${stat("Workflows",workflows.length,"Defined in demo")}${stat("Enabled",workflows.filter(w=>w.enabled).length,"Ready in preview","io-green")}${stat("Runs this month",255,"Illustrative total")}${stat("Success rate","97.8%","Illustrative aggregate","io-green")}</div>`+
+ panel("Automation library","Select a workflow to inspect its logic",`<div class="io-workflow-list">${workflows.map(w=>`<article class="io-workflow"><div class="io-workflow-title"><div><span class="io-workflow-id">${w.id}</span><h3>${esc(w.name)}</h3></div><label class="io-switch"><input type="checkbox" data-workflow-toggle="${w.id}" ${w.enabled?"checked":""}><span></span><em>${w.enabled?"Enabled":"Disabled"}</em></label></div><div class="io-flow"><div class="io-flow-step"><span>01 · TRIGGER</span><strong>${esc(w.trigger)}</strong></div><div class="io-flow-arrow">→</div><div class="io-flow-step"><span>02 · CONDITION</span><strong>${esc(w.condition)}</strong></div><div class="io-flow-arrow">→</div><div class="io-flow-step"><span>03 · ACTION</span><strong>${esc(w.action)}</strong></div></div><div class="io-workflow-foot"><span class="io-muted">${w.runs} demo runs · ${w.success}% success</span>${btn("Simulate run","simulate","")}<input type="hidden" data-workflow-id value="${w.id}"></div></article>`).join("")}</div>`)+
+ `<div class="io-note">Simulate run displays a local confirmation only. It does not trigger real infrastructure changes, messages or jobs.</div>`);
+}
+function renderNotifications(){
+ const q=($("[data-search]")?.value||"").toLowerCase();
+ const filtered=notices.filter(n=>(activeFilter==="All"||n.type===activeFilter)&&(`${n.title} ${n.body} ${n.source} ${n.type}`).toLowerCase().includes(q));
+ set(shell("ACTIVITY CENTER / NOTIFICATIONS","Notifications","A single feed for incidents, automation and platform events.",btn("Mark all read","read-all"))+
+ `<div class="io-stats">${stat("Total notifications",notices.length,"In this demo feed")}${stat("Unread",notices.filter(n=>!n.read).length,"Awaiting attention",notices.some(n=>!n.read)?"io-amber":"")}${stat("Critical",notices.filter(n=>n.type==="Critical").length,"High-priority signals","io-red")}${stat("Sources",5,"Illustrative integrations")}</div>`+
+ `<div class="io-toolbar">${search("Search notifications...")}${tabs(["All","Critical","Warning","Ticket","Workflow","System"],activeFilter)}</div>`+
+ panel("Recent activity",`${filtered.length} notifications`,`${filtered.map(n=>`<article class="io-notice ${n.read?"is-read":"is-unread"}"><div class="io-notice-icon ${priorityClass(n.type)}">${n.type==="Critical"?"!":n.type==="Ticket"?"#":n.type==="Workflow"?"↻":n.type==="Warning"?"△":"•"}</div><div class="io-notice-content"><div class="io-notice-top">${badge(n.type,priorityClass(n.type))}<span class="io-muted">${esc(n.time)}</span>${n.read?"":badge("UNREAD","unread")}</div><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><small>${esc(n.source)}</small></div><div class="io-notice-actions">${btn(n.read?"Read":"Mark read","toggle-read")}<input type="hidden" data-notice-id value="${n.id}"></div></article>`).join("")||empty}`)+
+ `<div class="io-note">Read/unread changes are stored in the current page session only.</div>`);
+}
+function renderReports(){
+ const days=$("[data-period]")?.value||"7";
+ const bars=days==="30"?[42,55,48,68,58,76,62,85,73,91,78,66]:days==="90"?[36,45,41,58,50,64,55,70,63,81,72,88]:[35,48,40,63,52,72,59];
+ const labels=days==="30"?["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12"]:days==="90"?["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12"]:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+ set(shell("ANALYTICS / REPORTS","Operations overview","Review illustrative service performance and export the displayed summary.",`<select class="io-select" data-period aria-label="Report period"><option value="7" ${days==="7"?"selected":""}>Last 7 days</option><option value="30" ${days==="30"?"selected":""}>Last 30 days</option><option value="90" ${days==="90"?"selected":""}>Last 90 days</option></select>${btn("Export CSV","export-csv","primary")}`)+
+ `<div class="io-stats">${stat("Tickets resolved","184","Illustrative period total","io-green")}${stat("SLA attainment","96.4%","Illustrative performance","io-green")}${stat("Mean resolution","3h 42m","Illustrative average")}${stat("Backlog change","−12.8%","Versus previous period","io-green")}</div>`+
+ `<div class="io-report-grid">${panel("Ticket volume",`Illustrative ticket activity · ${days} days`,`<div class="io-chart">${bars.map((v,i)=>`<div class="io-bar-group"><span>${v}</span><div class="io-bar" style="height:${v}%"></div><small>${labels[i]}</small></div>`).join("")}</div><div class="io-legend"><span><i></i> Tickets created (sample data)</span></div>`)}${panel("SLA performance","Illustrative service-level distribution",`<div class="io-sla-row"><div><span>Within SLA</span><strong>96.4%</strong></div><div class="io-progress"><i style="width:96.4%"></i></div></div><div class="io-sla-row"><div><span>At risk</span><strong>2.1%</strong></div><div class="io-progress warning"><i style="width:2.1%"></i></div></div><div class="io-sla-row"><div><span>Breached</span><strong>1.5%</strong></div><div class="io-progress danger"><i style="width:1.5%"></i></div></div><div class="io-report-foot"><span>Target</span><strong>≥ 95% within SLA</strong></div>`)}${panel("Team workload","Illustrative open-ticket distribution",`<div class="io-team-row"><span>Infrastructure</span><div class="io-progress"><i style="width:78%"></i></div><strong>24</strong></div><div class="io-team-row"><span>Service Desk</span><div class="io-progress"><i style="width:58%"></i></div><strong>18</strong></div><div class="io-team-row"><span>Network</span><div class="io-progress"><i style="width:42%"></i></div><strong>13</strong></div><div class="io-team-row"><span>Systems</span><div class="io-progress"><i style="width:31%"></i></div><strong>9</strong></div>`)}${panel("Report details","Exportable summary",`<div class="io-detail-list"><div><span>Report ID</span><strong>RPT-OPS-001</strong></div><div><span>Reporting window</span><strong>${days} days</strong></div><div><span>Data classification</span><strong>Sample / demo</strong></div><div><span>Generated</span><strong>On demand</strong></div></div>`)}</div>`+
+ `<div class="io-note">All figures and charts on this page are illustrative, not measured from your environment. CSV export contains demo summary figures.</div>`);
+}
+function render() {
+  if (slug === "ticketing") renderTicketing();
+  else if (slug === "knowledge") {
+    if (knowledgeArticleKey) renderKnowledgeArticle();
+    else renderKnowledge();
+  }
+  else if (slug === "tasks") renderTasks();
+  else if (slug === "workflows") renderWorkflows();
+  else if (slug === "notifications") renderNotifications();
+  else renderReports();
+}
+function rerenderKeepSearch(){const q=$("[data-search]")?.value||"";render();const s=$("[data-search]");if(s){s.value=q;s.focus();s.setSelectionRange(q.length,q.length);}}
+root.addEventListener("submit",ticketingSubmitListener);
+root.addEventListener("input",e=>{if(e.target.matches("[data-search]"))rerenderKeepSearch();});
+root.addEventListener("change",e=>{
+ const el=e.target;
+  if(el.matches("[data-kb-status]")){knowledgeState.statusFilter=el.value;renderKnowledge();}
+  if(el.matches("[data-kb-category]")){activeFilter=el.value;renderKnowledge();}
+
+ if(el.matches("[data-task-status]")){const t=tasks.find(x=>x.id===el.dataset.taskStatus);if(t)t.status=el.value;renderTasks();}
+ if(el.matches("[data-workflow-toggle]")){const w=workflows.find(x=>x.id===el.dataset.workflowToggle);if(w)w.enabled=el.checked;renderWorkflows();}
+ if(el.matches("[data-period]"))renderReports();
+});
+root.addEventListener("click",e=>{
+ if(slug==="ticketing"){void handleTicketingClick(e);return;}
+ const f=e.target.closest("[data-filter]");
+ if(f){activeFilter=f.dataset.filter;render();return;}
+ const b=e.target.closest("[data-action]");if(!b)return;
+ const action=b.dataset.action;
+  // CARTMAN_KB_NEW_ARTICLE_CLICK_GUARD_V1
+  if (action === "new-article" &&
+      document.querySelector(".io-kb-list-panel")) {
+    e.preventDefault();
+
+    if (!knowledgeState.canManage) {
+      window.alert("Only Cartman administrators can create articles.");
+      return;
+    }
+
+    knowledgeState.error = "";
+    knowledgeState.editor = {
+      mode: "create",
+      article: null,
+      draft: null
+    };
+    renderKnowledge();
+    return;
+  }
+
+    if (slug === "knowledge") {
+    if (action === "close-knowledge-editor") {
+      knowledgeState.editor = null;
+      knowledgeState.error = "";
+      renderKnowledge();
+      return;
+    }
+
+    if (action === "new-article") {
+      if (knowledgeState.canManage) {
+        knowledgeState.error = "";
+        knowledgeState.editor = {mode: "create", article: null, draft: null};
+        renderKnowledge();
+      }
+    } else if (action === "refresh-knowledge") {
+      void loadKnowledgeArticles(true);
+    } else if (action === "close-kb-editor") {
+      knowledgeState.editor = null;
+      knowledgeState.error = "";
+      renderKnowledge();
+    } else if (action === "read-article") {
+      const key = b.dataset.id;
+      if (key) window.location.assign(`/pages/knowledge/article/${encodeURIComponent(key)}/`);
+    } else if (action === "edit-article") {
+      if (knowledgeState.canManage) {
+        const article = knowledgeState.items.find(item => item.article_key === b.dataset.id);
+        if (article) {
+          knowledgeState.error = "";
+          knowledgeState.editor = {mode: "edit", article, draft: null};
+          renderKnowledge();
+        }
+      }
+    } else if (action === "set-knowledge-status") {
+      if (knowledgeState.canManage && ["Published", "Archived"].includes(b.dataset.status)) {
+        void setKnowledgeArticleStatus(b.dataset.id, b.dataset.status);
+      }
+    } else if (action === "delete-article") {
+      void deleteKnowledgeArticle(b.dataset.id);
+    } else if (action === "draft-knowledge-article") {
+      const reason = window.prompt("Why is this article being moved to Draft? A reason is required.");
+      if (reason !== null) {
+        if (!reason.trim()) {
+          window.alert("Please enter a reason before drafting this article.");
+        } else {
+          void changeKnowledgeArticleStatus(b.dataset.id, "Draft", reason.trim());
+        }
+      }
+    } else if (action === "publish-knowledge-article") {
+      void changeKnowledgeArticleStatus(b.dataset.id, "Published");
+    } else if (action === "archive-knowledge-article") {
+      const confirmed = window.confirm("Archive this article? It will no longer appear in the active Knowledge Base.");
+      if (confirmed) void changeKnowledgeArticleStatus(b.dataset.id, "Archived");
+    }
+    return;
+  }
+ if(action==="ticket-detail"){const t=tickets.find(x=>x.id===b.dataset.id);if(t)alert(`${t.id} — ${t.title}\n\n${t.desc}\n\nOwner: ${t.owner}\nStatus: ${t.status}\nSLA remaining: ${t.sla}`);}
+ if(action==="new-ticket"){const title=prompt("Ticket title:");if(title&&title.trim()){tickets.unshift({id:"INC-"+(1049+tickets.length),title:title.trim(),type:"Incident",priority:"Normal",status:"Open",owner:"Unassigned",team:"Service Desk",time:"Just now",desc:"Created in local demo.",sla:"4 hours"});activeFilter="All";renderTicketing();}}
+ if(action==="read-article"){const a=articles.find(x=>x.id===b.dataset.id);if(a)alert(`${a.title}\n\n${a.desc}\n\n${a.steps.map((x,i)=>`${i+1}. ${x}`).join("\n")}`);}
+ if(action==="new-article"){const title=prompt("Article title:");if(title&&title.trim()){articles.unshift({id:"KB-"+String(articles.length+1).padStart(3,"0"),cat:"General",title:title.trim(),desc:"New local demo article. Edit this content in the demo workflow.",time:"2 min read",tag:"New",steps:["Define the symptom.","Collect relevant logs.","Validate the fix.","Document the result."]});activeFilter="All";renderKnowledge();}}
+ if(action==="new-task"){const title=prompt("Task title:");if(title&&title.trim()){tasks.unshift({id:"TSK-"+String(27+tasks.length-6).padStart(3,"0"),title:title.trim(),project:"Operations",owner:"Unassigned",due:"Unscheduled",status:"To do",priority:"Normal"});renderTasks();}}
+ if(action==="new-workflow"){const name=prompt("Workflow name:");if(name&&name.trim()){workflows.push({id:"WF-"+String(workflows.length+1).padStart(3,"0"),name:name.trim(),trigger:"Manual trigger",condition:"No conditions configured",action:"Review required",runs:0,success:100,enabled:false});renderWorkflows();}}
+ if(action==="simulate"){const card=b.closest(".io-workflow");const id=card?.querySelector("[data-workflow-id]")?.value;const w=workflows.find(x=>x.id===id);if(w)alert(w.enabled?`Demo simulation complete: ${w.name}\n\nNo external actions were executed.`:`${w.name} is disabled. Enable it before simulating a run.`);}
+ if(action==="read-all"){notices.forEach(n=>n.read=true);renderNotifications();}
+ if(action==="toggle-read"){const id=Number(b.parentElement.querySelector("[data-notice-id]")?.value);const n=notices.find(x=>x.id===id);if(n)n.read=!n.read;renderNotifications();}
+ if(action==="export-csv"){const csv=[["Metric","Value","Note"],["Tickets resolved","184","Illustrative demo value"],["SLA attainment","96.4%","Illustrative demo value"],["Mean resolution","3h 42m","Illustrative demo value"],["Backlog change","-12.8%","Illustrative demo value"],["Reporting window",($("[data-period]")?.value||"7")+" days","Selected period"]].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cartman-operations-demo-report.csv";a.click();URL.revokeObjectURL(url);}
+});
+render();
+})();

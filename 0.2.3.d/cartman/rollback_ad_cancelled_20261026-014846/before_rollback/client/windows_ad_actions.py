@@ -1,0 +1,383 @@
+"""Allowlisted, read-only Active Directory operations for CartmanClient."""
+
+import json
+import platform
+import shutil
+import subprocess
+
+CHANGE_MARKER = "windows_ad_management_v1"
+
+PULL_PAGE_OPERATIONS = {
+    "pull_ous_page",
+    "pull_users_page",
+    "pull_groups_page",
+    "pull_computers_page",
+}
+
+READ_OPERATIONS = {
+    "read_domain",
+    "read_ous",
+    "read_users",
+    "read_groups",
+    "read_computers",
+    *PULL_PAGE_OPERATIONS,
+}
+
+QUERY_BODIES = {
+    "read_domain": r"""
+$d = Get-ADDomain -ErrorAction Stop
+$f = Get-ADForest -ErrorAction Stop
+$all = @(Get-ADDomainController -Filter * -ErrorAction Stop | Select-Object -First 6)
+$controllers = @($all | Select-Object -First 5 | ForEach-Object {
+    [pscustomobject]@{
+        hostname = LimitText $_.HostName 120
+        site = LimitText $_.Site 80
+        ipv4 = LimitText $_.IPv4Address 50
+        global_catalog = [bool]$_.IsGlobalCatalog
+        read_only = [bool]$_.IsReadOnly
+    }
+})
+$data = [pscustomobject]@{
+    domain = LimitText $d.DNSRoot 180
+    domain_dn = LimitText $d.DistinguishedName 220
+    netbios_name = LimitText $d.NetBIOSName 80
+    forest = LimitText $f.Name 180
+    domain_mode = [string]$d.DomainMode
+    forest_mode = [string]$f.ForestMode
+    domain_controllers = $controllers
+    controllers_truncated = ($all.Count -gt 5)
+}
+""",
+    "read_ous": r"""
+$all = @(Get-ADOrganizationalUnit -Filter * -ResultSetSize 6 `
+    -Properties ProtectedFromAccidentalDeletion -ErrorAction Stop)
+$items = @($all | Select-Object -First 5 | ForEach-Object {
+    [pscustomobject]@{
+        name = LimitText $_.Name 100
+        distinguished_name = LimitText $_.DistinguishedName 200
+        protected_from_deletion = [bool]$_.ProtectedFromAccidentalDeletion
+    }
+})
+$data = [pscustomobject]@{
+    items = $items
+    returned_count = $items.Count
+    truncated = ($all.Count -gt 5)
+}
+""",
+    "read_users": r"""
+$all = @(Get-ADUser -Filter * -ResultSetSize 6 `
+    -Properties DisplayName,UserPrincipalName,Enabled,Department,Title,DistinguishedName `
+    -ErrorAction Stop)
+$items = @($all | Select-Object -First 5 | ForEach-Object {
+    [pscustomobject]@{
+        username = LimitText $_.SamAccountName 100
+        display_name = LimitText $_.DisplayName 100
+        upn = LimitText $_.UserPrincipalName 140
+        enabled = [bool]$_.Enabled
+        department = LimitText $_.Department 80
+        title = LimitText $_.Title 80
+        distinguished_name = LimitText $_.DistinguishedName 180
+    }
+})
+$data = [pscustomobject]@{
+    items = $items
+    returned_count = $items.Count
+    truncated = ($all.Count -gt 5)
+}
+""",
+    "read_groups": r"""
+$all = @(Get-ADGroup -Filter * -ResultSetSize 6 `
+    -Properties GroupCategory,GroupScope,Description,DistinguishedName `
+    -ErrorAction Stop)
+$items = @($all | Select-Object -First 5 | ForEach-Object {
+    [pscustomobject]@{
+        name = LimitText $_.Name 100
+        sam_account_name = LimitText $_.SamAccountName 100
+        category = [string]$_.GroupCategory
+        scope = [string]$_.GroupScope
+        description = LimitText $_.Description 100
+        distinguished_name = LimitText $_.DistinguishedName 180
+    }
+})
+$data = [pscustomobject]@{
+    items = $items
+    returned_count = $items.Count
+    truncated = ($all.Count -gt 5)
+}
+""",
+    "read_computers": r"""
+$all = @(Get-ADComputer -Filter * -ResultSetSize 6 `
+    -Properties OperatingSystem,Enabled,IPv4Address,LastLogonDate,DistinguishedName `
+    -ErrorAction Stop)
+$items = @($all | Select-Object -First 5 | ForEach-Object {
+    $last = ''
+    if ($_.LastLogonDate) {
+        $last = $_.LastLogonDate.ToUniversalTime().ToString('o')
+    }
+    [pscustomobject]@{
+        name = LimitText $_.Name 100
+        dns_hostname = LimitText $_.DNSHostName 150
+        operating_system = LimitText $_.OperatingSystem 120
+        ipv4_address = LimitText $_.IPv4Address 50
+        enabled = [bool]$_.Enabled
+        last_logon = $last
+        distinguished_name = LimitText $_.DistinguishedName 180
+    }
+})
+$data = [pscustomobject]@{
+    items = $items
+    returned_count = $items.Count
+    truncated = ($all.Count -gt 5)
+}
+""",
+}
+
+
+
+PULL_PAGE_QUERY_BODIES = {
+    "pull_ous_page": r"""
+$all = @(Get-ADOrganizationalUnit -Filter * -ResultSetSize $null `
+    -Properties ProtectedFromAccidentalDeletion,ObjectGUID -ErrorAction Stop |
+    Sort-Object DistinguishedName |
+    Select-Object -Skip $offset -First ($pageSize + 1))
+$hasMore = $all.Count -gt $pageSize
+$items = @($all | Select-Object -First $pageSize | ForEach-Object {
+    [pscustomobject]@{
+        object_guid = [string]$_.ObjectGUID
+        name = LimitText $_.Name 100
+        distinguished_name = LimitText $_.DistinguishedName 220
+        protected_from_deletion = [bool]$_.ProtectedFromAccidentalDeletion
+    }
+})
+$data = [pscustomobject]@{ items = $items; offset = $offset; page_size = $pageSize; has_more = $hasMore; returned_count = $items.Count }
+""",
+    "pull_users_page": r"""
+$all = @(Get-ADUser -Filter * -ResultSetSize $null `
+    -Properties DisplayName,UserPrincipalName,Enabled,Department,Title,DistinguishedName,ObjectGUID `
+    -ErrorAction Stop |
+    Sort-Object SamAccountName |
+    Select-Object -Skip $offset -First ($pageSize + 1))
+$hasMore = $all.Count -gt $pageSize
+$items = @($all | Select-Object -First $pageSize | ForEach-Object {
+    [pscustomobject]@{
+        object_guid = [string]$_.ObjectGUID
+        username = LimitText $_.SamAccountName 100
+        display_name = LimitText $_.DisplayName 100
+        upn = LimitText $_.UserPrincipalName 140
+        enabled = [bool]$_.Enabled
+        department = LimitText $_.Department 80
+        title = LimitText $_.Title 80
+        distinguished_name = LimitText $_.DistinguishedName 220
+    }
+})
+$data = [pscustomobject]@{ items = $items; offset = $offset; page_size = $pageSize; has_more = $hasMore; returned_count = $items.Count }
+""",
+    "pull_groups_page": r"""
+$all = @(Get-ADGroup -Filter * -ResultSetSize $null `
+    -Properties GroupCategory,GroupScope,Description,DistinguishedName,ObjectGUID `
+    -ErrorAction Stop |
+    Sort-Object SamAccountName |
+    Select-Object -Skip $offset -First ($pageSize + 1))
+$hasMore = $all.Count -gt $pageSize
+$items = @($all | Select-Object -First $pageSize | ForEach-Object {
+    [pscustomobject]@{
+        object_guid = [string]$_.ObjectGUID
+        name = LimitText $_.Name 100
+        sam_account_name = LimitText $_.SamAccountName 100
+        category = [string]$_.GroupCategory
+        scope = [string]$_.GroupScope
+        description = LimitText $_.Description 100
+        distinguished_name = LimitText $_.DistinguishedName 220
+    }
+})
+$data = [pscustomobject]@{ items = $items; offset = $offset; page_size = $pageSize; has_more = $hasMore; returned_count = $items.Count }
+""",
+    "pull_computers_page": r"""
+$all = @(Get-ADComputer -Filter * -ResultSetSize $null `
+    -Properties OperatingSystem,Enabled,IPv4Address,LastLogonDate,DistinguishedName,ObjectGUID `
+    -ErrorAction Stop |
+    Sort-Object Name |
+    Select-Object -Skip $offset -First ($pageSize + 1))
+$hasMore = $all.Count -gt $pageSize
+$items = @($all | Select-Object -First $pageSize | ForEach-Object {
+    $last = ''
+    if ($_.LastLogonDate) { $last = $_.LastLogonDate.ToUniversalTime().ToString('o') }
+    [pscustomobject]@{
+        object_guid = [string]$_.ObjectGUID
+        name = LimitText $_.Name 100
+        dns_hostname = LimitText $_.DNSHostName 150
+        operating_system = LimitText $_.OperatingSystem 120
+        ipv4_address = LimitText $_.IPv4Address 50
+        enabled = [bool]$_.Enabled
+        last_logon = $last
+        distinguished_name = LimitText $_.DistinguishedName 220
+    }
+})
+$data = [pscustomobject]@{ items = $items; offset = $offset; page_size = $pageSize; has_more = $hasMore; returned_count = $items.Count }
+""",
+}
+
+def _error(message):
+    return "Failed", json.dumps({
+        "status": "Failed",
+        "read_only": True,
+        "verified": False,
+        "connector": "windows-ad-powershell",
+        "error": str(message)[:350],
+    }, ensure_ascii=True, separators=(",", ":"))
+
+
+def _make_script(operation, offset=0):
+    body = PULL_PAGE_QUERY_BODIES[operation] if operation in PULL_PAGE_OPERATIONS else QUERY_BODIES[operation]
+    paging_prelude = f"$offset = {offset}\n$pageSize = 5\n" if operation in PULL_PAGE_OPERATIONS else ""
+    return r"""
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+try {
+    function LimitText([object]$Value, [int]$Maximum = 120) {
+        if ($null -eq $Value) { return '' }
+        $s = [string]$Value
+        if ($s.Length -gt $Maximum) { return $s.Substring(0, $Maximum) }
+        return $s
+    }
+
+    if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) {
+        throw 'ActiveDirectory PowerShell module is not installed on this Windows host.'
+    }
+    Import-Module ActiveDirectory -ErrorAction Stop
+
+    $server = $env:COMPUTERNAME
+    $checked_at = (Get-Date).ToUniversalTime().ToString('o')
+""" + paging_prelude + body + r"""
+    $output = [pscustomobject]@{
+        status = 'Succeeded'
+        read_only = $true
+        verified = $true
+        connector = 'windows-ad-powershell'
+        operation = '""" + operation + r"""'
+        server = $server
+        checked_at = $checked_at
+        data = $data
+    }
+    $output | ConvertTo-Json -Depth 6 -Compress
+} catch {
+    $output = [pscustomobject]@{
+        status = 'Failed'
+        read_only = $true
+        verified = $false
+        connector = 'windows-ad-powershell'
+        operation = '""" + operation + r"""'
+        server = $env:COMPUTERNAME
+        error = ([string]$_.Exception.Message).Substring(
+            0, [Math]::Min(350, ([string]$_.Exception.Message).Length)
+        )
+    }
+    $output | ConvertTo-Json -Depth 3 -Compress
+    exit 1
+}
+"""
+
+
+def _run_powershell(operation, offset=0):
+    executable = (
+        shutil.which("powershell.exe")
+        or shutil.which("powershell")
+        or shutil.which("pwsh")
+    )
+    if not executable:
+        return _error("PowerShell executable was not found.")
+
+    try:
+        completed = subprocess.run(
+            [
+                executable,
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                _make_script(operation, offset),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=45,
+            check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except subprocess.TimeoutExpired:
+        return _error("Active Directory query timed out.")
+    except OSError:
+        return _error("Could not start PowerShell.")
+
+    raw = (completed.stdout or "").strip()
+    try:
+        result = json.loads(raw)
+    except (ValueError, TypeError):
+        return _error("PowerShell returned no valid structured AD result.")
+
+    if not isinstance(result, dict):
+        return _error("PowerShell returned an unexpected AD result format.")
+
+    # The current CartmanClient transport has an 8192-byte message limit.
+    # Bound the serialized nested result so the task-result message stays small.
+    encoded = json.dumps(result, ensure_ascii=True, separators=(",", ":"))
+    data = result.get("data")
+    while len(encoded) > 3500 and isinstance(data, dict):
+        removed = False
+        for key in ("items", "domain_controllers"):
+            rows = data.get(key)
+            if isinstance(rows, list) and rows:
+                rows.pop()
+                data["truncated"] = True
+                if key == "items":
+                    data["has_more"] = True
+                data["controllers_truncated"] = True
+                removed = True
+                break
+        if not removed:
+            result = {
+                "status": result.get("status", "Failed"),
+                "read_only": True,
+                "verified": result.get("verified", False),
+                "connector": "windows-ad-powershell",
+                "operation": operation,
+                "server": result.get("server", ""),
+                "error": "Result exceeded the current transport size limit.",
+            }
+            break
+        encoded = json.dumps(result, ensure_ascii=True, separators=(",", ":"))
+
+    encoded = json.dumps(result, ensure_ascii=True, separators=(",", ":"))
+    succeeded = completed.returncode == 0 and result.get("status") == "Succeeded"
+    return ("Succeeded" if succeeded else "Failed"), encoded
+
+
+def execute(payload):
+    """Execute one of the fixed read-only AD queries. Arbitrary commands are rejected."""
+    if not isinstance(payload, dict):
+        return _error("Invalid Active Directory request.")
+
+    if payload.get("connector_action") != CHANGE_MARKER:
+        return _error("Invalid Active Directory connector marker.")
+
+    if payload.get("confirmed") is not True:
+        return _error("The server did not confirm this Active Directory read.")
+
+    operation = payload.get("operation")
+    if operation not in READ_OPERATIONS:
+        return _error("Unsupported Active Directory operation.")
+
+    offset = payload.get("offset", 0)
+    if operation in PULL_PAGE_OPERATIONS:
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0 or offset > 500000:
+            return _error("Invalid AD page offset.")
+    else:
+        offset = 0
+
+    if platform.system() != "Windows":
+        return _error("Active Directory queries must run on the Windows domain controller.")
+
+    return _run_powershell(operation, offset)

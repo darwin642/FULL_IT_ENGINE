@@ -1,0 +1,19 @@
+/* CARTMAN_KILL_SWITCH_UI_V1 */
+.cartman-kill-main{width:100%;max-width:1120px;margin:0 auto;padding:28px 22px 60px;color:var(--text-color,inherit)}
+.ck-card{border:1px solid var(--border-color,#d8dee8);border-radius:15px;background:var(--card-background,var(--background-color,transparent));padding:22px;margin:0 0 16px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+.ck-danger{border-color:rgba(190,52,52,.48);background:rgba(190,52,52,.055)}
+.ck-kicker{font-size:10px;font-weight:900;letter-spacing:.13em;color:#c04444;text-transform:uppercase}
+.ck-title{font-size:clamp(25px,4vw,36px);font-weight:900;margin:9px 0;line-height:1.15;color:var(--text-color,inherit)}
+.ck-copy{color:var(--text-secondary,#718096);font-size:13px;line-height:1.75;max-width:900px}
+.ck-warning{padding:16px 18px;border:1px solid rgba(190,52,52,.5);border-radius:10px;background:rgba(190,52,52,.08);font-size:13px;line-height:1.8;color:var(--text-color,inherit)}
+.ck-warning strong{color:#c04444}
+.ck-form{display:grid;gap:12px;margin-top:17px}
+.ck-field{display:grid;gap:7px;font-size:12px;font-weight:800;color:var(--text-color,inherit)}
+.ck-field input{width:100%;box-sizing:border-box;padding:12px;border:1px solid var(--border-color,#d8dee8);border-radius:8px;background:var(--background-color,transparent);color:var(--text-color,inherit);font:inherit}
+.ck-btn{display:inline-flex;justify-content:center;align-items:center;padding:11px 15px;border:1px solid var(--border-color,#d8dee8);border-radius:8px;background:var(--background-color,transparent);color:var(--text-color,inherit);font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.ck-btn-danger{border-color:#a92e36;background:#a92e36;color:#fff}
+.ck-btn:disabled{opacity:.42;cursor:not-allowed}
+.ck-status{border:1px solid rgba(50,130,90,.4);background:rgba(50,130,90,.07);border-radius:10px;padding:15px;line-height:1.7;font-size:13px;color:var(--text-color,inherit)}
+.ck-note{font-size:11px;line-height:1.7;color:var(--text-secondary,#718096)}
+.ck-error{color:#c04444;font-size:12px;min-height:16px}
+@media(max-width:700px){.cartman-kill-main{padding:16px 12px 40px}.ck-card{padding:16px}}

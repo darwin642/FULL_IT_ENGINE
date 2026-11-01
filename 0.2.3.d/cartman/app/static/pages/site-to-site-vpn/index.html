@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Site-to-Site VPN</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/vpn-remote-access.css">
+    <script src="/static/js/modules/global-live-toasts.js?v=cartman-global-live-toasts-v3-20261029"></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js?v=cartman-active-page-task-completion-v6-20261029" defer></script>
+    <script src="/static/js/modules/vpn-site-to-site.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/header-support-availability.css">
+    <script src="/static/js/modules/header-support-availability.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">&#9672;</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE / SITE TO SITE VPN</div>
+                <h1>Site-to-Site VPN</h1>
+                <p>Manage site-to-site connection definitions between configured gateways. Saving a definition does not establish a live tunnel.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Site-to-Site VPN workspace" data-site-to-site>
+            <div class="workspace-eyebrow">SITE-TO-SITE VPN</div>
+
+            <div class="workspace-toolbar">
+                <input class="workspace-search"
+                    type="search"
+                    data-site-search
+                    placeholder="Search saved connection definitions…"
+                    aria-label="Search Site-to-Site VPN">
+                <button class="vpn-btn" type="button" data-site-refresh>Refresh ↻</button>
+                <button class="vpn-btn vpn-btn-primary" type="button" data-site-create disabled>
+                    Create definition
+                </button>
+                <span class="workspace-demo-label" data-site-api-state>Connecting to Cartman API…</span>
+            </div>
+
+            <div class="workspace-stats">
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Configured</span>
+                    <strong class="workspace-stat-value" data-site-configured>0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Active tunnels</span>
+                    <strong class="workspace-stat-value" data-site-active>0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Draft definitions</span>
+                    <strong class="workspace-stat-value" data-site-draft>0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Data source</span>
+                    <strong class="workspace-stat-value">Cartman API</strong>
+                </article>
+            </div>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <div>
+                        <h2>Site-to-Site VPN definitions</h2>
+                        <p>Saved definitions are not live tunnels. The Cartman VPN engine is not implemented.</p>
+                    </div>
+                    <span class="workspace-row-count" data-site-count>0 definitions</span>
+                </div>
+                <div class="workspace-table-wrap">
+                    <table class="workspace-table">
+                        <thead>
+                            <tr>
+                                <th>Connection</th>
+                                <th>Gateway A</th>
+                                <th>Gateway B</th>
+                                <th>Local subnet</th>
+                                <th>Remote subnet</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-site-tbody>
+                            <tr><td colspan="7">Loading saved definitions…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="workspace-empty hidden" data-site-empty>No saved definitions yet.</p>
+            </div>
+
+            <p data-site-notice style="font-size:12px;line-height:1.6;color:var(--text-muted,#9aa7bb);margin-top:14px;">
+                Loading Site-to-Site VPN data from Cartman API…
+            </p>
+            <div data-site-modal-host></div>
+        </section>
+
+        <footer class="app-footer cartman-version-footer"><span>Cartman v0.2.3d pre-alpha-0111260212</span></footer>
+    </main>
+</body>
+</html>

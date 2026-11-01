@@ -1,0 +1,45 @@
+/* CARTMAN_PROCESS_USAGE_THEME_V1 — inherit Cartman theme tokens */
+#cartman-process-usage-root{
+  --cpu-panel:var(--surface, var(--card, var(--bg-card, #111827)));
+  --cpu-panel-sub:var(--surface-secondary, var(--card-muted, var(--bg-elevated, #1f2937)));
+  --cpu-border:var(--border, var(--border-color, #374151));
+  --cpu-text:var(--text, var(--text-primary, #f3f4f6));
+  --cpu-muted:var(--text-muted, var(--text-secondary, #9ca3af));
+  --cpu-accent:var(--accent, var(--primary, #60a5fa));
+  --cpu-good:var(--success, #34d399);
+  width:100%;min-width:0;margin:16px 0;color:var(--cpu-text);font:inherit;
+}
+#cartman-process-usage-root *{box-sizing:border-box}
+#cartman-process-usage-root .cpu-process-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;padding:18px 20px;border:1px solid var(--cpu-border);border-radius:14px;background:var(--cpu-panel);color:var(--cpu-text)}
+#cartman-process-usage-root .cpu-process-kicker{display:block;margin-bottom:6px;font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--cpu-muted)}
+#cartman-process-usage-root .cpu-process-head h2{margin:0;color:var(--cpu-text);font-size:17px;font-weight:750;letter-spacing:-.02em}
+#cartman-process-usage-root .cpu-process-head p{margin:6px 0 0;color:var(--cpu-muted);font-size:11px;line-height:1.5}
+#cartman-process-usage-root .cpu-process-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-height:25px;padding:4px 9px;border:1px solid var(--cpu-border);border-radius:999px;background:var(--cpu-panel-sub);color:var(--cpu-muted);font-size:10px;font-weight:750}
+#cartman-process-usage-root .cpu-process-badge.is-live{border-color:color-mix(in srgb,var(--cpu-good) 40%,var(--cpu-border));color:var(--cpu-good);background:color-mix(in srgb,var(--cpu-good) 9%,var(--cpu-panel))}
+#cartman-process-usage-root .cpu-process-badge.is-error{border-color:color-mix(in srgb,#ef4444 45%,var(--cpu-border));color:var(--danger,#ef4444);background:color-mix(in srgb,#ef4444 9%,var(--cpu-panel))}
+#cartman-process-usage-root .cpu-process-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:12px 14px;border:1px solid var(--cpu-border);border-radius:12px;background:var(--cpu-panel-sub);color:var(--cpu-text)}
+#cartman-process-usage-root .cpu-process-search,#cartman-process-usage-root .cpu-process-sort{display:flex;flex-direction:column;gap:5px;min-width:145px;color:var(--cpu-muted);font-size:10px;font-weight:700}
+#cartman-process-usage-root .cpu-process-search{flex:1}
+#cartman-process-usage-root .cpu-process-search input,#cartman-process-usage-root .cpu-process-sort select{width:100%;min-height:34px;border:1px solid var(--cpu-border);border-radius:8px;background:var(--cpu-panel);color:var(--cpu-text);padding:7px 9px;font:inherit;font-size:11px;outline-offset:2px}
+#cartman-process-usage-root .cpu-process-search input::placeholder{color:var(--cpu-muted)}
+#cartman-process-usage-root .cpu-process-updated{margin-left:auto;padding-bottom:9px;color:var(--cpu-muted);font-size:10px}
+#cartman-process-usage-root .cpu-process-table-wrap{width:100%;overflow:auto;border:1px solid var(--cpu-border);border-radius:12px;background:var(--cpu-panel)}
+#cartman-process-usage-root .cpu-process-table{width:100%;border-collapse:collapse;min-width:700px;color:var(--cpu-text);font-size:11px}
+#cartman-process-usage-root .cpu-process-table th{padding:11px 13px;text-align:left;white-space:nowrap;background:var(--cpu-panel-sub);border-bottom:1px solid var(--cpu-border);color:var(--cpu-muted);font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+#cartman-process-usage-root .cpu-process-table td{padding:12px 13px;border-bottom:1px solid color-mix(in srgb,var(--cpu-border) 65%,transparent);vertical-align:middle}
+#cartman-process-usage-root .cpu-process-table tbody tr:last-child td{border-bottom:0}
+#cartman-process-usage-root .cpu-process-table tbody tr:hover{background:color-mix(in srgb,var(--cpu-accent) 5%,var(--cpu-panel))}
+#cartman-process-usage-root .cpu-process-table td:first-child{min-width:180px}
+#cartman-process-usage-root .cpu-process-name{font-size:11px;font-weight:750;color:var(--cpu-text);overflow-wrap:anywhere}
+#cartman-process-usage-root .cpu-process-pid,#cartman-process-usage-root .cpu-process-sub{display:block;margin-top:3px;color:var(--cpu-muted);font-size:9px}
+#cartman-process-usage-root .cpu-process-bar{display:block;width:100%;height:4px;margin-top:6px;border-radius:99px;background:var(--cpu-panel-sub);overflow:hidden;min-width:65px}
+#cartman-process-usage-root .cpu-process-bar i{display:block;height:100%;border-radius:99px;background:var(--cpu-accent)}
+#cartman-process-usage-root .cpu-process-bar.ram i{background:var(--cpu-good)}
+#cartman-process-usage-root .cpu-process-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:112px;padding:23px 17px;border:1px dashed var(--cpu-border);border-radius:12px;background:var(--cpu-panel);color:var(--cpu-muted);text-align:center;font-size:11px;line-height:1.6}
+#cartman-process-usage-root .cpu-process-empty strong{color:var(--cpu-text);font-size:12px}
+#cartman-process-usage-root .cpu-process-empty p{max-width:650px;margin:0;color:var(--cpu-muted)}
+#cartman-process-usage-root .cpu-process-empty.is-error{border-color:color-mix(in srgb,#ef4444 45%,var(--cpu-border))}
+#cartman-process-usage-root .cpu-process-btn{min-height:31px;padding:6px 10px;border:1px solid var(--cpu-border);border-radius:8px;background:var(--cpu-panel-sub);color:var(--cpu-text);font:inherit;font-weight:700;cursor:pointer}
+#cartman-process-usage-root .cpu-process-btn:hover{border-color:var(--cpu-accent)}
+#cartman-process-usage-root .cpu-process-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:9px;color:var(--cpu-muted);font-size:9px;line-height:1.5}
+@media(max-width:650px){#cartman-process-usage-root .cpu-process-head{flex-direction:column;padding:14px}#cartman-process-usage-root .cpu-process-toolbar{align-items:stretch}#cartman-process-usage-root .cpu-process-search,#cartman-process-usage-root .cpu-process-sort{min-width:100%}#cartman-process-usage-root .cpu-process-updated{margin-left:0;padding-bottom:0}}
