@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Endpoint Health</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/endpoint-health.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/endpoint-health.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span>
+            <span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="eh-main">
+    <section class="eh-heading">
+        <div>
+            <div class="eyebrow">CARTMAN WORKSPACE / ENDPOINT MANAGEMENT</div>
+            <h1>Endpoint Health</h1>
+            <p>Endpoint connectivity, agent readiness and devices that need attention.</p>
+        </div>
+        <div class="eh-heading-actions">
+            <span class="eh-updated" data-eh-updated>Not refreshed yet</span>
+            <button class="eh-button" type="button" data-eh-refresh>
+                <span aria-hidden="true">&#8635;</span> Refresh
+            </button>
+            <button class="eh-button eh-button-subtle" type="button" data-eh-export>
+                Export CSV
+            </button>
+        </div>
+    </section>
+
+    <section class="eh-state-banner" data-eh-banner aria-live="polite">
+        <span class="eh-banner-mark" data-eh-banner-mark>…</span>
+        <div>
+            <strong data-eh-banner-title>Loading endpoint status</strong>
+            <p data-eh-banner-description>Reading device inventory and agent connection records.</p>
+        </div>
+    </section>
+
+    <section class="eh-kpis" aria-label="Endpoint status summary">
+        <article class="eh-card">
+            <div class="eh-card-label"><span class="eh-kpi-icon">▦</span> Registered endpoints</div>
+            <strong data-eh-total>—</strong>
+            <small>Devices in Cartman inventory</small>
+        </article>
+        <article class="eh-card">
+            <div class="eh-card-label"><span class="eh-kpi-icon eh-green">●</span> Connected agents</div>
+            <strong data-eh-connected>—</strong>
+            <small>Currently reporting a connection</small>
+        </article>
+        <article class="eh-card">
+            <div class="eh-card-label"><span class="eh-kpi-icon eh-red">○</span> Offline agents</div>
+            <strong data-eh-offline>—</strong>
+            <small>Known agents without an active connection</small>
+        </article>
+        <article class="eh-card">
+            <div class="eh-card-label"><span class="eh-kpi-icon eh-amber">!</span> Needs attention</div>
+            <strong data-eh-attention>—</strong>
+            <small>Offline, missing agent or approval issue</small>
+        </article>
+    </section>
+
+    <section class="eh-panel">
+        <header class="eh-panel-header">
+            <div>
+                <h2>Endpoint status</h2>
+                <p>Use this list to find a device, check its connection and open Monitoring.</p>
+            </div>
+            <span class="eh-record-count" data-eh-count>0 endpoints</span>
+        </header>
+
+        <div class="eh-toolbar">
+            <label class="eh-search-wrap">
+                <span aria-hidden="true">⌕</span>
+                <input type="search" data-eh-search placeholder="Search name, OS, IP or agent…" aria-label="Search endpoints">
+            </label>
+            <select data-eh-filter aria-label="Filter endpoint status">
+                <option value="all">All endpoints</option>
+                <option value="connected">Connected</option>
+                <option value="offline">Offline</option>
+                <option value="attention">Needs attention</option>
+                <option value="missing">No agent</option>
+            </select>
+        </div>
+
+        <div class="eh-table-wrap">
+            <table class="eh-table">
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Operating system</th>
+                        <th>Connection</th>
+                        <th>Approval</th>
+                        <th>Last seen</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody data-eh-rows>
+                    <tr><td colspan="6" class="eh-empty">Loading endpoint records…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="eh-table-footer">
+            <span data-eh-table-note>Connection status is based on Cartman agent records.</span>
+            <button type="button" class="eh-text-button" data-eh-clear>Clear filters</button>
+        </div>
+    </section>
+
+    <section class="eh-monitoring-handoff">
+        <div class="eh-handoff-icon">↗</div>
+        <div>
+            <strong>Need performance graphs?</strong>
+            <p>Open Monitoring for the broader performance and service overview. Its current charts are still demo data; live per-endpoint telemetry has not been connected yet.</p>
+        </div>
+        <a href="/pages/monitoring/" class="eh-button eh-button-subtle">Open Monitoring</a>
+    </section>
+
+    <footer class="eh-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Live connection state · No fabricated CPU/RAM/disk values</span>
+    </footer>
+</main>
+</body>
+</html>

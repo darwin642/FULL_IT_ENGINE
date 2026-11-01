@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Endpoint Health</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/endpoint-health.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/endpoint-health.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span><span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="eh-page">
+    <div class="module-header eh-module-header">
+        <span class="category-icon purple">&#9672;</span>
+        <div>
+            <div class="eyebrow">CARTMAN WORKSPACE / ENDPOINT MANAGEMENT</div>
+            <h1>Endpoint Health</h1>
+            <p>Monitor endpoint condition, resource utilization and health-check readiness.</p>
+        </div>
+    </div>
+
+    <section class="eh-banner">
+        <div class="eh-banner-icon">&#9829;</div>
+        <div class="eh-banner-copy">
+            <strong data-eh-banner-title>Checking endpoint connections</strong>
+            <p data-eh-banner-description>Reading device inventory and CartmanClient connection records.</p>
+        </div>
+        <span class="eh-source-status" data-eh-source-status><i></i> Checking</span>
+    </section>
+
+    <section class="eh-overview">
+    <div class="eh-section-title">
+        <div>
+            <span class="eh-kicker">FLEET CONDITION</span>
+            <h2>Endpoint overview</h2>
+            <p>Agent connectivity and endpoint readiness from Cartman APIs.</p>
+        </div>
+        <button type="button" class="eh-action-button" data-eh-refresh>↻ Refresh</button>
+    </div>
+
+    <div class="eh-summary-grid">
+        <article class="eh-summary-card">
+            <div class="eh-card-label"><span>Registered endpoints</span><span class="eh-icon eh-icon-blue">▦</span></div>
+            <strong class="eh-big-value" data-eh-total>—</strong>
+            <p class="eh-card-description">Devices in Cartman inventory</p>
+            <div class="eh-card-foot"><span>Source</span><span>Device inventory API</span></div>
+        </article>
+        <article class="eh-summary-card">
+            <div class="eh-card-label"><span>Connected agents</span><span class="eh-icon eh-icon-blue">●</span></div>
+            <strong class="eh-big-value eh-good" data-eh-connected>—</strong>
+            <p class="eh-card-description">Endpoints with an active agent connection</p>
+            <div class="eh-card-foot"><span>Source</span><span>Connection state</span></div>
+        </article>
+        <article class="eh-summary-card">
+            <div class="eh-card-label"><span>Offline agents</span><span class="eh-icon eh-icon-amber">○</span></div>
+            <strong class="eh-big-value" data-eh-offline>—</strong>
+            <p class="eh-card-description">Known agents without an active connection</p>
+            <div class="eh-card-foot"><span>Source</span><span>Agent records</span></div>
+        </article>
+        <article class="eh-summary-card">
+            <div class="eh-card-label"><span>Needs attention</span><span class="eh-icon eh-icon-amber">!</span></div>
+            <strong class="eh-big-value eh-attention" data-eh-attention>—</strong>
+            <p class="eh-card-description">Missing agent, offline, approval or execution issue</p>
+            <div class="eh-card-foot"><span>Assessment</span><span>Connection readiness</span></div>
+        </article>
+    </div>
+</section>
+
+    <section class="eh-metrics-section eh-monitoring-note">
+    <div class="eh-monitoring-note-icon">↗</div>
+    <div class="eh-monitoring-note-copy">
+        <span class="eh-kicker">PERFORMANCE DIAGNOSIS</span>
+        <h2>CPU, memory, disk and performance trends live in Monitoring</h2>
+        <p>This page focuses on agent connectivity and endpoint readiness. Resource percentages are intentionally not shown here because live endpoint telemetry has not yet been connected.</p>
+    </div>
+    <a class="eh-action-button" href="/pages/monitoring/">Open Monitoring ↗</a>
+</section>
+
+    <section class="eh-bottom-grid">
+        <article class="eh-panel">
+            <div class="eh-panel-heading">
+                <div><span class="eh-kicker">ENDPOINT FLEET</span><h2>Endpoint health inventory</h2><p>Health state and latest check-in per device</p></div>
+                <span class="eh-record-count" data-eh-count>0 endpoints</span>
+            </div>
+            <div class="eh-toolbar">
+                <label class="eh-search"><span>&#9906;</span><input type="search" data-eh-search placeholder="Search endpoints..." aria-label="Search endpoints"></label>
+                <select data-eh-status aria-label="Filter by agent connection">
+                    <option value="">All connection states</option>
+                    <option value="connected">Connected</option>
+                    <option value="offline">Offline</option>
+                    <option value="attention">Needs attention</option>
+                    <option value="missing">No agent</option>
+                </select>
+                <select data-eh-platform aria-label="Filter by operating system">
+                    <option value="">All platforms</option>
+                    <option value="windows">Windows</option>
+                    <option value="linux">Linux</option>
+                    <option value="macos">macOS</option>
+                </select>
+            </div>
+            <div class="eh-table-wrap">
+                <table class="eh-table">
+                    <thead><tr>
+                        <th>ENDPOINT</th>
+                        <th>PLATFORM</th>
+                        <th>CONNECTION</th>
+                        <th>APPROVAL / EXECUTION</th>
+                        <th>LAST SEEN</th>
+                        <th>ACTION</th>
+                    </tr></thead>
+                    <tbody data-eh-rows></tbody>
+                </table>
+                <div class="eh-empty" data-eh-empty>
+                    <span class="eh-empty-icon">&#9829;</span>
+                    <h3>No endpoint records yet</h3>
+                    <p>Devices appear here when they exist in Cartman inventory. Agent connection state is loaded separately.</p>
+                </div>
+            </div>
+            <div class="eh-panel-footer"><span>Endpoint health inventory</span><span data-eh-footer-count>0 endpoints</span></div>
+        </article>
+
+        <article class="eh-panel eh-checks-panel">
+    <div class="eh-panel-heading">
+        <div>
+            <span class="eh-kicker">AGENT READINESS</span>
+            <h2>Connection checks</h2>
+            <p>What Cartman can verify right now</p>
+        </div>
+        <span class="eh-checks-count" data-eh-check-count>Checking</span>
+    </div>
+    <div class="eh-check-list">
+        <div class="eh-check-item">
+            <span class="eh-check-icon">●</span>
+            <div><strong>Agent connection</strong><small>Active connection reported by the client</small></div>
+            <span class="eh-check-state" data-eh-check-connection>Checking</span>
+        </div>
+        <div class="eh-check-item">
+            <span class="eh-check-icon">✓</span>
+            <div><strong>Device approval</strong><small>Client enrollment and approval state</small></div>
+            <span class="eh-check-state" data-eh-check-approval>Checking</span>
+        </div>
+        <div class="eh-check-item">
+            <span class="eh-check-icon">⌘</span>
+            <div><strong>Task execution</strong><small>Whether the agent can receive executable tasks</small></div>
+            <span class="eh-check-state" data-eh-check-execution>Checking</span>
+        </div>
+        <div class="eh-check-item">
+            <span class="eh-check-icon">▤</span>
+            <div><strong>Resource telemetry</strong><small>CPU, memory, disk and historical metrics</small></div>
+            <span class="eh-check-state">Not connected</span>
+        </div>
+    </div>
+    <div class="eh-checks-note">
+        <span>ⓘ</span>
+        <p>Connection status is not the same as full device health. Performance charts belong in Monitoring once real telemetry is available.</p>
+    </div>
+</article>
+    </section>
+
+    <footer class="app-footer eh-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Live connection state · Performance telemetry not yet connected</span>
+    </footer>
+</main>
+</body>
+</html>

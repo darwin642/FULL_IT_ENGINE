@@ -1,0 +1,562 @@
+"use strict";
+
+function closeCartmanFloatingDeviceMenu(menu = document.querySelector('[data-floating-device-menu="true"]')) {
+    if (!menu) return;
+    menu._cartmanTrigger?.setAttribute("aria-expanded", "false");
+    menu.remove();
+}
+
+function refreshDeviceRows() {
+    const workspace = $("#devices-workspace");
+    if (!workspace) return;
+
+    const tbody = $(".devices-table tbody", workspace);
+    if (tbody) tbody.innerHTML = renderDeviceRows();
+
+    const count = $(".devices-table-panel .section-count", workspace);
+    if (count) count.textContent = `${getDeviceFilteredData().length} SHOWN`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    renderDevicesModule();
+});
+
+document.addEventListener("click", event => {
+
+    const deviceViewButton = event.target.closest("[data-device-view]");
+    if (deviceViewButton) {
+        deviceViewState.view = deviceViewButton.dataset.deviceView;
+        renderDevicesModule();
+        return;
+    }
+
+    const groupButton = event.target.closest("[data-device-group-action]");
+    if (groupButton) {
+        const action = groupButton.dataset.deviceGroupAction;
+        const groupId = groupButton.dataset.deviceGroupId;
+
+        if (action === "new") {
+            deviceViewState.groupFormOpen = true;
+            deviceViewState.editingGroupId = null;
+            renderDevicesModule();
+            $("#device-group-name")?.focus();
+        } else if (action === "select") {
+            deviceViewState.selectedGroupId = groupId;
+            deviceViewState.groupFormOpen = false;
+            deviceViewState.editingGroupId = null;
+            renderDevicesModule();
+        } else if (action === "edit") {
+            deviceViewState.selectedGroupId = groupId;
+            deviceViewState.editingGroupId = groupId;
+            deviceViewState.groupFormOpen = true;
+            renderDevicesModule();
+            $("#device-group-name")?.focus();
+        } else if (action === "cancel") {
+            deviceViewState.groupFormOpen = false;
+            deviceViewState.editingGroupId = null;
+            renderDevicesModule();
+        } else if (action === "delete") {
+            const group = getDeviceGroups().find(item => item.id === groupId);
+
+            if (group && window.confirm(`Delete device group "${group.name}"?`)) {
+                void deleteDeviceGroupFromAPI(groupId).catch(error => {
+                    console.error("Device group deletion failed:", error);
+                    notify(`Could not delete device group: ${error.message}`);
+                });
+            }
+        }
+
+        return;
+    }
+    const filter = event.target.closest("[data-device-filter]");
+    if (filter) {
+        deviceViewState.filter = filter.dataset.deviceFilter;
+        renderDevicesModule();
+        return;
+    }
+
+    const menuItem = event.target.closest("[data-device-menu-action]");
+    if (menuItem) {
+        const id = menuItem.dataset.deviceId;
+        const action = menuItem.dataset.deviceMenuAction;
+        const device = getDeviceData().find(item => item.id === id);
+
+        const actionMenu = menuItem.closest("[data-device-menu]");
+        if (actionMenu?.dataset.floatingDeviceMenu === "true") {
+            closeCartmanFloatingDeviceMenu(actionMenu);
+        } else {
+            actionMenu?.setAttribute("hidden", "");
+            actionMenu?.closest(".device-actions")
+                ?.querySelector(".device-actions-trigger")
+                ?.setAttribute("aria-expanded", "false");
+        }
+
+        if (action === "edit" && device) {
+            openDeviceModal(device);
+        } else if (action === "delete" && id) {
+            deleteDevice(id);
+        } else if (
+            ["package", "shutdown", "network", "connect", "monitor", "vpn"].includes(action)
+            && device
+        ) {
+            void openDeviceActionModal(device, action);
+        } else if (["package", "shutdown", "network", "connect", "monitor", "vpn"].includes(action)) {
+            notify("The selected device could not be found.");
+        }
+        return;
+    }
+
+    const newAction = event.target.closest("[data-device-new-action]");
+    if (newAction) {
+        const action = newAction.dataset.deviceNewAction;
+
+        if (action === "export-selected") {
+            const allDevices = getDeviceData();
+            if (
+                (!Array.isArray(deviceViewState.selected) ||
+                 deviceViewState.selected.length === 0) &&
+                allDevices.length === 1
+            ) {
+                deviceViewState.selected = [String(allDevices[0].id)];
+            }
+            exportSelectedDevicesJSON();
+            return;
+        }
+
+        // Toolbar Actions applies endpoint tasks to exactly one selected device.
+        if (
+            ["package", "shutdown", "network"].includes(action) &&
+            (
+                newAction.closest(".devices-inventory-actions") ||
+                newAction.closest(".devices-inventory-actions-menu")
+            )
+        ) {
+            document.querySelectorAll(
+                ".devices-inventory-actions [data-device-menu]"
+            ).forEach(menu => { menu.hidden = true; });
+
+            const selectedIds = new Set((deviceViewState.selected || []).map(String));
+            let selectedDevices = getDeviceData().filter(
+                device => selectedIds.has(String(device.id))
+            );
+
+            // Convenience for a single-device inventory/demo.
+            const allDevices = getDeviceData();
+            if (selectedDevices.length === 0 && allDevices.length === 1) {
+                selectedDevices = [allDevices[0]];
+                deviceViewState.selected = [String(allDevices[0].id)];
+            }
+
+            if (selectedDevices.length !== 1) {
+                notify(
+                    selectedDevices.length === 0
+                        ? "Select one device first, then choose this action."
+                        : "Select only one device at a time for this action."
+                );
+                return;
+            }
+
+            void openDeviceActionModal(selectedDevices[0], action);
+            return;
+        }
+
+        if ((action === "more" && newAction.dataset.deviceId) ||
+            action === "inventory-more") {
+            const owner = newAction.closest(".device-actions, .devices-inventory-actions");
+            const sourceMenu = owner?.querySelector("[data-device-menu]");
+            if (!sourceMenu) return;
+
+            if (action === "inventory-more") {
+                closeCartmanFloatingDeviceMenu();
+                document.querySelectorAll(".devices-inventory-actions [data-device-menu]").forEach(item => {
+                    if (item !== sourceMenu) item.hidden = true;
+                });
+                sourceMenu.hidden = !sourceMenu.hidden;
+                newAction.setAttribute("aria-expanded", String(!sourceMenu.hidden));
+                return;
+            }
+
+            const currentMenu = document.querySelector('[data-floating-device-menu="true"]');
+            if (currentMenu?._cartmanTrigger === newAction) {
+                closeCartmanFloatingDeviceMenu(currentMenu);
+                return;
+            }
+            closeCartmanFloatingDeviceMenu(currentMenu);
+
+            // Keep the original menu in its row; portal a copy to avoid table clipping.
+            const floatingMenu = sourceMenu.cloneNode(true);
+            floatingMenu.hidden = false;
+            floatingMenu.dataset.floatingDeviceMenu = "true";
+            floatingMenu._cartmanTrigger = newAction;
+            floatingMenu.style.setProperty("position", "fixed", "important");
+            floatingMenu.style.setProperty("display", "block", "important");
+            floatingMenu.style.setProperty("visibility", "visible", "important");
+            floatingMenu.style.setProperty("right", "auto", "important");
+            floatingMenu.style.setProperty("bottom", "auto", "important");
+            floatingMenu.style.setProperty("left", "12px", "important");
+            floatingMenu.style.setProperty("top", "12px", "important");
+            floatingMenu.style.setProperty("width", "220px", "important");
+            floatingMenu.style.setProperty("max-width", "calc(100vw - 24px)", "important");
+            floatingMenu.style.setProperty("max-height", "calc(100vh - 24px)", "important");
+            floatingMenu.style.setProperty("overflow-y", "auto", "important");
+            floatingMenu.style.setProperty("z-index", "100000", "important");
+            document.body.appendChild(floatingMenu);
+
+            const triggerRect = newAction.getBoundingClientRect();
+            const menuRect = floatingMenu.getBoundingClientRect();
+            const margin = 12;
+            const availableBelow = window.innerHeight - triggerRect.bottom - margin;
+            const availableAbove = triggerRect.top - margin;
+
+            let top = menuRect.height <= availableBelow
+                ? triggerRect.bottom + 6
+                : triggerRect.top - menuRect.height - 6;
+
+            if (menuRect.height > availableBelow && menuRect.height > availableAbove) {
+                top = margin;
+            }
+
+            top = Math.max(
+                margin,
+                Math.min(top, window.innerHeight - menuRect.height - margin)
+            );
+
+            const left = Math.max(
+                margin,
+                Math.min(
+                    triggerRect.right - menuRect.width,
+                    window.innerWidth - menuRect.width - margin
+                )
+            );
+
+            floatingMenu.style.setProperty("left", `${left}px`, "important");
+            floatingMenu.style.setProperty("top", `${top}px`, "important");
+            newAction.setAttribute("aria-expanded", "true");
+            return;
+        }
+    }
+
+    const button = event.target.closest("[data-device-action]");
+    if (!button) return;
+
+    const action = button.dataset.deviceAction;
+    const id = button.dataset.deviceId;
+
+    switch (action) {
+        case "toggle-device-listener":
+            void toggleDeviceConnectionListener().catch(error => {
+                console.error("Listener toggle failed:", error);
+                const notice = document.querySelector(
+                    '[data-device-panel="auto"] .device-connect-notice'
+                );
+                if (notice) notice.textContent =
+                    `Could not update listener: ${error.message}`;
+            });
+            break;
+        case "refresh-device-requests":
+            void refreshDeviceConnectionRequests();
+            break;
+        case "approve-device-request":
+            void decideDeviceConnectionRequest(
+                button.dataset.deviceRequestId, "Approved", button
+            );
+            break;
+        case "deny-device-request":
+            void decideDeviceConnectionRequest(
+                button.dataset.deviceRequestId, "Rejected", button
+            );
+            break;
+        case "import-json":
+            $("#devices-json-file")?.click();
+            break;
+        case "export-json":
+            exportDevicesJSON();
+            break;
+        case "add":
+            openDeviceModal();
+            break;
+        case "edit": {
+            const device = getDeviceData().find(item => item.id === id);
+            if (device) openDeviceModal(device);
+            break;
+        }
+        case "delete":
+            deleteDevice(id);
+            break;
+        case "manage-tags":
+            openManageDeviceTags();
+            break;
+        case "inventory-info":
+            openDeviceInventoryInfo();
+            break;
+        case "close-inventory-info":
+            document.getElementById("device-inventory-info-modal")?.remove();
+            break;
+        case "reset":
+            resetDeviceDemoData();
+            break;
+        case "close-modal":
+            $("#devices-modal-backdrop")?.remove();
+            deviceViewState.editingId = null;
+            break;
+        case "add-tag-from-form":
+            addCustomDeviceTag();
+            break;
+        case "create-managed-tag":
+            createManagedDeviceTag();
+            break;
+        case "delete-tag":
+            deleteManagedDeviceTag(button.dataset.deviceTag);
+            break;
+    }
+});
+
+document.addEventListener("click", event => {
+    if (event.target.closest("#devices-clear-filters")) {
+        deviceViewState.search = "";
+        deviceViewState.sort = "newest";
+        deviceViewState.type = "all";
+        deviceViewState.os = "all";
+        deviceViewState.status = "all";
+        deviceViewState.filter = "All devices";
+        renderDevicesModule();
+    }
+});
+
+
+document.addEventListener("input", event => {
+    if (event.target.id !== "device-group-search-input") return;
+
+    deviceViewState.groupSearch = event.target.value;
+    const cursor = event.target.selectionStart;
+
+    renderDevicesModule();
+
+    const nextInput = $("#device-group-search-input");
+    if (nextInput) {
+        nextInput.focus();
+        try {
+            nextInput.setSelectionRange(cursor, cursor);
+        } catch (_) {}
+    }
+});
+
+document.addEventListener("input", event => {
+    if (event.target.id !== "devices-search-input") return;
+    deviceViewState.search = event.target.value;
+    refreshDeviceRows();
+});
+
+document.addEventListener("change", async event => {
+    const target = event.target;
+
+    if (target.id === "devices-json-file") {
+        const file = target.files?.[0];
+        if (!file) return;
+
+        try {
+            await importDevicesJSON(file);
+        } catch (error) {
+            console.error("Device import failed:", error);
+            notify("Could not import the JSON file.");
+        } finally {
+            target.value = "";
+        }
+        return;
+    }
+
+    const stateMap = {
+        "devices-sort": "sort",
+        "devices-type-filter": "type",
+        "devices-os-filter": "os",
+        "devices-status-filter": "status",
+        "devices-tag-filter": "filter"
+    };
+
+    if (stateMap[target.id]) {
+        deviceViewState[stateMap[target.id]] = target.value;
+        renderDevicesModule();
+        return;
+    }
+
+    if (target.id === "devices-select-visible") {
+        const visible = getDeviceFilteredData().map(device => String(device.id));
+        const selected = new Set((deviceViewState.selected || []).map(String));
+
+        visible.forEach(id => target.checked
+            ? selected.add(id)
+            : selected.delete(id));
+
+        deviceViewState.selected = [...selected];
+        renderDevicesModule();
+        return;
+    }
+
+    if (target.matches("[data-device-select]")) {
+        const selected = new Set((deviceViewState.selected || []).map(String));
+        const id = String(target.dataset.deviceSelect);
+
+        target.checked ? selected.add(id) : selected.delete(id);
+
+        deviceViewState.selected = [...selected];
+
+        const count = $(".devices-bulk-toolbar span");
+        if (count) count.textContent = `${selected.size} selected`;
+    }
+});
+
+document.addEventListener("submit", event => {
+    if (event.target.id === "device-group-form") {
+        saveDeviceGroupForm(event);
+        return;
+    }
+
+    if (event.target.id === "device-form") {
+        saveDeviceForm(event);
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        $("#devices-modal-backdrop")?.remove();
+        deviceViewState.editingId = null;
+
+        document.querySelectorAll("[data-device-menu]").forEach(menu => {
+            menu.hidden = true;
+        });
+    }
+
+    if (event.key === "Enter" && event.target.id === "device-new-tag") {
+        event.preventDefault();
+        addCustomDeviceTag();
+    }
+
+    if (event.key === "Enter" && event.target.id === "manage-new-device-tag") {
+        event.preventDefault();
+        createManagedDeviceTag();
+    }
+});
+
+
+if (!document.documentElement.dataset.cartmanFloatingMenuHandlers) {
+    document.documentElement.dataset.cartmanFloatingMenuHandlers = "installed";
+
+    document.addEventListener("click", event => {
+        const menu = document.querySelector('[data-floating-device-menu="true"]');
+        if (!menu) return;
+        if (event.target.closest("[data-device-menu]") === menu) return;
+        if (event.target.closest('[data-device-new-action="more"]') === menu._cartmanTrigger) return;
+        closeCartmanFloatingDeviceMenu(menu);
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeCartmanFloatingDeviceMenu();
+    });
+
+    window.addEventListener("resize", () => closeCartmanFloatingDeviceMenu());
+    window.addEventListener("scroll", event => {
+        const menu = document.querySelector('[data-floating-device-menu="true"]');
+        if (menu && event.target !== menu && !menu.contains(event.target)) {
+            closeCartmanFloatingDeviceMenu(menu);
+        }
+    }, true);
+}
+
+
+
+/* CARTMAN_RELIABLE_DEVICE_ACTIONS_V1
+   Resolve endpoint actions before legacy bubbling handlers. */
+(function installReliableDeviceActions() {
+    if (document.documentElement.dataset.cartmanReliableActionsInstalled) return;
+    document.documentElement.dataset.cartmanReliableActionsInstalled = "true";
+
+    document.addEventListener("click", event => {
+        const menuItem = event.target.closest("[data-device-menu-action]");
+
+        if (menuItem) {
+            const action = menuItem.dataset.deviceMenuAction;
+            const id = menuItem.dataset.deviceId;
+            const supported = [
+                "edit", "delete", "package", "shutdown",
+                "network", "connect", "monitor", "vpn"
+            ];
+
+            if (!supported.includes(action)) return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            const menu = menuItem.closest("[data-device-menu]");
+            if (menu?.dataset.floatingDeviceMenu === "true") {
+                closeCartmanFloatingDeviceMenu(menu);
+            } else if (menu) {
+                menu.hidden = true;
+                menu.closest(".device-actions")
+                    ?.querySelector(".device-actions-trigger")
+                    ?.setAttribute("aria-expanded", "false");
+            }
+
+            const device = getDeviceData().find(item => item.id === id);
+
+            if (!device) {
+                notify("The selected device could not be found. Refresh the inventory and try again.");
+                return;
+            }
+
+            if (action === "edit") {
+                openDeviceModal(device);
+            } else if (action === "delete") {
+                deleteDevice(id);
+            } else {
+                void openDeviceActionModal(device, action);
+            }
+            return;
+        }
+
+        const actionButton = event.target.closest("[data-device-new-action]");
+        if (!actionButton) return;
+
+        const action = actionButton.dataset.deviceNewAction;
+        const isToolbarMenu = Boolean(
+            actionButton.closest(".devices-inventory-actions-menu")
+        );
+
+        if (
+            !isToolbarMenu ||
+            !["package", "shutdown", "network"].includes(action)
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        document.querySelectorAll(
+            ".devices-inventory-actions [data-device-menu]"
+        ).forEach(menu => { menu.hidden = true; });
+        closeCartmanFloatingDeviceMenu();
+
+        const allDevices = getDeviceData();
+        const selectedIds = new Set((deviceViewState.selected || []).map(String));
+        let selectedDevices = allDevices.filter(
+            device => selectedIds.has(String(device.id))
+        );
+
+        // Convenience for a single-device inventory/demo.
+        if (selectedDevices.length === 0 && allDevices.length === 1) {
+            selectedDevices = [allDevices[0]];
+            deviceViewState.selected = [String(allDevices[0].id)];
+        }
+
+        if (selectedDevices.length !== 1) {
+            notify(
+                selectedDevices.length === 0
+                    ? "Select one device first, then choose this action."
+                    : "Select only one device at a time for this action."
+            );
+            return;
+        }
+
+        void openDeviceActionModal(selectedDevices[0], action);
+    }, true);
+})();

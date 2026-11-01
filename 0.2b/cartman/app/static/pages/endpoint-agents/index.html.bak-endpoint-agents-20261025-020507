@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Endpoint Agents</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/endpoint-agents.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/endpoint-agents.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main class="ea-page">
+        <div class="module-header">
+            <span class="category-icon purple">&#8984;</span>
+            <div>
+                <div class="eyebrow">ENDPOINT MANAGEMENT / AGENT CONTROL</div>
+                <h1>Endpoint Agents</h1>
+                <p>Manage endpoint enrollment, agent versions, connectivity and collectors.</p>
+            </div>
+        </div>
+
+        <section class="ea-service-banner" aria-label="Agent service status">
+            <span class="ea-service-indicator" aria-hidden="true"></span>
+            <div class="ea-service-copy">
+                <strong>Agent service not connected</strong>
+                <span>No agent API or enrollment service is configured in this installation.</span>
+            </div>
+            <span class="ea-service-tag">NOT CONNECTED</span>
+        </section>
+
+        <section class="ea-stats" aria-label="Agent summary">
+            <article class="ea-stat-card">
+                <div class="ea-stat-top"><span>Total agents</span><span class="ea-stat-icon">&#8984;</span></div>
+                <strong>—</strong>
+                <span>Awaiting agent inventory</span>
+            </article>
+            <article class="ea-stat-card">
+                <div class="ea-stat-top"><span>Online</span><span class="ea-stat-icon">&#9679;</span></div>
+                <strong>—</strong>
+                <span>Heartbeat data unavailable</span>
+            </article>
+            <article class="ea-stat-card">
+                <div class="ea-stat-top"><span>Offline</span><span class="ea-stat-icon">&#9711;</span></div>
+                <strong>—</strong>
+                <span>Requires connectivity data</span>
+            </article>
+            <article class="ea-stat-card">
+                <div class="ea-stat-top"><span>Pending enrollment</span><span class="ea-stat-icon">&#8635;</span></div>
+                <strong>—</strong>
+                <span>Enrollment workflow unavailable</span>
+            </article>
+        </section>
+
+        <section class="ea-panel" aria-label="Agent inventory">
+            <div class="ea-panel-heading">
+                <div>
+                    <span class="ea-kicker">FLEET MANAGEMENT</span>
+                    <h2>Agent inventory</h2>
+                    <p>Review registered endpoints and their reporting status.</p>
+                </div>
+                <span class="ea-count" data-ea-count>0 records</span>
+            </div>
+
+            <div class="ea-toolbar">
+                <label class="ea-search-wrap">
+                    <span aria-hidden="true">&#8981;</span>
+                    <input type="search" data-ea-search placeholder="Search hostname, platform or agent ID..." aria-label="Search agents" disabled>
+                </label>
+                <select data-ea-status aria-label="Filter by agent status" disabled>
+                    <option value="all">All statuses</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </div>
+
+            <div class="ea-table-wrap">
+                <table class="ea-table">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Platform</th>
+                            <th>Agent version</th>
+                            <th>Last check-in</th>
+                            <th>Collectors</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody data-ea-rows></tbody>
+                </table>
+            </div>
+
+            <div class="ea-empty-state">
+                <span class="ea-empty-icon" aria-hidden="true">&#8984;</span>
+                <h3>No agent inventory available</h3>
+                <p>Once an agent enrollment API and reporting service are implemented, registered endpoints will appear here.</p>
+                <span class="ea-empty-note">No sample devices are being presented as real endpoints.</span>
+            </div>
+        </section>
+
+        <section class="ea-collector-panel" aria-label="Collector overview">
+            <div class="ea-collector-symbol" aria-hidden="true">&#9672;</div>
+            <div class="ea-collector-copy">
+                <span class="ea-kicker">DATA COLLECTION</span>
+                <h2>Collectors</h2>
+                <p>Inventory, performance and health collectors require an agent-side reporting pipeline.</p>
+            </div>
+            <div class="ea-collector-state">
+                <span class="ea-state-dot"></span>
+                <span>Not configured</span>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Endpoint Agents · Integration pending</span>
+        </footer>
+    </main>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Software Catalog</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/software-catalog.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/software-catalog.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-area">
+        <a class="brand" href="/">
+            <span class="brand-logo">C</span><span>CARTMAN</span>
+        </a>
+    </div>
+    <div class="top-actions">
+        <a class="secondary-button" href="/">&#8592; Dashboard</a>
+    </div>
+</header>
+
+<main class="sc-page">
+    <div class="module-header sc-header">
+        <span class="category-icon purple">&#9672;</span>
+        <div>
+            <div class="eyebrow">CARTMAN WORKSPACE / SOFTWARE &amp; DEPLOYMENT</div>
+            <h1>Software Catalog</h1>
+            <p>Manage software metadata, package details and lifecycle records.</p>
+        </div>
+    </div>
+
+    <section class="sc-workspace" aria-label="Software catalog workspace">
+        <div class="sc-toolbar">
+            <div class="sc-toolbar-copy">
+                <span class="sc-eyebrow">SOFTWARE INVENTORY</span>
+                <h2>Software library</h2>
+                <p>Catalog records stored by Cartman.</p>
+            </div>
+            <div class="sc-toolbar-actions">
+                <button type="button" class="secondary-button" id="software-history">Audit history</button>
+                <button type="button" class="primary-button" id="software-add">+ Add software</button>
+            </div>
+        </div>
+
+        <div class="sc-message" id="software-message" role="status" aria-live="polite">Connecting to software catalog...</div>
+
+        <div class="sc-stats">
+            <article class="sc-stat">
+                <span>Total software</span>
+                <strong id="software-total">—</strong>
+                <small>All catalog records</small>
+            </article>
+            <article class="sc-stat">
+                <span>Active</span>
+                <strong id="software-active">—</strong>
+                <small>Available records</small>
+            </article>
+            <article class="sc-stat">
+                <span>Draft</span>
+                <strong id="software-draft">—</strong>
+                <small>Pending review</small>
+            </article>
+        </div>
+
+        <section class="sc-panel">
+            <div class="sc-panel-heading">
+                <div>
+                    <h2>Catalog records</h2>
+                    <p>Search and manage registered software.</p>
+                </div>
+                <span class="sc-count" id="software-row-count">Loading...</span>
+            </div>
+
+            <div class="sc-filters">
+                <label class="sc-search">
+                    <span aria-hidden="true">&#9906;</span>
+                    <input type="search" id="software-search" placeholder="Search name, publisher, version..." aria-label="Search software">
+                </label>
+                <select id="software-status-filter" aria-label="Filter by status">
+                    <option value="">All statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Draft">Draft</option>
+                </select>
+            </div>
+
+            <div class="sc-table-wrap">
+                <table class="sc-table">
+                    <thead>
+                        <tr>
+                            <th>Software</th>
+                            <th>Publisher</th>
+                            <th>Version</th>
+                            <th>Target OS</th>
+                            <th>Package</th>
+                            <th>Status</th>
+                            <th>Created by</th>
+                            <th>Created</th>
+                            <th>Updated by</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="software-table-body">
+                        <tr><td colspan="11">Loading software catalog...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="sc-empty hidden" id="software-empty">No matching software found.</p>
+        </section>
+
+        <section class="sc-operator">
+            <label for="software-operator">Operator name</label>
+            <input id="software-operator" type="text" placeholder="Enter operator name">
+            <span>Used for catalog change and audit attribution.</span>
+        </section>
+    </section>
+
+    <footer class="app-footer">
+        <span>Cartman Infrastructure Management</span>
+        <span>Software Catalog · API-backed</span>
+    </footer>
+</main>
+
+<div class="sc-backdrop" id="software-modal" hidden>
+    <section class="sc-modal" role="dialog" aria-modal="true" aria-labelledby="software-modal-title">
+        <header class="sc-modal-header">
+            <div>
+                <span class="sc-eyebrow">SOFTWARE RECORD</span>
+                <h2 id="software-modal-title">Add software</h2>
+                <p>Maintain package metadata and operational commands.</p>
+            </div>
+            <button type="button" class="sc-icon-button" id="software-cancel" aria-label="Close dialog">&times;</button>
+        </header>
+
+        <form id="software-form">
+            <div class="sc-form-body">
+                <div class="sc-form-grid">
+                    <label class="sc-field sc-field-wide">Software name *
+                        <input name="name" required maxlength="200" placeholder="e.g. Mozilla Firefox">
+                    </label>
+                    <label class="sc-field">Publisher
+                        <input name="publisher" maxlength="200" placeholder="e.g. Mozilla">
+                    </label>
+                    <label class="sc-field">Version
+                        <input name="version" required placeholder="e.g. 128.0">
+                    </label>
+                    <label class="sc-field">Target operating system
+                        <select name="target_os">
+                            <option value="Any">Any</option>
+                            <option value="Windows">Windows</option>
+                            <option value="Linux">Linux</option>
+                            <option value="macOS">macOS</option>
+                        </select>
+                    </label>
+                    <label class="sc-field">Category
+                        <select name="category">
+                            <option value="General">General</option>
+                            <option value="Productivity">Productivity</option>
+                            <option value="Security">Security</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Development">Development</option>
+                            <option value="Infrastructure">Infrastructure</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </label>
+                    <label class="sc-field">Package type
+                        <select name="package_type">
+                            <option value="Other">Other</option>
+                            <option value="MSI">MSI</option>
+                            <option value="EXE">EXE</option>
+                            <option value="PKG">PKG</option>
+                            <option value="DMG">DMG</option>
+                            <option value="DEB">DEB</option>
+                            <option value="RPM">RPM</option>
+                            <option value="AppImage">AppImage</option>
+                            <option value="Script">Script</option>
+                        </select>
+                    </label>
+                    <label class="sc-field">Status
+                        <select name="status">
+                            <option value="Active">Active</option>
+                            <option value="Draft">Draft</option>
+                        </select>
+                    </label>
+                    <label class="sc-field sc-field-wide">Source URL
+                        <input name="source_url" type="url" placeholder="https://vendor.example/download">
+                    </label>
+                    <label class="sc-field sc-field-wide">Install command
+                        <textarea name="install_command" rows="2" placeholder="Optional install command"></textarea>
+                    </label>
+                    <label class="sc-field sc-field-wide">Uninstall command
+                        <textarea name="uninstall_command" rows="2" placeholder="Optional uninstall command"></textarea>
+                    </label>
+                    <label class="sc-field sc-field-wide">Notes
+                        <textarea name="notes" rows="3" placeholder="Compatibility, requirements or operational notes"></textarea>
+                    </label>
+                </div>
+                <p class="sc-form-error" id="software-form-error" role="alert"></p>
+            </div>
+            <footer class="sc-modal-footer">
+                <button type="button" class="secondary-button" id="software-cancel-visible">Cancel</button>
+                <button type="submit" class="primary-button" id="software-save">Save software</button>
+            </footer>
+        </form>
+    </section>
+</div>
+
+<div class="sc-backdrop" id="software-history-modal" hidden>
+    <section class="sc-modal sc-history-modal" role="dialog" aria-modal="true" aria-labelledby="software-history-title">
+        <header class="sc-modal-header">
+            <div>
+                <span class="sc-eyebrow">AUDIT LOG</span>
+                <h2 id="software-history-title">Software audit history</h2>
+                <p>Recorded changes and actions.</p>
+            </div>
+            <button type="button" class="sc-icon-button" id="software-history-close" aria-label="Close history">&times;</button>
+        </header>
+        <div class="sc-history-content" id="software-history-content">Loading history...</div>
+    </section>
+</div>
+</body>
+</html>

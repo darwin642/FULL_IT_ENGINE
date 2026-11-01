@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1020"><title>Cartman | Software Deployment</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/modules/deployment-workflows.css">
+<script src="/static/js/modules/standalone-page.js" defer></script>
+<script src="/static/js/core/module-definitions.js" defer></script>
+<script src="/static/js/modules/standalone-navigation.js" defer></script>
+<script src="/static/js/modules/deployment-demo-store.js" defer></script>
+<script src="/static/js/modules/deployment-workflows.js" defer></script>
+</head>
+<body data-deployment-page="software-deployment">
+<header class="topbar"><div class="brand-area"><a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a></div>
+<div class="top-actions"><span style="font-size:10px;font-weight:800;letter-spacing:1px;color:#a5b4fc">DEMO PREVIEW</span><a class="secondary-button" href="/">&#8592; Dashboard</a></div></header>
+<main class="dw-page">
+<div class="dw-header"><div><div class="dw-eyebrow">CARTMAN WORKSPACE / SOFTWARE &amp; DEPLOYMENT</div><h1>Software Deployment</h1><p>Build a rollout plan, review its scope, and create a demo job without touching endpoints.</p></div>
+<div class="dw-actions"><button class="dw-btn" id="dw-export">Export view ↗</button><button class="dw-btn dw-btn-primary" id="dw-new">＋ New deployment</button></div></div>
+<div class="dw-notice"><span class="dw-notice-icon">i</span><div><strong>Demo environment</strong><p>Session-only sample data. No API requests, installations, or remote endpoint actions.</p></div></div>
+<section class="dw-stats">
+<article class="dw-stat"><span class="dw-stat-label">Total records</span><strong id="dw-total">—</strong><small>Visible in this demo view</small></article>
+<article class="dw-stat"><span class="dw-stat-label">Running</span><strong id="dw-running">—</strong><small>Simulated active jobs</small></article>
+<article class="dw-stat"><span class="dw-stat-label">Queued</span><strong id="dw-queued">—</strong><small>Waiting in demo queue</small></article>
+<article class="dw-stat"><span class="dw-stat-label">Failed</span><strong id="dw-failed">—</strong><small>Needs review in the demo</small></article>
+</section><div class="dw-layout"><div><section class="dw-panel">
+<div class="dw-panel-head"><div><div class="dw-eyebrow">ROLLOUT PLANNER</div><h2>Deployment plans</h2><p>Configure a software rollout and track its simulated execution state.</p></div><span class="dw-count" id="dw-count">Loading records</span></div>
+<div class="dw-filters"><input class="dw-input dw-search" id="dw-search" type="search" placeholder="Search name, target, version or ID..." aria-label="Search records">
+<select class="dw-select" id="dw-status" aria-label="Filter by status"><option value="all">All statuses</option><option>Running</option><option>Queued</option><option>Completed</option><option>Failed</option><option>Draft</option></select>
+<button class="dw-btn" id="dw-reset">Reset filters</button></div>
+<div class="dw-table-wrap" id="dw-table-wrap"><table class="dw-table"><thead><tr>
+<th><button class="dw-btn" data-dw-sort="name">Deployment ↕</button></th>
+<th>Target group</th><th>Version</th><th><button class="dw-btn" data-dw-sort="progress">Progress ↕</button></th>
+<th><button class="dw-btn" data-dw-sort="status">Status ↕</button></th><th>Actions</th>
+</tr></thead><tbody id="dw-rows"></tbody></table></div>
+<div class="dw-empty" id="dw-empty" hidden><strong>No matching records</strong>Change the search term or clear your filters.</div>
+<div class="dw-table-foot"><span>Demo records only</span><span>No live deployment activity</span></div>
+</section></div><aside><section class="dw-panel dw-side-card"><div class="dw-eyebrow">WORKFLOW</div><h3>Deployment lifecycle</h3>
+<a class="dw-shortcut" href="/pages/software-catalog/"><span>Software Catalog<small>Browse demo software packages</small></span><b>→</b></a>
+<a class="dw-shortcut" href="/pages/deployment-jobs/"><span>Deployment Jobs<small>Review the simulated queue</small></span><b>→</b></a>
+<a class="dw-shortcut" href="/pages/deployment-history/"><span>Deployment History<small>Inspect recorded outcomes</small></span><b>→</b></a>
+<p style="font-size:11px;line-height:1.6;color:var(--muted,#8b95a7)">The wizard creates a session-only record. It does not download packages or install software.</p>
+</section></aside></div><footer class="dw-footer"><span>Cartman Infrastructure Management</span><span>Deployment workspace · UI Preview</span></footer>
+<div class="dw-toast" id="dw-toast" role="status" aria-live="polite" hidden></div>
+<div class="dw-modal-backdrop" id="dw-detail-modal" hidden><section class="dw-modal" role="dialog" aria-modal="true" aria-labelledby="dw-detail-title">
+<div class="dw-modal-head"><div><div class="dw-eyebrow">RECORD DETAILS</div><h2 id="dw-detail-title">Deployment details</h2></div><button class="dw-close" data-dw-close="dw-detail-modal" aria-label="Close">×</button></div>
+<div class="dw-modal-body" id="dw-detail-body"></div><div class="dw-modal-foot"><span style="font-size:11px;color:var(--muted,#8b95a7)">Demo data only</span><button class="dw-btn dw-btn-primary" data-dw-close="dw-detail-modal">Done</button></div>
+</section></div>
+</main></body></html>
+<div class="dw-modal-backdrop" id="dw-deploy-modal" hidden><section class="dw-modal" role="dialog" aria-modal="true" aria-labelledby="dw-deploy-title">
+<div class="dw-modal-head"><div><div class="dw-eyebrow">DEMO WIZARD</div><h2 id="dw-deploy-title">New software deployment</h2><p>Configure the rollout, review its scope, then create a demo job.</p></div><button class="dw-close" data-dw-close="dw-deploy-modal" aria-label="Close">×</button></div>
+<form id="dw-deploy-form"><div class="dw-modal-body"><div class="dw-steps"><div class="dw-step active">1 · Configure</div><div class="dw-step">2 · Review</div></div>
+<div class="dw-wizard-step"><div class="dw-form-grid">
+<label class="dw-field dw-field-wide">Deployment name<input name="name" required maxlength="90" placeholder="e.g. Chrome Enterprise — Pilot"></label>
+<label class="dw-field">Package type<select name="type"><option>Software</option><option>Package</option><option>Patch</option><option>OS Image</option></select></label>
+<label class="dw-field">Version / release<input name="version" maxlength="60" placeholder="e.g. 141.0.7390.55"></label>
+<label class="dw-field">Target group<select name="target"><option>IT Workstations</option><option>Corporate Laptops</option><option>Engineering</option><option>Finance Devices</option><option>Pilot Devices</option><option>Managed Windows</option><option>All Managed Endpoints</option></select></label>
+<label class="dw-field">Target device count<input name="devices" type="number" min="1" max="100000" value="25" required></label>
+<label class="dw-field">Schedule<select name="schedule"><option>Now</option><option>Next maintenance window</option><option>Weekend window</option><option>Custom schedule (demo)</option></select></label>
+<label class="dw-field">Rollout policy<select name="policy"><option>Standard</option><option>Pilot → Broad</option><option>Phased rollout</option><option>Maintenance window only</option></select></label>
+</div><p style="font-size:11px;color:var(--muted,#8b95a7);margin-top:16px">No real package source, credentials, endpoint connection, or execution is configured.</p></div>
+<div class="dw-wizard-step" hidden><div id="dw-review" class="dw-review"></div><p style="font-size:11px;color:var(--muted,#8b95a7);margin-top:16px">Confirming creates a demo queue entry only.</p></div></div>
+<div class="dw-modal-foot"><button type="button" class="dw-btn" id="dw-cancel">Cancel</button><div class="dw-modal-foot-right"><button type="button" class="dw-btn" id="dw-back" hidden>← Back</button><button type="button" class="dw-btn dw-btn-primary" id="dw-next">Review rollout →</button><button type="button" class="dw-btn dw-btn-primary" id="dw-create" hidden>Create demo job</button></div></div>
+</form></section></div>
+</main></body></html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1020">
+<title>Cartman | Advanced Package Studio</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/modules/package-management.css">
+<script src="/static/js/core/events.js" defer></script>
+  <script src="/static/js/core/i18n.js" defer></script>
+  <script src="/static/js/core/theme.js" defer></script>
+  <script src="/static/js/modules/standalone-page.js" defer></script>
+<script src="/static/js/core/module-definitions.js" defer></script>
+<script src="/static/js/modules/standalone-navigation.js" defer></script>
+<style>
+#package-studio{--ps-line:var(--border);--ps-muted:var(--muted);--ps-bg:var(--surface);color:var(--text);padding-bottom:36px}
+#package-studio *{box-sizing:border-box}
+#package-studio .ps-kicker{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ps-muted);font-weight:750}
+#package-studio .ps-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin:12px 0 26px}
+#package-studio h1{font-size:clamp(24px,3vw,32px);letter-spacing:-.8px;margin:5px 0 8px}
+#package-studio p{color:var(--ps-muted);font-size:13px;line-height:1.6;margin:0}
+#package-studio .ps-status{border:1px solid var(--ps-line);border-radius:8px;padding:9px 12px;font-size:11px;display:flex;gap:8px;align-items:center}
+#package-studio .ps-dot{width:7px;height:7px;border-radius:50%;background:#d49a36}
+#package-studio .ps-section{margin:0 0 22px}
+#package-studio .ps-section-title{font-size:14px;font-weight:750;margin-bottom:5px}
+#package-studio .ps-section-desc{font-size:12px;color:var(--ps-muted);margin-bottom:14px}
+#package-studio .ps-platforms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#package-studio .ps-platform{appearance:none;text-align:left;position:relative;min-width:0;padding:16px;border:1px solid var(--ps-line);border-radius:11px;background:var(--ps-bg);color:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
+#package-studio .ps-platform:hover{border-color:#8998d8;transform:translateY(-1px)}
+#package-studio .ps-platform[aria-pressed=true]{border-color:#6879d5;box-shadow:0 0 0 1px #6879d5;background:var(--surface-2)}
+#package-studio .ps-glyph{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:var(--tint);color:var(--accent);font-weight:800;font-size:17px;margin-bottom:13px}
+#package-studio .ps-platform strong{display:block;font-size:13px;margin-bottom:5px}
+#package-studio .ps-platform small{display:block;color:var(--ps-muted);font-size:11px;line-height:1.5}
+#package-studio .ps-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+#package-studio .ps-tag{font-size:10px;color:var(--ps-muted);border:1px solid var(--ps-line);border-radius:5px;padding:3px 6px}
+#package-studio .ps-card{border:1px solid var(--ps-line);border-radius:11px;background:var(--ps-bg);overflow:hidden;margin-bottom:18px}
+#package-studio .ps-card-head{padding:16px 19px;border-bottom:1px solid var(--ps-line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#package-studio .ps-card-head h2{font-size:14px;margin:0 0 5px}
+#package-studio .ps-step{font-size:10px;border:1px solid var(--ps-line);border-radius:6px;padding:5px 8px;color:var(--ps-muted)}
+#package-studio .ps-card-body{padding:19px}
+#package-studio .ps-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+#package-studio .ps-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+#package-studio .ps-field.full{grid-column:1/-1}
+#package-studio .ps-field label{font-size:12px;font-weight:650}
+#package-studio .ps-field input,#package-studio .ps-field select,#package-studio .ps-field textarea{width:100%;min-width:0;border:1px solid var(--ps-line);border-radius:7px;padding:10px 11px;background:var(--surface-2);color:var(--text);font:inherit;font-size:12px;outline:none}
+#package-studio .ps-field textarea{min-height:78px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+#package-studio .ps-field input:focus,#package-studio .ps-field select:focus,#package-studio .ps-field textarea:focus{border-color:#6879d5;box-shadow:0 0 0 2px #6879d51c}
+#package-studio .ps-hint{font-size:11px;color:var(--ps-muted);line-height:1.5}
+#package-studio .ps-lower{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:16px}
+#package-studio .ps-json{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface-2);border:1px solid var(--ps-line);border-radius:8px;padding:13px;min-height:155px;font:11px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ps-muted)}
+#package-studio .ps-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+#package-studio .ps-btn{border:1px solid var(--ps-line);border-radius:7px;padding:9px 13px;background:var(--surface-2);color:var(--text);font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+#package-studio .ps-btn.primary{background:#596bd0;color:white;border-color:#596bd0}
+#package-studio .ps-btn:disabled{opacity:.45;cursor:not-allowed}
+#package-studio .ps-notice{margin-top:14px;border:1px solid #e6d6ad;background:var(--surface-2);border-radius:8px;padding:12px;font-size:11px;line-height:1.6}
+#package-studio .ps-message{font-size:11px;color:var(--ps-muted);margin-top:12px;line-height:1.6}
+#package-studio .ps-platform-fields{display:none}
+#package-studio .ps-platform-fields.active{display:grid}
+@media(max-width:760px){#package-studio .ps-platforms{grid-template-columns:repeat(2,minmax(0,1fr))}#package-studio .ps-lower{grid-template-columns:1fr}}
+@media(max-width:480px){#package-studio .ps-platforms,#package-studio .ps-fields{grid-template-columns:1fr}#package-studio .ps-field.full{grid-column:auto}#package-studio .ps-card-body{padding:14px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-area">
+    <button id="menu-toggle" class="icon-button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a>
+  </div>
+  <div class="top-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input id="global-search" type="search" placeholder="Search modules..." autocomplete="off">
+      <kbd>Ctrl K</kbd>
+    </label>
+    <div class="language-wrap">
+      <button id="language-toggle" class="toolbar-button flag-toggle" aria-label="Select language" aria-expanded="false">
+        <span id="language-label">EN</span><span>⌄</span>
+      </button>
+      <div id="language-menu" class="dropdown language-menu hidden">
+        <button data-language="en" title="English" aria-label="English"></button>
+        <button data-language="tr" title="Türkçe" aria-label="Turkish"></button>
+        <button data-language="de" title="Deutsch" aria-label="German"></button>
+        <button data-language="fr" title="Français" aria-label="French"></button>
+        <button data-language="es" title="Español" aria-label="Spanish"></button>
+        <button data-language="nl" title="Nederlands" aria-label="Dutch"></button>
+        <button data-language="pl" title="Polski" aria-label="Polish"></button>
+        <button data-language="it" title="Italiano" aria-label="Italian"></button>
+        <button data-language="pt-BR" title="Português" aria-label="Portuguese"></button>
+        <button data-language="ja" title="日本語" aria-label="Japanese"></button>
+        <button data-language="ar" title="العربية" aria-label="Arabic"></button>
+        <button data-language="zh-CN" title="简体中文" aria-label="Simplified Chinese"></button>
+        <button data-language="ru" title="Русский" aria-label="Russian"></button>
+      </div>
+    </div>
+    <button id="terminal-toggle" class="toolbar-button terminal-button" type="button"><span>›_</span><span>Terminal</span></button>
+    <button id="theme-toggle" class="toolbar-button" aria-label="Switch theme">☀ <span id="theme-label">Light mode</span></button>
+    <div class="profile-wrap">
+      <button id="profile-toggle" class="profile-button" aria-expanded="false">
+        <span class="avatar">K</span>
+        <span class="profile-info"><strong>Kaan Yaşar</strong><small>Administrator · Demo</small></span>
+        <span>⌄</span>
+      </button>
+      <div id="profile-menu" class="dropdown profile-menu hidden">
+        <div class="dropdown-heading">Current session</div>
+        <strong>Kaan Yaşar</strong><small>Administrator · Demo UI</small>
+        <a href="/">Dashboard</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+<div id="package-studio">
+  <div class="ps-heading">
+    <div>
+      <div class="ps-kicker">CARTMAN WORKSPACE / SOFTWARE PACKAGING</div>
+      <h1>Advanced Package Studio</h1>
+      <p>Platforma özel paket tanımları oluştur, yapılandırmayı incele ve manifest olarak dışa aktar.</p>
+    </div>
+    <div class="ps-status"><span class="ps-dot"></span> Manifest mode · Build service not connected</div>
+  </div>
+
+  <section class="ps-section">
+    <div class="ps-section-title">01 / Operating system</div>
+    <div class="ps-section-desc">Hedef platformu seç. Builder alanları ve paket formatı seçimine göre değişir.</div>
+    <div class="ps-platforms" role="group" aria-label="Operating system">
+      <button class="ps-platform" type="button" data-platform="windows" aria-pressed="true" style="--tint:#eaf1ff;--accent:#3567b7"><span class="ps-glyph">W</span><strong>Windows</strong><small>Windows Installer ve executable paketleri</small><span class="ps-tags"><span class="ps-tag">MSI</span><span class="ps-tag">EXE</span><span class="ps-tag">MSIX</span></span></button>
+      <button class="ps-platform" type="button" data-platform="macos" aria-pressed="false" style="--tint:#f0f0f0;--accent:#454545"><span class="ps-glyph">⌘</span><strong>macOS</strong><small>Mac uygulama paketleri</small><span class="ps-tags"><span class="ps-tag">PKG</span><span class="ps-tag">DMG</span></span></button>
+      <button class="ps-platform" type="button" data-platform="debian" aria-pressed="false" style="--tint:#fff0f0;--accent:#b64c5a"><span class="ps-glyph">D</span><strong>Debian family</strong><small>Debian, Ubuntu ve türevleri</small><span class="ps-tags"><span class="ps-tag">DEB</span><span class="ps-tag">APT</span></span></button>
+      <button class="ps-platform" type="button" data-platform="rpm" aria-pressed="false" style="--tint:#fff2e8;--accent:#ad6534"><span class="ps-glyph">R</span><strong>RPM family</strong><small>RHEL, Fedora ve uyumlu sistemler</small><span class="ps-tags"><span class="ps-tag">RPM</span><span class="ps-tag">DNF</span></span></button>
+      <button class="ps-platform" type="button" data-platform="arch" aria-pressed="false" style="--tint:#e8f8ff;--accent:#167da5"><span class="ps-glyph">A</span><strong>Arch Linux</strong><small>Arch tabanlı dağıtımlar</small><span class="ps-tags"><span class="ps-tag">PKGBUILD</span></span></button>
+      <button class="ps-platform" type="button" data-platform="universal" aria-pressed="false" style="--tint:#edf8ed;--accent:#3b8750"><span class="ps-glyph">↗</span><strong>Universal Linux</strong><small>Dağıtımdan bağımsız formatlar</small><span class="ps-tags"><span class="ps-tag">AppImage</span><span class="ps-tag">Flatpak</span></span></button>
+    </div>
+  </section>
+
+  <section class="ps-card">
+    <div class="ps-card-head"><div><h2>02 / Package configuration</h2><p>Temel metadata ve platforma özgü paket ayarları.</p></div><span class="ps-step">PACKAGE BUILDER</span></div>
+    <div class="ps-card-body">
+      <div class="ps-fields">
+        <div class="ps-field"><label for="ps-name">Package name *</label><input id="ps-name" placeholder="e.g. Contoso Agent"></div>
+        <div class="ps-field"><label for="ps-version">Version *</label><input id="ps-version" placeholder="1.0.0"></div>
+        <div class="ps-field"><label for="ps-publisher">Publisher</label><input id="ps-publisher" placeholder="Company or publisher"></div>
+        <div class="ps-field"><label for="ps-architecture">Target architecture</label><select id="ps-architecture"><option>Auto</option><option>x64</option><option>ARM64</option><option>x64 + ARM64</option><option>x86</option></select></div>
+        <div class="ps-field"><label for="ps-detection">Detection method *</label><select id="ps-detection"><option value="">Select detection method</option><option>File exists</option><option>Registry key</option><option>Package identifier</option><option>Application version</option><option>Custom detection script</option></select><span class="ps-hint">Kurulumun algılanması için kullanılacak yöntem.</span></div>
+        <div class="ps-field"><label for="ps-detection-target">Detection target *</label><input id="ps-detection-target" placeholder="Path, identifier or registry key"></div>
+      </div>
+      <div class="ps-fields ps-platform-fields active" data-fields="windows" style="margin-top:20px">
+        <div class="ps-field"><label for="ps-win-format">Package format</label><select id="ps-win-format"><option>MSI</option><option>EXE</option><option>MSIX</option></select></div>
+        <div class="ps-field"><label for="ps-win-install">Silent install arguments</label><input id="ps-win-install" placeholder="/quiet /norestart"></div>
+        <div class="ps-field"><label for="ps-win-uninstall">Uninstall command</label><input id="ps-win-uninstall" placeholder="msiexec /x {PRODUCT-CODE} /qn"></div>
+        <div class="ps-field"><label for="ps-win-codes">Success exit codes</label><input id="ps-win-codes" value="0, 3010"></div>
+      </div>
+      <div class="ps-fields ps-platform-fields" data-fields="macos" style="margin-top:20px">
+        <div class="ps-field"><label for="ps-mac-format">Package format</label><select id="ps-mac-format"><option>PKG</option><option>DMG</option></select></div>
+        <div class="ps-field"><label for="ps-mac-id">Bundle identifier</label><input id="ps-mac-id" placeholder="com.example.application"></div>
+        <div class="ps-field"><label for="ps-mac-install">Install procedure</label><input id="ps-mac-install" placeholder="Describe installation procedure"></div>
+        <div class="ps-field"><label for="ps-mac-remove">Uninstall procedure</label><input id="ps-mac-remove" placeholder="Describe removal procedure"></div>
+      </div>
+      <div class="ps-fields ps-platform-fields" data-fields="debian" style="margin-top:20px">
+        <div class="ps-field"><label for="ps-deb-format">Package format</label><select id="ps-deb-format"><option>DEB</option></select></div>
+        <div class="ps-field"><label for="ps-deb-deps">Dependencies</label><input id="ps-deb-deps" placeholder="libc6, curl"></div>
+        <div class="ps-field"><label for="ps-deb-install">Install command</label><input id="ps-deb-install" placeholder="apt install ./package.deb"></div>
+        <div class="ps-field"><label for="ps-deb-remove">Remove command</label><input id="ps-deb-remove" placeholder="apt remove package-name"></div>
+      </div>
+      <div class="ps-fields ps-platform-fields" data-fields="rpm" style="margin-top:20px">
+        <div class="ps-field"><label for="ps-rpm-format">Package format</label><select id="ps-rpm-format"><option>RPM</option></select></div>
+        <div class="ps-field"><label for="ps-rpm-deps">Dependencies</label><input id="ps-rpm-deps" placeholder="glibc, curl"></div>
+        <div class="ps-field"><label for="ps-rpm-install">Install command</label><input id="ps-rpm-install" placeholder="dnf install ./package.rpm"></div>
+        <div class="ps-field"><label for="ps-rpm-remove">Remove command</label><input id="ps-rpm-remove" placeholder="dnf remove package-name"></div>
+      </div>
+      <div class="ps-fields ps-platform-fields" data-fields="arch" style="margin-top:20px">
+        <div class="ps-field"><label for="ps-arch-format">Package format</label><select id="ps-arch-format"><option>PKGBUILD</option></select></div>
+        <div class="ps-field"><label for="ps-arch-deps">Dependencies</label><input id="ps-arch-deps" placeholder="glibc, curl"></div>
+        <div class="ps-field full"><label for="ps-arch-source">Source URL</label><input id="ps-arch-source" placeholder="https://example.com/source.tar.gz"></div>
+        <div class="ps-field full"><label for="ps-arch-build">Build instructions</label><textarea id="ps-arch-build" placeholder="Describe package build steps"></textarea></div>
+      </div>
+      <div class="ps-fields ps-platform-fields" data-fields="universal" style="margin-top:20px">
+        <div class="ps-field"><label for="ps-universal-format">Package format</label><select id="ps-universal-format"><option>AppImage</option><option>Flatpak</option></select></div>
+        <div class="ps-field"><label for="ps-universal-id">Application ID</label><input id="ps-universal-id" placeholder="org.example.Application"></div>
+        <div class="ps-field full"><label for="ps-universal-source">Artifact / repository URL</label><input id="ps-universal-source" placeholder="https://example.com/application.AppImage"></div>
+      </div>
+      <div class="ps-field full" style="margin-top:18px"><label for="ps-notes">Notes</label><textarea id="ps-notes" placeholder="Optional deployment notes, requirements or constraints"></textarea></div>
+    </div>
+  </section>
+
+  <div class="ps-lower">
+    <section class="ps-card">
+      <div class="ps-card-head"><div><h2>03 / Manifest preview</h2><p>Export edilecek tanımın canlı önizlemesi.</p></div><span class="ps-step">JSON</span></div>
+      <div class="ps-card-body">
+        <div class="ps-json" id="ps-preview" aria-live="polite">{}</div>
+        <div class="ps-actions"><button class="ps-btn primary" type="button" id="ps-export">Export JSON</button><button class="ps-btn" type="button" id="ps-validate">Validate</button><button class="ps-btn" type="button" id="ps-save">Save draft</button><button class="ps-btn" type="button" id="ps-load">Load draft</button></div>
+        <div class="ps-message" id="ps-message" role="status">Taslak hazır. Alanları doldurarak başlayabilirsin.</div>
+      </div>
+    </section>
+    <section class="ps-card">
+      <div class="ps-card-head"><div><h2>Build &amp; deployment</h2><p>Paket üretimi ve endpoint dağıtımı durumu.</p></div><span class="ps-step">NOT CONNECTED</span></div>
+      <div class="ps-card-body">
+        <p>Bu ekran yalnızca paket manifesti hazırlamak içindir. Gerçek paket üretimi veya endpoint dağıtımı bağlı değildir.</p>
+        <div class="ps-notice">Build servisi bağlı değil. Komut alanları yalnızca tanım verisidir; hiçbir komut çalıştırılmaz.</div>
+        <div class="ps-actions"><button class="ps-btn" type="button" disabled>Build package</button><button class="ps-btn" type="button" disabled>Deploy to endpoints</button></div>
+        <div class="ps-message">UI preview · No live data · No command execution</div>
+      </div>
+    </section>
+  </div>
+</div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const root = document.getElementById("package-studio");
+  if (!root || root.dataset.initialized === "true") return;
+  root.dataset.initialized = "true";
+
+  const $ = id => document.getElementById(id);
+  let platform = "windows";
+  const platformNames = {
+    windows: "Windows", macos: "macOS", debian: "Debian family",
+    rpm: "RPM family", arch: "Arch Linux", universal: "Universal Linux"
+  };
+  const formats = {
+    windows: "ps-win-format", macos: "ps-mac-format", debian: "ps-deb-format",
+    rpm: "ps-rpm-format", arch: "ps-arch-format", universal: "ps-universal-format"
+  };
+  const groups = {
+    windows: ["ps-win-install", "ps-win-uninstall", "ps-win-codes"],
+    macos: ["ps-mac-id", "ps-mac-install", "ps-mac-remove"],
+    debian: ["ps-deb-deps", "ps-deb-install", "ps-deb-remove"],
+    rpm: ["ps-rpm-deps", "ps-rpm-install", "ps-rpm-remove"],
+    arch: ["ps-arch-deps", "ps-arch-source", "ps-arch-build"],
+    universal: ["ps-universal-id", "ps-universal-source"]
+  };
+
+  function value(id) { return $(id)?.value?.trim() || ""; }
+  function setMessage(message) { $("ps-message").textContent = message; }
+
+  function manifest() {
+    const extra = {};
+    for (const id of (groups[platform] || [])) extra[id.replace(/^ps-[a-z]+-/, "")] = value(id);
+    return {
+      schemaVersion: "1.0",
+      status: "draft",
+      package: {
+        name: value("ps-name"),
+        version: value("ps-version"),
+        publisher: value("ps-publisher"),
+        platform: platformNames[platform],
+        format: value(formats[platform]),
+        architecture: value("ps-architecture"),
+        detection: {
+          method: value("ps-detection"),
+          target: value("ps-detection-target")
+        },
+        platformConfiguration: extra,
+        notes: value("ps-notes")
+      }
+    };
+  }
+
+  function refreshPreview() {
+    $("ps-preview").textContent = JSON.stringify(manifest(), null, 2);
+  }
+
+  root.querySelectorAll("[data-platform]").forEach(button => {
+    button.addEventListener("click", () => {
+      platform = button.dataset.platform;
+      root.querySelectorAll("[data-platform]").forEach(item =>
+        item.setAttribute("aria-pressed", String(item === button))
+      );
+      root.querySelectorAll(".ps-platform-fields").forEach(panel =>
+        panel.classList.toggle("active", panel.dataset.fields === platform)
+      );
+      refreshPreview();
+      setMessage(platformNames[platform] + " seçildi. Paket alanlarını yapılandırabilirsin.");
+    });
+  });
+
+  root.querySelectorAll("input, select, textarea").forEach(control => {
+    control.addEventListener("input", refreshPreview);
+    control.addEventListener("change", refreshPreview);
+  });
+
+  function validate() {
+    const errors = [];
+    if (!value("ps-name")) errors.push("Package name zorunludur.");
+    if (!value("ps-version")) errors.push("Version zorunludur.");
+    else if (!/^\d+(?:\.\d+){0,3}(?:[-+][0-9A-Za-z.-]+)?$/.test(value("ps-version"))) errors.push("Version biçimini kontrol et (ör. 1.2.3).");
+    if (!value("ps-detection")) errors.push("Detection method seç.");
+    if (!value("ps-detection-target")) errors.push("Detection target gir.");
+    if (platform === "windows" && value("ps-win-codes") &&
+        !value("ps-win-codes").split(",").every(code => /^\s*\d+\s*$/.test(code))) {
+      errors.push("Success exit codes yalnızca virgülle ayrılmış sayılar olmalı.");
+    }
+    if (errors.length) {
+      setMessage("Validation başarısız: " + errors.join(" "));
+      return false;
+    }
+    setMessage("Validation başarılı. Manifest dışa aktarılmaya hazır. (Paket build edilmedi.)");
+    return true;
+  }
+
+  $("ps-validate").addEventListener("click", validate);
+
+  $("ps-export").addEventListener("click", () => {
+    if (!validate()) return;
+    const blob = new Blob([JSON.stringify(manifest(), null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeName = value("ps-name").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "package";
+    link.href = url;
+    link.download = safeName + "-manifest.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setMessage("Manifest JSON dışa aktarıldı. Gerçek paket oluşturulmadı.");
+  });
+
+  const storageKey = "cartman.package-studio.draft.v1";
+  $("ps-save").addEventListener("click", () => {
+    const values = {};
+    root.querySelectorAll("input, select, textarea").forEach(el => {
+      if (el.id) values[el.id] = el.value;
+    });
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({platform, values}));
+      setMessage("Taslak bu tarayıcının localStorage alanına kaydedildi.");
+    } catch (_) {
+      setMessage("Taslak kaydedilemedi; tarayıcı localStorage erişimini kontrol et.");
+    }
+  });
+
+  $("ps-load").addEventListener("click", () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (!saved || !saved.values) {
+        setMessage("Bu tarayıcıda kayıtlı taslak bulunamadı.");
+        return;
+      }
+      Object.entries(saved.values).forEach(([id, val]) => {
+        const el = $(id);
+        if (el) el.value = val;
+      });
+      const button = root.querySelector('[data-platform="' + saved.platform + '"]');
+      if (button) button.click();
+      refreshPreview();
+      setMessage("Kayıtlı taslak yüklendi.");
+    } catch (_) {
+      setMessage("Taslak okunamadı veya geçersiz.");
+    }
+  });
+
+  refreshPreview();
+
+  // Standalone toolbar: mevcut Cartman event handler'larını bağla.
+  if (typeof setupCartmanEvents === "function") {
+    try { setupCartmanEvents(); } catch (error) {
+      console.warn("Toolbar initialization:", error);
+    }
+  }
+})();
+</script>
+</body>
+</html>

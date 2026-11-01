@@ -1,0 +1,491 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Infrastructure Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/modules/devices.css">
+    <script src="/static/js/modules/devices.js" defer></script>
+    <script src="/static/js/core/events.js" defer></script>
+    <script src="/static/js/core/notifications.js" defer></script>
+    <script src="/static/js/core/i18n.js" defer></script>
+    <script src="/static/js/core/theme.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/app.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <button id="menu-toggle" class="icon-button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+            <a class="brand" href="#" data-page="Home">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+
+        <div class="top-actions">
+            <label class="search-box">
+                <span>⌕</span>
+                <input id="global-search" type="search" placeholder="Search modules..." autocomplete="off">
+                <kbd>Ctrl K</kbd>
+            </label>
+
+            <div class="language-wrap">
+                <button id="language-toggle" class="toolbar-button flag-toggle" aria-label="Select language" aria-expanded="false">
+                    <span id="language-label"></span>
+                    <span>⌄</span>
+                </button>
+
+                <div id="language-menu" class="dropdown language-menu hidden">
+                    <!-- LATIN ALPHABET -->
+                    <button data-language="en" title="English" aria-label="English"></button>
+                    <button data-language="tr" title="Türkçe" aria-label="Turkish"></button>
+                    <button data-language="de" title="Deutsch" aria-label="German"></button>
+                    <button data-language="fr" title="Français" aria-label="French"></button>
+                    <button data-language="es" title="Español" aria-label="Spanish"></button>
+                    <button data-language="nl" title="Nederlands" aria-label="Dutch"></button>
+                    <button data-language="pl" title="Polski" aria-label="Polish"></button>
+                    <button data-language="it" title="Italiano" aria-label="Italian"></button>
+                    <button data-language="pt-BR" title="Português" aria-label="Portuguese"></button>
+                    <button data-language="bcs" title="Bosanski / Hrvatski / Srpski" aria-label="Bosnian Croatian Serbian"></button>
+                    <button data-language="sq" title="Shqip" aria-label="Albanian"></button>
+                    <button data-language="cs" title="Čeština" aria-label="Czech"></button>
+                    <button data-language="lt" title="Lietuvių" aria-label="Lithuanian"></button>
+                    <button data-language="sv" title="Svenska" aria-label="Swedish"></button>
+                    <button data-language="no" title="Norsk bokmål" aria-label="Norwegian"></button>
+                    <button data-language="da" title="Dansk" aria-label="Danish"></button>
+                    <button data-language="fi" title="Suomi" aria-label="Finnish"></button>
+                    <button data-language="az" title="Azərbaycanca" aria-label="Azerbaijani"></button>
+                    <button data-language="id" title="Bahasa Indonesia" aria-label="Indonesian"></button>
+                    <button data-language="ms" title="Bahasa Melayu" aria-label="Malay"></button>
+                    <button data-language="et" title="Eesti" aria-label="Estonian"></button>
+                    <button data-language="hu" title="Magyar" aria-label="Hungarian"></button>
+
+                    <!-- OTHER ALPHABETS -->
+                    <button data-language="ja" title="日本語" aria-label="Japanese"></button>
+                    <button data-language="ar" title="العربية" aria-label="Arabic"></button>
+                    <button data-language="zh-CN" title="简体中文" aria-label="Simplified Chinese"></button>
+                    <button data-language="ru" title="Русский" aria-label="Russian"></button>
+                    <button data-language="el" title="Ελληνικά" aria-label="Greek"></button>
+                    <button data-language="he" title="עברית" aria-label="Hebrew"></button>
+                    <button data-language="ko" title="한국어" aria-label="Korean"></button>
+                </div>
+            </div>
+
+            <button id="terminal-toggle" class="toolbar-button terminal-button">
+                <span>›_</span><span>Terminal</span>
+            </button>
+
+            <button id="theme-toggle" class="toolbar-button" aria-label="Switch theme">
+                ☀ <span id="theme-label">Light mode</span>
+            </button>
+
+            <div class="profile-wrap">
+                <button id="profile-toggle" class="profile-button" aria-expanded="false">
+                    <span class="avatar">K</span>
+                    <span class="profile-info">
+                        <strong>Kaan Yaşar</strong>
+                        <small>Administrator · Demo</small>
+                    </span>
+                    <span>⌄</span>
+                </button>
+
+                <div id="profile-menu" class="dropdown profile-menu hidden">
+                    <div class="dropdown-heading">Current session</div>
+                    <strong>Kaan Yaşar</strong>
+                    <small>Administrator · Demo UI</small>
+                    <button data-page="Settings">Account settings</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="page-backdrop" class="page-backdrop"></div>
+
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-brand">
+            <span class="sidebar-brand-dot"></span>
+            <span>WORKSPACE</span>
+        </div>
+
+        
+        <div class="sidebar-heading">WORKSPACE</div>
+        <button class="nav-link active" data-page="Home"><span>⌂</span> Overview</button>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-endpoint-management" aria-expanded="false" aria-controls="nav-group-endpoint-management">
+            <span class="sidebar-heading-label">ENDPOINT MANAGEMENT</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-endpoint-management" data-nav-group="nav-group-endpoint-management" hidden>
+        <button class="nav-link" data-page="Devices"><span>▣</span> Devices</button>
+        <button class="nav-link" data-page="Inventory"><span>▤</span> Inventory</button>
+        <button class="nav-link" data-page="Hardware Inventory"><span>▦</span> Hardware Inventory</button>
+        <button class="nav-link" data-page="Software"><span>▧</span> Software</button>
+        <button class="nav-link" data-page="Software Inventory"><span>▤</span> Software Inventory</button>
+        <button class="nav-link" data-page="Device Groups"><span>◫</span> Device Groups</button>
+        <button class="nav-link" data-page="Endpoint Agents"><span>⌘</span> Endpoint Agents</button>
+        <button class="nav-link" data-page="Remote Commands"><span>⌁</span> Remote Commands</button>
+        <button class="nav-link" data-page="Endpoint Health"><span>◉</span> Endpoint Health</button>
+        <button class="nav-link" data-page="Device Lifecycle"><span>↻</span> Device Lifecycle</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-network-infrastructure" aria-expanded="false" aria-controls="nav-group-network-infrastructure">
+            <span class="sidebar-heading-label">NETWORK & INFRASTRUCTURE</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-network-infrastructure" data-nav-group="nav-group-network-infrastructure" hidden>
+        <button class="nav-link" data-page="Network"><span>⌁</span> Network</button>
+        <button class="nav-link" data-page="Network Discovery"><span>⌕</span> Network Discovery</button>
+        <button class="nav-link" data-page="Network Topology"><span>⌘</span> Network Topology</button>
+        <button class="nav-link" data-page="IP Address Management"><span>▦</span> IP Address Management</button>
+        <button class="nav-link" data-page="DNS & DHCP"><span>⇄</span> DNS &amp; DHCP</button>
+        <button class="nav-link" data-page="Network Diagnostics"><span>⌁</span> Network Diagnostics</button>
+        <button class="nav-link" data-page="Network Devices"><span>▣</span> Network Devices</button>
+        <button class="nav-link" data-page="Infrastructure"><span>▤</span> Infrastructure</button>
+        <button class="nav-link" data-page="Servers & Infrastructure"><span>▦</span> Servers &amp; Infrastructure</button>
+        <button class="nav-link" data-page="Virtualization"><span>▧</span> Virtualization</button>
+        <button class="nav-link" data-page="Capacity Management"><span>◴</span> Capacity Management</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-software-deployment" aria-expanded="false" aria-controls="nav-group-software-deployment">
+            <span class="sidebar-heading-label">SOFTWARE & DEPLOYMENT</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-software-deployment" data-nav-group="nav-group-software-deployment" hidden>
+        <button class="nav-link" data-page="Deployment"><span>⇧</span> Deployment</button>
+        <button class="nav-link" data-page="Software Catalog"><span>▤</span> Software Catalog</button>
+        <button class="nav-link" data-page="Software Deployment"><span>⇧</span> Software Deployment</button>
+        <button class="nav-link" data-page="OS Deployment"><span>▣</span> OS Deployment</button>
+        <button class="nav-link" data-page="Package Management"><span>▦</span> Package Management</button>
+        <button class="nav-link" data-page="Patch Management"><span>↻</span> Patch Management</button>
+        <button class="nav-link" data-page="Deployment Jobs"><span>⌘</span> Deployment Jobs</button>
+        <button class="nav-link" data-page="Deployment History"><span>≡</span> Deployment History</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-vpn-remote-access" aria-expanded="false" aria-controls="nav-group-vpn-remote-access">
+            <span class="sidebar-heading-label">VPN & REMOTE ACCESS</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-vpn-remote-access" data-nav-group="nav-group-vpn-remote-access" hidden>
+        <button class="nav-link" data-page="Remote Access"><span>↗</span> Remote Access</button>
+        <button class="nav-link" data-page="VPN Overview"><span>⌁</span> VPN Overview</button>
+        <button class="nav-link" data-page="Gateways"><span>⇄</span> Gateways</button>
+        <button class="nav-link" data-page="Peers & Clients"><span>♙</span> Peers &amp; Clients</button>
+        <button class="nav-link" data-page="Site-to-Site VPN"><span>⇄</span> Site-to-Site VPN</button>
+        <button class="nav-link" data-page="Routes & Networks"><span>⌘</span> Routes &amp; Networks</button>
+        <button class="nav-link" data-page="Access Policies"><span>◈</span> Access Policies</button>
+        <button class="nav-link" data-page="VPN Audit Logs"><span>≡</span> VPN Audit Logs</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-monitoring-observability" aria-expanded="false" aria-controls="nav-group-monitoring-observability">
+            <span class="sidebar-heading-label">MONITORING & OBSERVABILITY</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-monitoring-observability" data-nav-group="nav-group-monitoring-observability" hidden>
+        <button class="nav-link" data-page="Monitoring"><span>◉</span> Monitoring</button>
+        <button class="nav-link" data-page="Monitoring Overview"><span>◉</span> Monitoring Overview</button>
+        <button class="nav-link" data-page="Metrics & Performance"><span>⌁</span> Metrics &amp; Performance</button>
+        <button class="nav-link" data-page="Alerts"><span>!</span> Alerts</button>
+        <button class="nav-link" data-page="Logs"><span>≡</span> Logs</button>
+        <button class="nav-link" data-page="Availability"><span>◴</span> Availability</button>
+        <button class="nav-link" data-page="Service Monitoring"><span>◉</span> Service Monitoring</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-it-operations" aria-expanded="false" aria-controls="nav-group-it-operations">
+            <span class="sidebar-heading-label">IT OPERATIONS</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-it-operations" data-nav-group="nav-group-it-operations" hidden>
+        <button class="nav-link" data-page="Ticketing"><span>▣</span> Ticketing</button>
+        <button class="nav-link" data-page="Knowledge Base"><span>▤</span> Knowledge Base</button>
+        <button class="nav-link" data-page="Tasks & Automation"><span>⌘</span> Tasks &amp; Automation</button>
+        <button class="nav-link" data-page="Workflows"><span>⇄</span> Workflows</button>
+        <button class="nav-link" data-page="Change Management"><span>↻</span> Change Management</button>
+        <button class="nav-link" data-page="Services"><span>⚙</span> Services</button>
+        <button class="nav-link" data-page="Notifications"><span>♧</span> Notifications</button>
+        <button class="nav-link" data-page="Reports"><span>▥</span> Reports</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-identity-security" aria-expanded="false" aria-controls="nav-group-identity-security">
+            <span class="sidebar-heading-label">IDENTITY &amp; SECURITY</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-identity-security" data-nav-group="nav-group-identity-security" hidden>
+        <button class="nav-link" data-page="Identity & Access"><span>♙</span> Identity &amp; Access</button>
+        <button class="nav-link" data-page="Users & Groups"><span>♙</span> Users &amp; Groups</button>
+        <button class="nav-link" data-page="Identity Providers"><span>◈</span> Identity Providers</button>
+        <button class="nav-link" data-page="Policies"><span>◈</span> Policies</button>
+        <button class="nav-link" data-page="Roles & Permissions"><span>♙</span> Roles &amp; Permissions</button>
+        <button class="nav-link" data-page="Compliance"><span>✓</span> Compliance</button>
+        <button class="nav-link" data-page="Audit Logs"><span>≡</span> Audit Logs</button>
+        <button class="nav-link" data-page="Credentials & Secrets"><span>⚿</span> Credentials &amp; Secrets</button>
+        </div>
+        <button class="sidebar-heading" type="button" data-nav-group-toggle="nav-group-administration" aria-expanded="false" aria-controls="nav-group-administration">
+            <span class="sidebar-heading-label">ADMINISTRATION</span>
+            <span class="sidebar-heading-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="sidebar-submenu" id="nav-group-administration" data-nav-group="nav-group-administration" hidden>
+        <button class="nav-link" data-page="Settings"><span>⚙</span> Settings</button>
+        <button class="nav-link" data-page="API"><span aria-hidden="true">&lt;/&gt;</span> API</button>
+        <button class="nav-link" data-page="API & API Keys"><span aria-hidden="true">&lt;/&gt;</span> API &amp; API Keys</button>
+        <button class="nav-link" data-page="Connectors"><span>⛓</span> Connectors</button>
+        <button class="nav-link" data-page="Agents & Collectors"><span>⌘</span> Agents &amp; Collectors</button>
+        <button class="nav-link" data-page="Job Queue"><span>≡</span> Job Queue</button>
+        <button class="nav-link" data-page="System Logs"><span>≡</span> System Logs</button>
+        <button class="nav-link" data-page="Platform Health"><span>◉</span> Platform Health</button>
+
+        </div>
+        <div class="sidebar-spacer"></div>
+
+        <div class="sidebar-footer">
+            <span class="status-dot"></span>
+            <span>Cartman API</span>
+            <strong id="api-status">Checking...</strong>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="breadcrumb">
+            <span>Cartman</span>
+            <span>/</span>
+            <strong id="breadcrumb-page">Overview</strong>
+        </div>
+
+        <section id="home-view">
+            <div class="welcome">
+                <div class="eyebrow"><span class="eyebrow-dot"></span> INFRASTRUCTURE CONTROL CENTER</div>
+                <h1>Welcome back, Kaan <span class="wave">✦</span></h1>
+                <p>Manage your endpoints, infrastructure and operations from one place.</p>
+            </div>
+
+            <div class="section-heading">
+                <div>
+                    <h2>Environment overview</h2>
+                    <p>A quick look at your workspace.</p>
+                </div>
+                <button id="refresh-dashboard" class="secondary-button">↻ Refresh</button>
+            </div>
+
+            <div class="stats-grid">
+                <article class="stat-card stat-blue">
+                    <div class="stat-top"><span>Managed devices</span><span class="stat-icon">▣</span></div>
+                    <div class="stat-value">24</div>
+                    <div class="stat-foot"><span class="stat-positive">↗ 3</span> this week</div>
+                    <div class="stat-progress"><span style="width:75%"></span></div>
+                </article>
+
+                <article class="stat-card stat-green">
+                    <div class="stat-top"><span>Healthy endpoints</span><span class="stat-icon">✓</span></div>
+                    <div class="stat-value">21 <small>/ 24</small></div>
+                    <div class="stat-foot"><span class="stat-positive">87.5%</span> health status</div>
+                    <div class="stat-progress"><span style="width:87.5%"></span></div>
+                </article>
+
+                <article class="stat-card stat-orange">
+                    <div class="stat-top"><span>Open tickets</span><span class="stat-icon">▤</span></div>
+                    <div class="stat-value">05</div>
+                    <div class="stat-foot"><span class="stat-warning">2 high priority</span></div>
+                    <div class="stat-progress"><span style="width:38%"></span></div>
+                </article>
+
+                <article class="stat-card stat-purple">
+                    <div class="stat-top"><span>Active tasks</span><span class="stat-icon">⌘</span></div>
+                    <div class="stat-value">08</div>
+                    <div class="stat-foot"><span class="stat-positive">6 completed</span> today</div>
+                    <div class="stat-progress"><span style="width:65%"></span></div>
+                </article>
+            </div>
+
+            <div class="dashboard-grid">
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div><h2>Device health</h2><p>Sample endpoint status</p></div>
+                        <button class="text-button" data-page="Devices">View devices ↗</button>
+                    </div>
+
+                    <div class="health-summary">
+                        <div class="health-ring">
+                            <div><strong>87%</strong><small>Healthy</small></div>
+                        </div>
+                        <div class="health-legend">
+                            <div><span class="legend-dot green-dot"></span><span>Healthy</span><strong>21</strong></div>
+                            <div><span class="legend-dot orange-dot"></span><span>Warning</span><strong>2</strong></div>
+                            <div><span class="legend-dot red-dot"></span><span>Offline</span><strong>1</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="device-list">
+                        <div class="device-row">
+                            <span class="device-symbol blue">W</span>
+                            <div class="device-info"><strong>WS-ACCT-014</strong><small>Windows 11 · 10.0.0.14</small></div>
+                            <span class="status-pill healthy">Healthy</span>
+                        </div>
+                        <div class="device-row">
+                            <span class="device-symbol purple">L</span>
+                            <div class="device-info"><strong>LINUX-WEB-02</strong><small>Ubuntu 24.04 · 10.0.1.22</small></div>
+                            <span class="status-pill warning-pill">Warning</span>
+                        </div>
+                        <div class="device-row">
+                            <span class="device-symbol cyan">M</span>
+                            <div class="device-info"><strong>MAC-DESIGN-03</strong><small>macOS · 10.0.0.31</small></div>
+                            <span class="status-pill healthy">Healthy</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div><h2>Ticket overview</h2><p>Sample support queue</p></div>
+                        <button class="text-button" data-page="Ticketing">View tickets ↗</button>
+                    </div>
+
+                    <div class="ticket-summary">
+                        <div><strong>05</strong><span>Open</span></div>
+                        <div><strong>03</strong><span>In progress</span></div>
+                        <div><strong>12</strong><span>Resolved</span></div>
+                    </div>
+
+                    <div class="ticket-list">
+                        <div class="ticket-row">
+                            <span class="priority-dot priority-high"></span>
+                            <div><strong>#CT-1042 · VPN connectivity</strong><small>Network · 18 min ago</small></div>
+                            <span class="status-pill warning-pill">Open</span>
+                        </div>
+                        <div class="ticket-row">
+                            <span class="priority-dot priority-medium"></span>
+                            <div><strong>#CT-1041 · Disk usage alert</strong><small>Infrastructure · 42 min ago</small></div>
+                            <span class="status-pill progress-pill">In progress</span>
+                        </div>
+                        <div class="ticket-row">
+                            <span class="priority-dot priority-low"></span>
+                            <div><strong>#CT-1039 · Software request</strong><small>Endpoint · 2 hours ago</small></div>
+                            <span class="status-pill healthy">Resolved</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div><h2>Recent activity</h2><p>Example workspace events</p></div>
+                        <button class="text-button" data-page="Audit Logs">Audit logs ↗</button>
+                    </div>
+
+                    <div class="activity-list">
+                        <div class="activity-item">
+                            <span class="activity-icon activity-green">✓</span>
+                            <div><strong>Health check completed</strong><p>Scheduled endpoint check finished.</p><small>5 minutes ago</small></div>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-icon activity-blue">↻</span>
+                            <div><strong>Inventory sync preview</strong><p>Sample inventory data refreshed.</p><small>22 minutes ago</small></div>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-icon activity-orange">!</span>
+                            <div><strong>New ticket recorded</strong><p>VPN connectivity issue · CT-1042.</p><small>18 minutes ago</small></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div><h2>Quick access</h2><p>Jump into a module</p></div>
+                    </div>
+
+                    <div class="quick-grid">
+                        <button class="quick-item" data-page="Devices"><span class="quick-icon blue">▣</span><span><strong>Devices</strong><small>Endpoint list</small></span><b>↗</b></button>
+                        <button class="quick-item" data-page="Monitoring"><span class="quick-icon green">◉</span><span><strong>Monitoring</strong><small>Health &amp; alerts</small></span><b>↗</b></button>
+                        <button class="quick-item" data-page="Ticketing"><span class="quick-icon orange">▤</span><span><strong>Ticketing</strong><small>Support queue</small></span><b>↗</b></button>
+                        <button class="quick-item" data-page="Knowledge Base"><span class="quick-icon purple">▧</span><span><strong>Knowledge Base</strong><small>Articles &amp; guides</small></span><b>↗</b></button>
+                    </div>
+
+                    <button id="quick-open-terminal" class="terminal-cta">
+                        <span>›_</span>
+                        <span><strong>Open terminal</strong><small>Run preview commands</small></span>
+                        <b>↗</b>
+                    </button>
+                </section>
+            </div>
+
+            <div class="section-heading modules-heading">
+                <div><h2>Management modules</h2><p>Explore the Cartman workspace.</p></div>
+                <span class="section-count">13 MODULES</span>
+            </div>
+
+            <div id="category-grid" class="category-grid">
+                <button class="category-card" data-page="Devices"><span class="category-icon blue">▣</span><strong>Devices</strong><p>Manage Windows, macOS and Linux endpoints.</p><span class="category-footer">Endpoint management <b>↗</b></span></button>
+                <button class="category-card" data-page="Inventory"><span class="category-icon purple">▤</span><strong>Inventory</strong><p>Hardware specifications and asset details.</p><span class="category-footer">Asset information <b>↗</b></span></button>
+                <button class="category-card" data-page="Software"><span class="category-icon cyan">▧</span><strong>Software</strong><p>Software inventory and deployment workflows.</p><span class="category-footer">Software management <b>↗</b></span></button>
+                <button class="category-card" data-page="Remote Access"><span class="category-icon green">↗</span><strong>Remote Access</strong><p>Review authorized remote access workflows.</p><span class="category-footer">Remote operations <b>↗</b></span></button>
+                <button class="category-card" data-page="Monitoring"><span class="category-icon orange">◉</span><strong>Monitoring</strong><p>Inspect resource usage and alerts.</p><span class="category-footer">Observability <b>↗</b></span></button>
+                <button class="category-card" data-page="Ticketing"><span class="category-icon pink">▤</span><strong>Ticketing</strong><p>Track incidents, requests and ticket status.</p><span class="category-footer">Service operations <b>↗</b></span></button>
+                <button class="category-card" data-page="Knowledge Base"><span class="category-icon cyan">▧</span><strong>Knowledge Base</strong><p>Browse troubleshooting guides and articles.</p><span class="category-footer">Documentation <b>↗</b></span></button>
+                <button class="category-card" data-page="Tasks & Automation"><span class="category-icon orange">⌘</span><strong>Tasks &amp; Automation</strong><p>Review task and automation workflows.</p><span class="category-footer">Automation <b>↗</b></span></button>
+                <button class="category-card" data-page="Services"><span class="category-icon blue">⚙</span><strong>Services</strong><p>Inspect operating system services.</p><span class="category-footer">Service management <b>↗</b></span></button>
+                <button class="category-card" data-page="Identity & Access"><span class="category-icon purple">♙</span><strong>Identity &amp; Access</strong><p>Users, roles and access permissions.</p><span class="category-footer">IAM <b>↗</b></span></button>
+                <button class="category-card" data-page="Policies"><span class="category-icon green">◈</span><strong>Policies</strong><p>Review configuration and endpoint policies.</p><span class="category-footer">Configuration <b>↗</b></span></button>
+                <button class="category-card" data-page="Audit Logs"><span class="category-icon orange">≡</span><strong>Audit Logs</strong><p>Review administrative actions and events.</p><span class="category-footer">Audit &amp; compliance <b>↗</b></span></button>
+                <button class="category-card" data-page="Settings"><span class="category-icon gray">⚙</span><strong>Settings</strong><p>Configure application preferences.</p><span class="category-footer">Administration <b>↗</b></span></button>
+            </div>
+
+            <div id="no-results" class="empty-state hidden">No matching modules found.</div>
+        </section>
+
+        <section id="module-view" class="hidden">
+            <div class="module-header">
+                <span id="module-icon" class="category-icon blue">▣</span>
+                <div>
+                    <div class="eyebrow">CARTMAN WORKSPACE</div>
+                    <h1 id="module-title">Devices</h1>
+                    <p id="module-description">Manage your infrastructure.</p>
+                </div>
+            </div>
+
+            <div class="module-placeholder">
+                <span class="placeholder-art">◈</span>
+                <span class="preview-label">DEVELOPMENT PREVIEW</span>
+                <h2 id="module-state-title">Module preview</h2>
+                <p id="module-state-description">This module is part of the Cartman roadmap. Its live backend and device operations have not been implemented yet.</p>
+                <div class="placeholder-actions">
+                    <button id="back-home" class="primary-button">← Back to overview</button>
+                    <button id="module-open-terminal" class="secondary-button">Open terminal ›_</button>
+                </div>
+            </div>
+
+            <div id="module-page-content"></div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Development Preview · Demo data</span>
+        </footer>
+    </main>
+
+    <section id="terminal-panel" class="terminal-panel" aria-hidden="true">
+        <div class="terminal-header">
+            <div class="terminal-heading">
+                <span class="terminal-logo">›_</span>
+                <div><strong>Cartman Terminal</strong><small>Local command preview</small></div>
+            </div>
+            <div class="terminal-controls">
+                <span class="preview-badge">PREVIEW</span>
+                <button id="terminal-clear" aria-label="Clear terminal" title="Clear output">⌫</button>
+                <button id="terminal-close" aria-label="Close terminal" title="Close terminal">×</button>
+            </div>
+        </div>
+
+        <div id="terminal-output" class="terminal-output" aria-live="polite">
+            <p class="terminal-muted">Cartman Command Interface · Preview mode</p>
+            <p class="terminal-muted">Type <code>help</code> to see available commands.</p>
+        </div>
+
+        <form id="terminal-form" class="terminal-input-row">
+            <label for="terminal-command">cartman &gt;</label>
+            <input id="terminal-command" placeholder="Enter a command..." autocomplete="off" spellcheck="false">
+            <button type="submit">Run ↵</button>
+        </form>
+
+        <div class="terminal-footer">
+            <span><span class="status-dot"></span> Local preview</span>
+            <span>Remote execution disabled</span>
+        </div>
+    </section>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+</body>
+</html>

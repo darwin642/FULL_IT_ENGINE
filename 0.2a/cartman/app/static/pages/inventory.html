@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Inventory</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/inventory.js" defer></script>
+    <style>
+        .inventory-toolbar {
+            display:flex; align-items:center; justify-content:space-between;
+            flex-wrap:wrap; gap:12px; margin-bottom:18px;
+        }
+        .inventory-toolbar-actions {
+            display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+        }
+        .inventory-toolbar button, .inventory-action-btn {
+            border:1px solid var(--border-color, #30394d);
+            border-radius:8px; padding:10px 14px; cursor:pointer;
+            font:inherit; font-size:13px; font-weight:600;
+            color:var(--text-primary, #e8edf7);
+            background:var(--surface-secondary, #171f31);
+        }
+        .inventory-toolbar .inventory-add-btn {
+            background:#7657e8; border-color:#7657e8; color:#fff;
+        }
+        .inventory-toolbar button:hover, .inventory-action-btn:hover {filter:brightness(1.12)}
+        .inventory-search {width:min(340px, 100%); min-width:180px}
+        .inventory-table-wrap {
+            width:100%; overflow-x:auto; border-radius:10px;
+            border:1px solid var(--border-color, #30394d);
+        }
+        .inventory-table {
+            width:100%; min-width:1450px; border-collapse:collapse;
+            text-align:left;
+        }
+        .inventory-table th, .inventory-table td {
+            padding:14px 12px; border-bottom:1px solid var(--border-color, #30394d);
+            vertical-align:top; font-size:13px;
+        }
+        .inventory-table th {
+            white-space:nowrap; font-size:11px; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--text-muted, #9aa7bd);
+            background:var(--surface-secondary, #151d2d);
+        }
+        .inventory-table tbody tr:hover {background:rgba(125,140,170,.06)}
+        .inventory-table tbody tr:last-child td {border-bottom:0}
+        .inventory-asset-name {font-weight:650; color:var(--text-primary, #e8edf7)}
+        .inventory-muted {color:var(--text-muted, #9aa7bd)}
+        .inventory-tags {display:flex; flex-wrap:wrap; gap:5px; min-width:90px}
+        .inventory-tag {
+            display:inline-block; padding:3px 7px; border-radius:5px;
+            background:rgba(118,87,232,.14); color:#b9a9ff; font-size:11px;
+        }
+        .inventory-row-actions {display:flex; gap:6px; white-space:nowrap}
+        .inventory-action-btn {padding:6px 9px; font-size:12px}
+        .inventory-action-btn.danger {color:#ff9999}
+        .inventory-empty {padding:30px 16px; text-align:center; color:var(--text-muted, #9aa7bd)}
+        .inventory-count {font-size:12px; color:var(--text-muted, #9aa7bd)}
+        .inventory-modal-backdrop {
+            position:fixed; inset:0; z-index:10000; display:flex;
+            align-items:center; justify-content:center; padding:18px;
+            background:rgba(3,7,18,.78); overflow-y:auto;
+        }
+        .inventory-modal {
+            width:min(720px,100%); max-height:calc(100vh - 36px); overflow-y:auto;
+            border:1px solid var(--border-color, #30394d); border-radius:14px;
+            background:var(--surface-primary, #101827); color:var(--text-primary, #e8edf7);
+            box-shadow:0 24px 80px rgba(0,0,0,.4);
+        }
+        .inventory-modal-header, .inventory-modal-footer {
+            display:flex; align-items:center; justify-content:space-between;
+            gap:12px; padding:18px 22px;
+            border-bottom:1px solid var(--border-color, #30394d);
+        }
+        .inventory-modal-header h2 {margin:0; font-size:19px}
+        .inventory-modal-header p {margin:5px 0 0; font-size:12px; color:var(--text-muted, #9aa7bd)}
+        .inventory-modal-body {padding:20px 22px}
+        .inventory-form-grid {display:grid; grid-template-columns:1fr 1fr; gap:16px}
+        .inventory-field {display:flex; flex-direction:column; gap:7px; min-width:0}
+        .inventory-field.full {grid-column:1 / -1}
+        .inventory-field label {font-size:12px; font-weight:600}
+        .inventory-field input, .inventory-field select, .inventory-field textarea {
+            width:100%; box-sizing:border-box; padding:10px 11px; border-radius:8px;
+            border:1px solid var(--border-color, #30394d);
+            background:var(--surface-secondary, #151d2d);
+            color:var(--text-primary, #e8edf7); font:inherit; font-size:13px;
+        }
+        .inventory-field textarea {min-height:88px; resize:vertical}
+        .inventory-modal-footer {border-top:1px solid var(--border-color, #30394d); border-bottom:0}
+        .inventory-modal-footer button {
+            border:1px solid var(--border-color, #30394d); border-radius:8px;
+            padding:10px 15px; cursor:pointer; font:inherit;
+        }
+        .inventory-save-btn {background:#7657e8; color:white; border-color:#7657e8 !important}
+        .inventory-close-btn {background:transparent; color:inherit}
+        .inventory-hidden {display:none !important}
+        @media(max-width:600px) {
+            .inventory-form-grid {grid-template-columns:1fr}
+            .inventory-field.full {grid-column:auto}
+            .inventory-modal-header, .inventory-modal-body, .inventory-modal-footer {padding:16px}
+            .inventory-toolbar {align-items:stretch}
+            .inventory-toolbar-actions {width:100%}
+        }
+    
+        .inventory-bulk-actions {
+            display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+            padding:0 0 12px;
+        }
+        .inventory-bulk-actions span {
+            margin-right:auto; color:var(--muted); font-size:11px;
+        }
+        .inventory-bulk-actions button {
+            min-height:34px; padding:0 10px; border:1px solid var(--border);
+            border-radius:8px; background:var(--surface-2); color:var(--text);
+            cursor:pointer; font:inherit; font-size:12px;
+        }
+        .inventory-bulk-actions button.danger { border-color:#a94444; color:#ff9999; }
+        .inventory-bulk-actions button:disabled { opacity:.45; cursor:not-allowed; }
+        .inventory-select { accent-color:var(--accent); cursor:pointer; }
+
+        .inventory-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px;
+            margin: 0 0 18px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+        }
+        .inventory-control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 145px;
+            flex: 1 1 145px;
+        }
+        .inventory-control label {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .inventory-control select,
+        .inventory-control input,
+        .inventory-control button {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            min-height: 36px;
+            padding: 0 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-2);
+            color: var(--text);
+            font: inherit;
+            font-size: 12px;
+        }
+        .inventory-control button {
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .inventory-control button:hover {filter:brightness(1.12)}
+        .inventory-clear-control {
+            flex: 0 1 145px;
+        }
+        @media(max-width:760px) {
+            .inventory-controls {padding:12px}
+            .inventory-control {flex:1 1 135px; min-width:0}
+            .inventory-clear-control {flex:1 1 100%}
+        }
+
+        .inventory-asset-cell {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-width:150px;
+        }
+        .inventory-asset-icon {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            flex:0 0 34px;
+            width:34px;
+            height:34px;
+            border-radius:8px;
+            background:rgba(118,87,232,.14);
+            font-size:18px;
+        }
+        @media(max-width:600px) {
+            .inventory-controls {grid-template-columns:repeat(2,minmax(0,1fr));padding:12px}
+            .inventory-clear-control {grid-column:1 / -1}
+        }
+
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">← Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1800px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">▤</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE</div>
+                <h1>Inventory</h1>
+                <p>Manage hardware assets, assignments and equipment details.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Inventory asset management">
+            <div class="workspace-eyebrow">ASSET MANAGEMENT</div>
+
+            <div class="inventory-toolbar">
+                <input id="inventory-search" class="workspace-search inventory-search"
+                       type="search" placeholder="Search assets..."
+                       aria-label="Search assets">
+                <div class="inventory-toolbar-actions">
+                    <input id="inventory-json-file" type="file" accept=".json,application/json"
+                           class="inventory-hidden">
+                    <button type="button" id="inventory-import-btn">Import JSON</button>
+                    <button type="button" id="inventory-export-btn">Export JSON</button>
+                    <button type="button" id="inventory-add-btn" class="inventory-add-btn">+ Add Asset</button>
+                </div>
+            </div>
+
+            
+            <section class="inventory-controls" aria-label="Sort and filter assets">
+                <div class="inventory-control">
+                    <label for="inventory-sort-by">Sort</label>
+                    <select id="inventory-sort-by">
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="department">Department</option>
+                        <option value="type">Device type</option>
+                        <option value="serialNo">Serial number</option>
+                    </select>
+                </div>
+                <div class="inventory-control">
+                    <label for="inventory-filter-department">Department</label>
+                    <select id="inventory-filter-department">
+                        <option value="">All departments</option>
+                    </select>
+                </div>
+                <div class="inventory-control">
+                    <label for="inventory-filter-type">Device Type</label>
+                    <select id="inventory-filter-type">
+                        <option value="">All types</option>
+                    </select>
+                </div>
+                <div class="inventory-control">
+                    <label for="inventory-filter-assigned">Assigned To</label>
+                    <select id="inventory-filter-assigned">
+                        <option value="">All assignees</option>
+                    </select>
+                </div>
+                <div class="inventory-control">
+                    <label for="inventory-filter-date-from">Purchased from</label>
+                    <input id="inventory-filter-date-from" type="date">
+                </div>
+                <div class="inventory-control">
+                    <label for="inventory-filter-date-to">Purchased to</label>
+                    <input id="inventory-filter-date-to" type="date">
+                </div>
+                <div class="inventory-control inventory-clear-control">
+                    <label>&nbsp;</label>
+                    <button type="button" id="inventory-clear-filters">Clear Filters</button>
+                </div>
+            </section>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <h2>Inventory Assets</h2>
+                    <span id="inventory-row-count" class="inventory-count">0 assets</span>
+                </div>
+                <div class="inventory-bulk-actions">
+                    <span id="inventory-selected-count">0 selected</span>
+                    <button type="button" id="inventory-export-selected" disabled>Export Selected JSON</button>
+                    <button type="button" id="inventory-delete-selected" class="danger" disabled>Delete Selected</button>
+                </div>
+                <div class="inventory-table-wrap">
+                    <table class="inventory-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="inventory-select-visible" aria-label="Select visible assets"></th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Brand</th>
+                                <th>Purchase Date</th>
+                                <th>Serial No</th>
+                                <th>Department</th>
+                                <th>Assigned To</th>
+                                <th>Tags</th>
+                                <th>Special Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body"></tbody>
+                    </table>
+                </div>
+                <p id="inventory-empty" class="inventory-empty">No assets yet. Select Add Asset to register equipment.</p>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Inventory</span>
+        </footer>
+    </main>
+
+    <div id="inventory-modal-backdrop" class="inventory-modal-backdrop inventory-hidden"
+         role="presentation">
+        <section class="inventory-modal" role="dialog" aria-modal="true"
+                 aria-labelledby="inventory-modal-title">
+            <div class="inventory-modal-header">
+                <div>
+                    <h2 id="inventory-modal-title">Add Asset</h2>
+                    <p>Enter the equipment details below.</p>
+                </div>
+                <button type="button" id="inventory-close-x" class="inventory-close-btn"
+                        aria-label="Close form">✕</button>
+            </div>
+
+            <form id="inventory-asset-form">
+                <div class="inventory-modal-body">
+                    <div class="inventory-form-grid">
+                        <div class="inventory-field">
+                            <label for="asset-name">Name *</label>
+                            <input id="asset-name" name="name" required maxlength="160"
+                                   placeholder="e.g. Dell Monitor 27">
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-type">Type *</label>
+                            <select id="asset-type" name="type" required>
+                                <option value="">Select equipment type</option>
+                                <option>Desktop</option><option>Laptop</option>
+                                <option>Server</option><option>Monitor</option>
+                                <option>Printer</option><option>Projector</option>
+                                <option>Keyboard</option><option>Mouse</option>
+                                <option>Headset</option><option>Docking Station</option>
+                                <option>Storage</option><option>RAM</option>
+                                <option>CPU</option><option>GPU</option>
+                                <option>Motherboard</option><option>UPS</option>
+                                <option>Switch</option><option>Router</option>
+                                <option>Firewall</option><option>Access Point</option>
+                                <option>Rack</option><option>Security Equipment</option>
+                                <option>Lab Equipment</option><option>Other</option>
+                            </select>
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-brand">Brand</label>
+                            <input id="asset-brand" name="brand" maxlength="120"
+                                   placeholder="e.g. Dell">
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-purchase-date">Purchase Date</label>
+                            <input id="asset-purchase-date" name="purchaseDate" type="date">
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-serial">Serial No</label>
+                            <input id="asset-serial" name="serialNo" maxlength="180"
+                                   placeholder="Equipment serial number">
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-department">Department</label>
+                            <input id="asset-department" name="department" maxlength="120"
+                                   placeholder="e.g. IT Infrastructure">
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-assigned-to">Assigned To</label>
+                            <input id="asset-assigned-to" name="assignedTo" maxlength="160"
+                                   placeholder="Person or team">
+                        </div>
+                        <div class="inventory-field">
+                            <label for="asset-tags">Tags</label>
+                            <input id="asset-tags" name="tags" maxlength="500"
+                                   placeholder="Production, Critical (comma-separated)">
+                        </div>
+                        <div class="inventory-field full">
+                            <label for="asset-notes">Special Notes</label>
+                            <textarea id="asset-notes" name="specialNotes" maxlength="4000"
+                                      placeholder="Specifications, condition, warranty or other notes..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="inventory-modal-footer">
+                    <button type="button" id="inventory-cancel-btn" class="inventory-close-btn">Cancel</button>
+                    <button type="submit" class="inventory-save-btn">Save Asset</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</body>
+</html>

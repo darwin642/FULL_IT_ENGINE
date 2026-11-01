@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Software</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .software-toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:20px 0}
+        .software-toolbar .workspace-search{flex:1;min-width:200px}
+        .software-toolbar select,.software-form input,.software-form select,.software-form textarea{
+            width:100%;padding:10px 12px;border:1px solid var(--border-color,#394158);
+            border-radius:8px;background:var(--card-bg,#111827);color:inherit;font:inherit
+        }
+        .software-toolbar select{width:auto;min-width:145px}
+        .software-toolbar #software-operator{width:190px;min-width:150px;padding:10px 12px;border:1px solid var(--border-color,#394158);border-radius:8px;background:var(--card-bg,#111827);color:inherit;font:inherit}
+        .software-history-dialog{width:min(1100px,100%)}
+        .software-history-content{max-height:60vh;overflow:auto}
+        .software-history-table{width:100%;border-collapse:collapse;font-size:13px}
+        .software-history-table th,.software-history-table td{padding:10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border-color,#394158)}
+        .software-history-table th{position:sticky;top:0;background:var(--panel-bg,#111827)}
+        .software-history-details{white-space:pre-wrap;overflow-wrap:anywhere;min-width:220px}
+        .software-history-note{font-size:13px;opacity:.8;margin:0 0 14px}
+        .software-history-close{float:right}
+        .software-actions{display:flex;gap:8px;flex-wrap:wrap}
+        .software-action{border:1px solid var(--border-color,#394158);border-radius:7px;padding:7px 10px;background:transparent;color:inherit;cursor:pointer}
+        .software-action:hover{filter:brightness(1.2)}
+        .software-status{display:inline-block;padding:4px 8px;border-radius:20px;background:#263449;font-size:12px}
+        .software-status[data-status="Active"]{background:#164e3c;color:#a7f3d0}
+        .software-status[data-status="Draft"]{background:#493b1b;color:#fde68a}
+        .software-status[data-status="Deprecated"]{background:#4c2630;color:#fecdd3}
+        .software-modal[hidden]{display:none}
+        .software-modal{position:fixed;inset:0;z-index:9999;background:#000a;display:flex;align-items:center;justify-content:center;padding:20px}
+        .software-dialog{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--panel-bg,#111827);color:inherit;border:1px solid var(--border-color,#394158);border-radius:14px;padding:22px}
+        .software-dialog h2{margin-top:0}
+        .software-form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .software-form label{display:flex;flex-direction:column;gap:6px;font-size:13px}
+        .software-form .wide{grid-column:1/-1}
+        .software-form textarea{min-height:76px;resize:vertical}
+        .software-dialog-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+        .software-error{color:#fca5a5;min-height:1.2em}
+        @media(max-width:650px){.software-form{grid-template-columns:1fr}.software-form .wide{grid-column:auto}}
+    </style>
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <script src="/static/js/modules/software-catalog.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span><span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">&#9672;</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE</div>
+                <h1>Software Catalog</h1>
+                <p>Manage application packages and software metadata.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Software catalog">
+            <div class="workspace-eyebrow">SOFTWARE MANAGEMENT</div>
+
+            <div class="software-toolbar">
+                <input id="software-search" class="workspace-search" type="search"
+                       placeholder="Search name, publisher, version..." aria-label="Search software">
+                <select id="software-status-filter" aria-label="Filter by status">
+                    <option value="">All statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Deprecated">Deprecated</option>
+                </select>
+                <input id="software-operator" type="text" maxlength="100"
+                       placeholder="Operator name" aria-label="Operator name"
+                       title="Operator label; this is not an authenticated identity">
+                <button id="software-history" class="secondary-button" type="button">History</button>
+                <button id="software-add" class="primary-button" type="button">+ Add software</button>
+            </div>
+
+            <div class="workspace-stats">
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Total packages</span>
+                    <strong class="workspace-stat-value" id="software-total">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Active</span>
+                    <strong class="workspace-stat-value" id="software-active">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Draft</span>
+                    <strong class="workspace-stat-value" id="software-draft">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Data source</span>
+                    <strong class="workspace-stat-value">SQLite</strong>
+                </article>
+            </div>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <h2>Software packages</h2>
+                    <span class="workspace-row-count" id="software-row-count">Loading...</span>
+                </div>
+                <div class="workspace-table-wrap">
+                    <table class="workspace-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th><th>Publisher</th><th>Version</th><th>Target OS</th><th>Package</th><th>Status</th><th>Created By</th><th>Created At</th><th>Updated By</th><th>Updated At</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="software-table-body">
+                            <tr><td colspan="11">Loading software catalog...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="workspace-empty hidden" id="software-empty">No matching software found.</p>
+                <p id="software-message" role="status" aria-live="polite"></p>
+            </div>
+        </section>
+    </main>
+
+    <div class="software-modal" id="software-modal" hidden>
+        <section class="software-dialog" role="dialog" aria-modal="true" aria-labelledby="software-modal-title">
+            <h2 id="software-modal-title">Add software</h2>
+            <form id="software-form">
+                <div class="software-form">
+                    <label>Name *
+                        <input name="name" required maxlength="180" placeholder="e.g. 7-Zip">
+                    </label>
+                    <label>Publisher
+                        <input name="publisher" maxlength="180" placeholder="e.g. 7-Zip team">
+                    </label>
+                    <label>Version *
+                        <input name="version" required maxlength="80" value="Unknown">
+                    </label>
+                    <label>Target OS
+                        <select name="target_os">
+                            <option>Any</option><option>Windows</option><option>macOS</option><option>Linux</option>
+                        </select>
+                    </label>
+                    <label>Category
+                        <input name="category" maxlength="80" value="General" placeholder="Utilities, Browser...">
+                    </label>
+                    <label>Package type
+                        <select name="package_type">
+                            <option>Other</option><option>MSI</option><option>EXE</option><option>PKG</option>
+                            <option>DMG</option><option>DEB</option><option>RPM</option><option>ZIP</option>
+                        </select>
+                    </label>
+                    <label>Status
+                        <select name="status"><option>Active</option><option>Draft</option><option>Deprecated</option></select>
+                    </label>
+                    <label>Package source URL
+                        <input name="source_url" type="url" maxlength="1000" placeholder="https://...">
+                    </label>
+                    <label class="wide">Install command (stored only)
+                        <textarea name="install_command" maxlength="2000" placeholder="Optional install parameters"></textarea>
+                    </label>
+                    <label class="wide">Uninstall command (stored only)
+                        <textarea name="uninstall_command" maxlength="2000" placeholder="Optional uninstall parameters"></textarea>
+                    </label>
+                    <label class="wide">Notes
+                        <textarea name="notes" maxlength="5000" placeholder="Additional details"></textarea>
+                    </label>
+                </div>
+                <p class="software-error" id="software-form-error"></p>
+                <div class="software-dialog-footer">
+                    <button class="secondary-button" id="software-cancel" type="button">Cancel</button>
+                    <button class="primary-button" id="software-save" type="submit">Save software</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="software-modal" id="software-history-modal" hidden>
+        <section class="software-dialog software-history-dialog" role="dialog"
+                 aria-modal="true" aria-labelledby="software-history-title">
+            <button class="software-action software-history-close" id="software-history-close"
+                    type="button">Close</button>
+            <h2 id="software-history-title">Software audit history</h2>
+            <p class="software-history-note">
+                Operator names are labels supplied by the client, not verified user identities.
+            </p>
+            <div id="software-history-content" class="software-history-content" aria-live="polite">
+                Loading history...
+            </div>
+        </section>
+    </div>
+
+</body>
+</html>

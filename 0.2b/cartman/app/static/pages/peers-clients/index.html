@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
+  <title>Cartman | Peers & Clients</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/css/modules/vpn-remote-access.css">
+  <script src="/static/js/modules/standalone-page.js" defer></script>
+  <script src="/static/js/core/module-definitions.js" defer></script>
+  <script src="/static/js/modules/standalone-navigation.js" defer></script>
+  <script src="/static/js/modules/vpn-remote-access.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-area"><a class="brand" href="/"><span class="brand-logo">C</span><span>CARTMAN</span></a></div>
+    <div class="top-actions"><a class="secondary-button" href="/">&#8592; Dashboard</a></div>
+  </header>
+  <main class="vpn-workspace" data-vpn-page="peers-clients" data-vpn-title="Peers & Clients" data-vpn-action="Add client" data-vpn-columns="id|user|platform|ip|gateway|status">
+    <section class="vpn-hero">
+      <div class="vpn-hero-copy">
+        <div class="vpn-kicker">VPN & REMOTE ACCESS / ENDPOINTS</div>
+        <h1>♙ &nbsp;Peers & Clients</h1>
+        <p>Manage the demo inventory of VPN peers, client devices and assigned addresses.</p>
+      </div>
+      <div class="vpn-hero-actions">
+        <button class="vpn-btn" type="button" data-vpn-refresh>Refresh view ↻</button>
+        <button class="vpn-btn vpn-btn-primary" type="button" data-vpn-action>Add client</button>
+      </div>
+    </section>
+
+    <div class="vpn-preview-banner"><span class="vpn-preview-dot"></span><span><strong>LOCAL UI PREVIEW</strong> &nbsp; Sample records only. No live VPN telemetry, authentication, policy enforcement or remote actions are connected.</span></div>
+
+    <section class="vpn-metrics" data-vpn-stats aria-label="Peers & Clients metrics">
+      <article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">REGISTERED PEERS</span><span class="vpn-metric-icon">◉</span></div><div class="vpn-metric-value" data-vpn-metric>total</div><div class="vpn-metric-note">Local preview <span class="vpn-note-accent">·</span> illustrative</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">CONNECTED</span><span class="vpn-metric-icon">↗</span></div><div class="vpn-metric-value" data-vpn-metric>active</div><div class="vpn-metric-note">Local preview <span class="vpn-note-accent">·</span> illustrative</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">OFFLINE</span><span class="vpn-metric-icon">◇</span></div><div class="vpn-metric-value" data-vpn-metric>offline</div><div class="vpn-metric-note">Local preview <span class="vpn-note-accent">·</span> illustrative</div></article><article class="vpn-metric"><div class="vpn-metric-top"><span class="vpn-metric-label">PENDING</span><span class="vpn-metric-icon">⌁</span></div><div class="vpn-metric-value" data-vpn-metric>pending</div><div class="vpn-metric-note">Local preview <span class="vpn-note-accent">·</span> illustrative</div></article>
+    </section>
+
+    <section class="vpn-layout">
+      <div class="vpn-panel">
+        <div class="vpn-panel-head">
+          <div><h2>Peers and client devices</h2><p>Search, filter and inspect illustrative records.</p></div>
+          <div class="vpn-panel-tools">
+            <input class="vpn-search" type="search" data-vpn-search placeholder="Search records..." aria-label="Search Peers & Clients">
+            <select class="vpn-select" data-vpn-filter aria-label="Filter records">
+              <option value="all">All statuses</option>
+              <option value="active">Healthy / active</option>
+              <option value="attention">Needs attention</option>
+              <option value="offline">Offline / denied</option>
+            </select>
+          </div>
+        </div>
+        <div class="vpn-table-wrap">
+          <table class="vpn-table">
+            <thead><tr><th>Peer / device</th><th>Assigned user</th><th>Platform</th><th>Peer IP</th><th>Gateway</th><th>Status</th><th>DETAILS</th></tr></thead>
+            <tbody data-vpn-tbody></tbody>
+          </table>
+          <div class="vpn-empty" data-vpn-empty hidden><strong>No matching records</strong>Try a different search term or status filter.</div>
+        </div>
+        <div class="vpn-table-foot"><span data-vpn-count>Loading records…</span><span>Sample data · not connected to a live service</span></div>
+      </div>
+    </section>
+
+    <section class="vpn-shortcuts" aria-label="VPN workspace navigation"><a class="vpn-shortcut" href="/pages/remote/"><span class="vpn-shortcut-icon">↗</span><span><strong>Remote Access</strong><small>Sessions and access readiness</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/vpn-overview/"><span class="vpn-shortcut-icon">⌁</span><span><strong>VPN Overview</strong><small>VPN health and activity</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/gateways/"><span class="vpn-shortcut-icon">⇄</span><span><strong>Gateways</strong><small>Gateway inventory</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/access-policies/"><span class="vpn-shortcut-icon">◈</span><span><strong>Access Policies</strong><small>Rules and authorization</small></span><span class="vpn-shortcut-arrow">↗</span></a><a class="vpn-shortcut" href="/pages/vpn-audit-logs/"><span class="vpn-shortcut-icon">≡</span><span><strong>VPN Audit Logs</strong><small>Security event history</small></span><span class="vpn-shortcut-arrow">↗</span></a></section>
+    <p class="vpn-footer-note">Cartman Infrastructure Management · Local interface preview. Values and events on this page are illustrative and do not represent live infrastructure state.</p>
+    <div data-vpn-modal-host></div>
+  </main>
+  <footer class="app-footer"><span>Cartman Infrastructure Management</span><span>VPN &amp; Remote Access · Local UI preview</span></footer>
+</body>
+</html>

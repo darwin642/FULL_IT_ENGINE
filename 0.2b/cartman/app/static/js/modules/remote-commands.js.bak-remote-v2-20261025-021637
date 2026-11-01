@@ -1,0 +1,462 @@
+/* CARTMAN_REMOTE_COMMANDS_LIVE_V1 */
+"use strict";
+
+document.addEventListener("DOMContentLoaded", () => {
+    const $ = selector => document.querySelector(selector);
+    const search = $("[data-rc-search]");
+    const statusFilter = $("[data-rc-status]");
+    const osFilter = $("[data-rc-os]");
+    const rows = $("[data-rc-rows]");
+    const empty = $("[data-rc-empty]");
+    const count = $("[data-rc-count]");
+    const footerCount = $("[data-rc-footer-count]");
+    const actionSelect = $("[data-rc-template]");
+    const targetSelect = $("#rc-target");
+    const commandDetails = $("[data-rc-command]");
+    const clearButton = $("[data-rc-clear]");
+    const runButton = $("[data-rc-run]");
+    const feedback = $("[data-rc-feedback]");
+    const refreshButton = $("[data-rc-refresh]");
+
+    if (
+        !search || !statusFilter || !osFilter || !rows || !empty ||
+        !actionSelect || !targetSelect || !commandDetails || !runButton
+    ) return;
+
+    let devices = [];
+    let clients = [];
+    let records = [];
+    let loading = false;
+    let submitting = false;
+    let selectedTask = null;
+
+    async function api(url, options = {}) {
+        const operator = (() => {
+            try {
+                return localStorage.getItem("cartman-operator-name") || "Cartman Operator";
+            } catch (_) {
+                return "Cartman Operator";
+            }
+        })();
+
+        const response = await fetch(url, {
+            cache: "no-store",
+            ...options,
+            headers: {
+                "Accept": "application/json",
+                "X-Operator": operator,
+                ...(options.body ? {"Content-Type": "application/json"} : {}),
+                ...(options.headers || {})
+            }
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(
+                typeof data.detail === "string"
+                    ? data.detail
+                    : `Request failed (HTTP ${response.status})`
+            );
+        }
+        return data;
+    }
+
+    function normalizeStatus(value) {
+        const status = String(value || "").toLowerCase();
+        if (["succeeded", "completed", "success"].includes(status)) return "completed";
+        if (["failed", "error"].includes(status)) return "failed";
+        if (["running", "started"].includes(status)) return "running";
+        return "pending";
+    }
+
+    function normalizeOS(value) {
+        const os = String(value || "").toLowerCase();
+        if (os.includes("windows")) return "windows";
+        if (os.includes("mac") || os.includes("darwin")) return "macos";
+        if (os.includes("linux") || os.includes("ubuntu") || os.includes("debian")) return "linux";
+        return "";
+    }
+
+    function formatTime(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+    }
+
+    function formatDuration(task) {
+        const start = task.started_at || task.created_at;
+        const end = task.finished_at;
+        if (!start) return "—";
+        const startDate = new Date(start);
+        if (Number.isNaN(startDate.getTime())) return "—";
+        if (!end && normalizeStatus(task.status) === "running") return "Running";
+        if (!end) return "—";
+        const endDate = new Date(end);
+        if (Number.isNaN(endDate.getTime())) return "—";
+        const seconds = Math.max(0, Math.round((endDate - startDate) / 1000));
+        return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    }
+
+    function actionLabel(action) {
+        return ({
+            self_test: "Agent connection self-test",
+            shutdown: "Device shutdown",
+            package_deployment: "Software deployment",
+            network_disconnect: "Network disconnect",
+            vpn_action: "VPN action"
+        })[action] || action || "Unknown action";
+    }
+
+    function addCell(row, value) {
+        const cell = document.createElement("td");
+        cell.textContent = value == null || value === "" ? "—" : String(value);
+        row.appendChild(cell);
+        return cell;
+    }
+
+    function setStat(selector, value) {
+        const element = $(selector);
+        if (element) element.textContent = String(value);
+    }
+
+    function targetIsReady(deviceId) {
+        return clients.some(client =>
+            client.device_id === deviceId
+            && client.connected === true
+            && client.approval_status === "Approved"
+            && client.task_execution_enabled === true
+        );
+    }
+
+    function populateTargets() {
+        const oldValue = targetSelect.value;
+        targetSelect.replaceChildren(new Option("Choose a device...", ""));
+
+        for (const device of devices) {
+            const ready = targetIsReady(device.id);
+            const live = clients.some(client =>
+                client.device_id === device.id
+                && client.connected === true
+                && client.approval_status === "Approved"
+            );
+
+            let availability = "Offline";
+            if (ready) availability = "Ready";
+            else if (live) availability = "Connected · task execution disabled";
+
+            const label = `${device.name} · ${device.os || "Unknown OS"} · ${availability}`;
+            targetSelect.add(new Option(label, device.id));
+        }
+
+        if ([...targetSelect.options].some(option => option.value === oldValue)) {
+            targetSelect.value = oldValue;
+        }
+    }
+
+    function updateActionDetails() {
+        const action = actionSelect.value;
+        if (action === "self_test") {
+            commandDetails.value =
+                "Runs CartmanClient's built-in connection self-test and reports the result to Cartman.";
+        } else if (action === "shutdown") {
+            commandDetails.value =
+                "Schedules a device shutdown after a confirmed countdown. A local administrator may need to authorize the action.";
+        } else {
+            commandDetails.value = "";
+        }
+
+        runButton.disabled = !targetSelect.value || !action || submitting;
+    }
+
+    function showTaskDetails(task) {
+        selectedTask = task;
+        const panel = $(".rc-detail-panel");
+        if (!panel) return;
+
+        const pill = panel.querySelector(".rc-neutral-pill");
+        const title = panel.querySelector(".rc-detail-empty strong");
+        const description = panel.querySelector(".rc-detail-empty p");
+        const output = panel.querySelector(".rc-output-placeholder pre");
+
+        if (pill) {
+            pill.textContent = task.status || "Unknown";
+            pill.dataset.status = normalizeStatus(task.status);
+        }
+        if (title) title.textContent = actionLabel(task.action);
+        if (description) {
+            description.textContent =
+                `${task.device_name || "Unknown device"} · ${task.device_os || "Unknown OS"} · Created ${formatTime(task.created_at)}`;
+        }
+        if (output) {
+            output.textContent = task.result || "No result has been reported by the agent yet.";
+        }
+
+        document.querySelectorAll("[data-rc-task-id]").forEach(row => {
+            row.classList.toggle("rc-row-selected", row.dataset.rcTaskId === task.id);
+        });
+    }
+
+    function renderHistory() {
+        const query = search.value.trim().toLocaleLowerCase();
+        const selectedStatus = statusFilter.value.toLowerCase();
+        const selectedOS = osFilter.value.toLowerCase();
+
+        const filtered = records.filter(task => {
+            const status = normalizeStatus(task.status);
+            const os = normalizeOS(task.device_os);
+            const searchable = [
+                actionLabel(task.action), task.device_name, task.device_os,
+                task.id, task.status, task.result
+            ].join(" ").toLocaleLowerCase();
+
+            return searchable.includes(query)
+                && (!selectedStatus || status === selectedStatus)
+                && (!selectedOS || os === selectedOS);
+        });
+
+        rows.replaceChildren();
+
+        for (const task of filtered) {
+            const row = document.createElement("tr");
+            row.dataset.rcTaskId = task.id;
+            row.dataset.searchText = [
+                actionLabel(task.action), task.device_name, task.device_os, task.id, task.status
+            ].join(" ");
+            row.dataset.status = normalizeStatus(task.status);
+            row.dataset.os = normalizeOS(task.device_os);
+            row.tabIndex = 0;
+
+            addCell(row, actionLabel(task.action));
+            addCell(row, task.device_name);
+            addCell(row, task.device_os);
+            addCell(row, formatTime(task.started_at || task.created_at));
+            addCell(row, formatDuration(task));
+
+            const statusCell = addCell(row, "");
+            const badge = document.createElement("span");
+            badge.className = "rc-live-status";
+            badge.dataset.status = normalizeStatus(task.status);
+            badge.textContent = task.status || "Unknown";
+            statusCell.appendChild(badge);
+
+            const select = () => showTaskDetails(task);
+            row.addEventListener("click", select);
+            row.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    select();
+                }
+            });
+            rows.appendChild(row);
+        }
+
+        count.textContent = `${filtered.length} records`;
+        if (footerCount) footerCount.textContent = `${filtered.length} records`;
+        empty.style.display = filtered.length ? "none" : "grid";
+
+        const emptyTitle = empty.querySelector("h3");
+        const emptyText = empty.querySelector("p");
+        if (emptyTitle) {
+            emptyTitle.textContent = records.length
+                ? "No matching executions"
+                : "No command executions yet";
+        }
+        if (emptyText) {
+            emptyText.textContent = records.length
+                ? "Try changing the search term or filters."
+                : "Choose a device with an approved, connected CartmanClient and queue a supported action.";
+        }
+
+        const completed = records.filter(x => normalizeStatus(x.status) === "completed").length;
+        const pending = records.filter(x => ["pending", "running"].includes(normalizeStatus(x.status))).length;
+        const failed = records.filter(x => normalizeStatus(x.status) === "failed").length;
+        setStat("#rc-stat-total", records.length);
+        setStat("#rc-stat-completed", completed);
+        setStat("#rc-stat-pending", pending);
+        setStat("#rc-stat-failed", failed);
+
+        if (selectedTask && !filtered.some(item => item.id === selectedTask.id)) {
+            selectedTask = null;
+        }
+    }
+
+    async function load() {
+        if (loading || submitting) return;
+        loading = true;
+        if (refreshButton) refreshButton.disabled = true;
+
+        try {
+            const [deviceData, clientData, listener] = await Promise.all([
+                api("/api/devices"),
+                api("/api/device-connection-clients"),
+                api("/api/device-connection-listener/status")
+            ]);
+
+            devices = Array.isArray(deviceData) ? deviceData
+                : Array.isArray(deviceData.items) ? deviceData.items : [];
+            clients = Array.isArray(clientData) ? clientData : [];
+
+            populateTargets();
+
+            const deviceTasks = await Promise.all(devices.map(async device => {
+                try {
+                    const tasks = await api(
+                        "/api/devices/" + encodeURIComponent(device.id) + "/tasks"
+                    );
+                    return (Array.isArray(tasks) ? tasks : []).map(task => ({
+                        ...task,
+                        device_name: device.name,
+                        device_os: device.os
+                    }));
+                } catch (_) {
+                    return [];
+                }
+            }));
+
+            records = deviceTasks.flat()
+                .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
+                .slice(0, 500);
+
+            renderHistory();
+
+            const readyCount = clients.filter(client =>
+                client.connected === true
+                && client.approval_status === "Approved"
+                && client.task_execution_enabled === true
+            ).length;
+
+            const title = $("[data-rc-service-title]");
+            const description = $("[data-rc-service-description]");
+            const pill = $("[data-rc-service-pill]");
+            const previewStatus = $("[data-rc-preview-status]");
+
+            if (title) {
+                title.textContent = readyCount
+                    ? "Remote task execution available"
+                    : listener.running
+                        ? "Listener running · no execution-ready agent"
+                        : "Local agent listener stopped";
+            }
+            if (description) {
+                description.textContent = readyCount
+                    ? `${readyCount} approved connected agent(s) have task execution enabled.`
+                    : listener.running
+                        ? "Start CartmanClient with task execution enabled and approve its enrollment before queuing tasks."
+                        : `Start the local listener on port ${listener.port} before connecting an agent.`;
+            }
+            if (pill) {
+                pill.textContent = readyCount ? "READY" : listener.running ? "WAITING FOR AGENT" : "STOPPED";
+                pill.dataset.status = readyCount ? "ready" : "waiting";
+            }
+            if (previewStatus) previewStatus.textContent = "Live task history";
+
+            updateActionDetails();
+        } catch (error) {
+            const title = $("[data-rc-service-title]");
+            const description = $("[data-rc-service-description]");
+            const previewStatus = $("[data-rc-preview-status]");
+            if (title) title.textContent = "Remote task API unavailable";
+            if (description) description.textContent = error.message;
+            if (previewStatus) previewStatus.textContent = "API unavailable";
+            rows.replaceChildren();
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 6;
+            cell.textContent = "Could not load devices or task history: " + error.message;
+            row.appendChild(cell);
+            rows.appendChild(row);
+        } finally {
+            loading = false;
+            if (refreshButton) refreshButton.disabled = false;
+        }
+    }
+
+    async function queueTask() {
+        if (submitting) return;
+
+        const deviceId = targetSelect.value;
+        const action = actionSelect.value;
+        if (!deviceId || !action) {
+            feedback.textContent = "Choose a device and an action first.";
+            return;
+        }
+
+        const device = devices.find(item => item.id === deviceId);
+        if (!device) {
+            feedback.textContent = "Selected device is no longer in Devices.";
+            return;
+        }
+
+        let payload = {};
+
+        if (action === "shutdown") {
+            const rawDelay = window.prompt(
+                "Shutdown countdown in seconds (1–86400):",
+                "60"
+            );
+            if (rawDelay === null) return;
+
+            const delay = Number(rawDelay.trim());
+            if (!Number.isInteger(delay) || delay < 1 || delay > 86400) {
+                feedback.textContent = "Enter a whole number between 1 and 86400 seconds.";
+                return;
+            }
+
+            if (!window.confirm(
+                `Confirm shutdown for "${device.name}" in ${delay} second(s)?`
+            )) return;
+
+            payload = {confirmed: true, delay_seconds: delay};
+        } else if (action === "self_test") {
+            if (!window.confirm(`Run the CartmanClient self-test on "${device.name}"?`)) return;
+        }
+
+        submitting = true;
+        runButton.disabled = true;
+        runButton.textContent = "Queuing task...";
+
+        try {
+            const result = await api(
+                "/api/devices/" + encodeURIComponent(deviceId) + "/tasks",
+                {
+                    method: "POST",
+                    body: JSON.stringify({action, payload})
+                }
+            );
+
+            feedback.textContent = `Task queued: ${result.id || "created"} · ${result.status || "Queued"}.`;
+            actionSelect.value = "";
+            updateActionDetails();
+            await load();
+        } catch (error) {
+            feedback.textContent = "Task was not queued: " + error.message;
+        } finally {
+            submitting = false;
+            runButton.innerHTML = 'Queue task <span>&#8594;</span>';
+            updateActionDetails();
+        }
+    }
+
+    search.addEventListener("input", renderHistory);
+    statusFilter.addEventListener("change", renderHistory);
+    osFilter.addEventListener("change", renderHistory);
+    targetSelect.addEventListener("change", updateActionDetails);
+    actionSelect.addEventListener("change", () => {
+        feedback.textContent = "";
+        updateActionDetails();
+    });
+
+    clearButton.addEventListener("click", () => {
+        actionSelect.value = "";
+        commandDetails.value = "";
+        feedback.textContent = "";
+        updateActionDetails();
+    });
+
+    runButton.addEventListener("click", queueTask);
+    if (refreshButton) refreshButton.addEventListener("click", load);
+
+    updateActionDetails();
+    load();
+    window.setInterval(load, 15000);
+});

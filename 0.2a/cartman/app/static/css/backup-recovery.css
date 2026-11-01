@@ -1,0 +1,113 @@
+
+.backup-console {
+  --br-border: var(--border-color, #d9dee7);
+  --br-muted: var(--text-secondary, #687386);
+  width: 100%;
+  color: var(--text-color, inherit);
+  padding-bottom: 32px;
+}
+.backup-console * { box-sizing: border-box; }
+.backup-console .br-wrap { display:grid; gap:20px; }
+.backup-console .br-hero {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  gap:18px; flex-wrap:wrap; padding:24px;
+  border:1px solid var(--br-border); border-radius:16px;
+  background:linear-gradient(135deg,rgba(90,125,190,.12),rgba(90,125,190,.025));
+}
+.backup-console .br-eyebrow {
+  text-transform:uppercase; letter-spacing:.09em; font-size:11px;
+  font-weight:800; color:var(--br-muted); margin-bottom:8px;
+}
+.backup-console .br-title { font-size:clamp(24px,3vw,32px); font-weight:800; line-height:1.2; margin:0 0 10px; }
+.backup-console .br-subtitle { color:var(--br-muted); max-width:680px; line-height:1.65; margin:0; }
+.backup-console .br-demo {
+  display:inline-flex; align-items:center; gap:7px; border:1px solid var(--br-border);
+  border-radius:999px; padding:7px 11px; font-size:12px; font-weight:800;
+  white-space:nowrap; background:var(--background-color,transparent);
+}
+.backup-console .br-dot { width:7px;height:7px;border-radius:50%;background:#d99b35; }
+.backup-console .br-actions { display:flex;gap:9px;flex-wrap:wrap;align-items:center; }
+.backup-console .br-btn {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:10px 14px;border:1px solid var(--br-border);border-radius:9px;
+  background:var(--background-color,transparent);color:inherit;font:inherit;
+  font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s,transform .15s;
+}
+.backup-console .br-btn:hover { opacity:.82; }
+.backup-console .br-btn:active { transform:translateY(1px); }
+.backup-console .br-btn-primary { background:var(--primary-color,#315fbd);color:white;border-color:transparent; }
+.backup-console .br-btn-danger { color:#c74646; }
+.backup-console .br-btn:disabled { opacity:.45;cursor:not-allowed; }
+.backup-console .br-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px; }
+.backup-console .br-card {
+  min-width:0;border:1px solid var(--br-border);border-radius:13px;
+  padding:17px;background:var(--card-background,transparent);
+}
+.backup-console .br-stat-head { display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--br-muted);font-size:12px; }
+.backup-console .br-stat-icon { display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:rgba(100,130,190,.12);font-size:17px; }
+.backup-console .br-stat-value { font-size:26px;font-weight:800;letter-spacing:-.03em;margin:13px 0 4px;overflow-wrap:anywhere; }
+.backup-console .br-stat-foot { font-size:11px;color:var(--br-muted);line-height:1.5; }
+.backup-console .br-section { display:grid;gap:13px; }
+.backup-console .br-section-head { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+.backup-console .br-section-title { margin:0;font-size:17px;font-weight:800; }
+.backup-console .br-muted { color:var(--br-muted);font-size:12px;line-height:1.6; }
+.backup-console .br-panel { border:1px solid var(--br-border);border-radius:13px;overflow:hidden; }
+.backup-console .br-panel-head { padding:16px 18px;border-bottom:1px solid var(--br-border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap; }
+.backup-console .br-panel-body { padding:18px; }
+.backup-console .br-profile { display:flex;align-items:flex-start;gap:13px; }
+.backup-console .br-profile-icon { flex:0 0 42px;height:42px;display:grid;place-items:center;border-radius:11px;background:rgba(90,125,190,.13);font-size:20px; }
+.backup-console .br-profile-name { font-size:14px;font-weight:800;margin-bottom:5px; }
+.backup-console .br-badges { display:flex;gap:7px;flex-wrap:wrap;margin-top:9px; }
+.backup-console .br-badge { display:inline-flex;align-items:center;gap:5px;border:1px solid var(--br-border);border-radius:6px;padding:4px 7px;font-size:11px;font-weight:700; }
+.backup-console .br-badge-ok { color:#21865b; }
+.backup-console .br-badge-warn { color:#ad741e; }
+.backup-console .br-tabs { display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--br-border); }
+.backup-console .br-tab { padding:11px 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--br-muted);font:inherit;font-size:13px;font-weight:700;cursor:pointer; }
+.backup-console .br-tab[aria-selected="true"] { color:var(--primary-color,#315fbd);border-bottom-color:var(--primary-color,#315fbd); }
+.backup-console .br-form-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px; }
+.backup-console .br-field { display:grid;gap:7px;min-width:0; }
+.backup-console .br-field label { font-size:12px;font-weight:750; }
+.backup-console .br-field input,.backup-console .br-field select {
+  width:100%;min-width:0;padding:10px 11px;border:1px solid var(--br-border);
+  border-radius:8px;background:var(--background-color,transparent);color:inherit;font:inherit;font-size:13px;
+}
+.backup-console .br-field small { color:var(--br-muted);font-size:11px;line-height:1.5; }
+.backup-console .br-toggle-row { display:flex;justify-content:space-between;align-items:center;gap:15px;padding:14px 0;border-bottom:1px solid var(--br-border); }
+.backup-console .br-toggle-row:last-child { border-bottom:0; }
+.backup-console .br-toggle { width:40px;height:23px;appearance:none;border-radius:999px;background:#aab2c0;position:relative;cursor:pointer;flex:0 0 40px; }
+.backup-console .br-toggle:before { content:"";position:absolute;left:3px;top:3px;width:17px;height:17px;background:white;border-radius:50%;transition:transform .15s; }
+.backup-console .br-toggle:checked { background:#318764; }
+.backup-console .br-toggle:checked:before { transform:translateX(17px); }
+.backup-console .br-progress { height:7px;background:rgba(130,140,160,.2);border-radius:99px;overflow:hidden;margin:12px 0 8px; }
+.backup-console .br-progress > span { display:block;height:100%;width:0;background:#5488d8;border-radius:99px; }
+.backup-console .br-table-wrap { overflow-x:auto; }
+.backup-console .br-table { width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap; }
+.backup-console .br-table th,.backup-console .br-table td { text-align:left;padding:13px 16px;border-bottom:1px solid var(--br-border); }
+.backup-console .br-table th { font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--br-muted);font-weight:800; }
+.backup-console .br-table tr:last-child td { border-bottom:0; }
+.backup-console .br-empty { padding:35px 16px;text-align:center; }
+.backup-console .br-empty-icon { font-size:28px;margin-bottom:10px; }
+.backup-console .br-empty-title { font-weight:800;margin-bottom:5px; }
+.backup-console .br-notice { padding:13px 15px;border:1px solid var(--br-border);border-radius:10px;font-size:12px;line-height:1.65; }
+.backup-console .br-notice-warn { background:rgba(210,160,50,.08); }
+.backup-console .br-notice-info { background:rgba(80,130,210,.08); }
+.backup-console .br-toast { padding:12px 14px;border:1px solid var(--br-border);border-radius:9px;font-size:12px;line-height:1.5; }
+.backup-console .br-toast:empty { display:none; }
+.backup-console .br-split { display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:14px; }
+.backup-console .br-kv { display:flex;justify-content:space-between;gap:15px;padding:10px 0;border-bottom:1px solid var(--br-border);font-size:12px; }
+.backup-console .br-kv:last-child { border-bottom:0; }
+.backup-console .br-kv span:first-child { color:var(--br-muted); }
+.backup-console .br-kv strong { text-align:right;overflow-wrap:anywhere; }
+.backup-console .br-inline { display:flex;align-items:center;gap:9px;flex-wrap:wrap; }
+@media(max-width:900px) {
+  .backup-console .br-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .backup-console .br-split { grid-template-columns:1fr; }
+}
+@media(max-width:560px) {
+  .backup-console .br-hero { padding:17px; }
+  .backup-console .br-grid { grid-template-columns:1fr 1fr;gap:9px; }
+  .backup-console .br-card { padding:12px; }
+  .backup-console .br-stat-value { font-size:22px; }
+  .backup-console .br-form-grid { grid-template-columns:1fr; }
+  .backup-console .br-panel-body { padding:13px; }
+}

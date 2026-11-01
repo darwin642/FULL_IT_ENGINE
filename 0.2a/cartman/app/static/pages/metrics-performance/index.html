@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>Cartman | Cartman | Metrics &amp; Performance</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/js/modules/standalone-page.js" defer></script>
+    <script src="/static/js/core/module-definitions.js" defer></script>
+    <script src="/static/js/modules/standalone-navigation.js" defer></script>
+    <link rel="stylesheet" href="/static/css/modules/monitoring-live.css">
+    <link rel="stylesheet" href="/static/css/modules/monitoring-dashboard.css">
+    <script src="/static/js/modules/monitoring-dashboard.js" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand-area">
+            <a class="brand" href="/">
+                <span class="brand-logo">C</span>
+                <span>CARTMAN</span>
+            </a>
+        </div>
+        <div class="top-actions">
+            <a class="secondary-button" href="/">&#8592; Dashboard</a>
+        </div>
+    </header>
+
+    <main style="width:100%;max-width:1600px;margin:0 auto;padding:28px 24px">
+        <div class="module-header">
+            <span class="category-icon purple">&#9672;</span>
+            <div>
+                <div class="eyebrow">CARTMAN WORKSPACE / METRICS PERFORMANCE</div>
+                <h1>Metrics &amp; Performance</h1>
+                <p>Review performance measurements and resource trends.</p>
+            </div>
+        </div>
+
+        <section class="workspace-module" aria-label="Metrics &amp; Performance workspace">
+            <div class="workspace-eyebrow">METRICS &amp; PERFORMANCE</div>
+
+            <div class="workspace-toolbar">
+                <input class="workspace-search"
+                    type="search"
+                    data-page-search
+                    placeholder="Search metrics &amp; performance..."
+                    aria-label="Search Metrics &amp; Performance">
+                <span class="workspace-demo-label">DEMO DATA · LOCAL PREVIEW</span>
+            </div>
+
+            <section class="monitor-dashboard" data-monitor-dashboard="metrics-performance"></section>
+
+                    <div class="workspace-stats">
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Configured</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Active</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Pending review</span>
+                    <strong class="workspace-stat-value">0</strong>
+                </article>
+                <article class="workspace-stat">
+                    <span class="workspace-stat-label">Data source</span>
+                    <strong class="workspace-stat-value">—</strong>
+                </article>
+            </div>
+
+            <div class="workspace-table-panel">
+                <div class="workspace-panel-header">
+                    <h2>Metrics &amp; Performance resources</h2>
+                    <span class="workspace-row-count" data-row-count>1 preview row(s)</span>
+                </div>
+                <div class="workspace-table-wrap">
+                    <table class="workspace-table">
+                        <thead><tr><th>Resource</th><th>Signal</th><th>Last observed</th><th>Source</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr data-search-text="metrics-performance Cartman | Metrics &amp; Performance Review performance measurements and resource trends. DEMO-METRICS-PERFORMANCE Availability Not collected Demo configuration No live data">
+                                <td>DEMO-METRICS-PERFORMANCE</td><td>Availability</td><td>Not collected</td><td>Demo configuration</td><td>No live data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="workspace-empty hidden" data-empty-state>No matching rows.</p>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <span>Cartman Infrastructure Management</span>
+            <span>Local UI preview · No live data or remote actions</span>
+        </footer>
+    </main>
+</body>
+</html>
